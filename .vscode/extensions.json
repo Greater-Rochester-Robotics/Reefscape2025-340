@@ -1,0 +1,25 @@
+{
+    "recommendations": [
+        "asciidoctor.asciidoctor-vscode",
+        "ms-python.debugpy",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-vscode.cpptools",
+        "pkief.material-icon-theme",
+        "redhat.java",
+        "rust-lang.rust-analyzer",
+        "streetsidesoftware.code-spell-checker",
+        "svelte.svelte-vscode",
+        "tauri-apps.tauri-vscode",
+        "visualstudioexptteam.vscodeintellicode",
+        "visualstudioexptteam.vscodeintellicode-completions",
+        "vscjava.vscode-gradle",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-dependency",
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-java-test",
+        "vscjava.vscode-maven",
+        "wpilibsuite.vscode-wpilib",
+        "zhuangtongfa.material-theme"
+    ]
+}
