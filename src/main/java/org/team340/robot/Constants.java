@@ -39,5 +39,7 @@ public final class Constants {
 
         public static final int kElevatorLead = 15;
         public static final int kElevatorFollow = 16;
+        public static final int kElevatorLeadEncoder = 17;
+        public static final int kElevatorFollowEncoder = 18;
     }
 }
