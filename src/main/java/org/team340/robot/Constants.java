@@ -18,8 +18,9 @@ public final class Constants {
      */
     public static final class RobotMap {
 
-        public static final String kSwerveCANBus = "Swerve";
-
+        // lower canbus includes swerve and elevator
+        public static final String kLowerCANBus = "Lower";
+        // TODO: DISCUSS NAMING CONVENTIONS
         public static final int kFlMove = 2;
         public static final int kFlTurn = 3;
         public static final int kFrMove = 4;
@@ -35,5 +36,8 @@ public final class Constants {
         public static final int kBrEncoder = 13;
 
         public static final int kCanandgyro = 14;
+
+        public static final int kElevatorLead = 15;
+        public static final int kElevatorFollow = 16;
     }
 }
