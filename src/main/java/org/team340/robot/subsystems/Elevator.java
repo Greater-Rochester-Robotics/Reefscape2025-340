@@ -5,6 +5,10 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
+
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj2.command.Command;
+
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RobotMap;
@@ -15,6 +19,7 @@ public class Elevator extends GRRSubsystem {
     private final TalonFX followMotor;
     private final CANcoder leadCanCoder;
     private final CANcoder followCanCoder;
+    private final DigitalInput bottomLimit;
 
     public Elevator() {
         // MOTOR SETUP
@@ -48,5 +53,24 @@ public class Elevator extends GRRSubsystem {
         PhoenixUtil.run("Apply Follow CANcoderConfiguration", followCanCoder, () ->
             followCanCoder.getConfigurator().apply(followCanCoderConfig)
         );
+
+        bottomLimit = new DigitalInput(RobotMap.kElevatorLimitSwitch);
+    }
+/**
+ * Setting the led motor also sets the follow motor
+ * @param position
+ */
+    public Command goTo(double position){
+        return commandBuilder("Elevator.goTo()")
+            .onExecute(() ->{
+// distance and direction to goal position
+// determine speed
+// tell the motors to go
+            })
+            .isFinished(()->false
+            // in position within error 
+            // get position average position of CANcoder
+            );
+       
     }
 }
