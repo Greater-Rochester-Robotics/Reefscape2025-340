@@ -1,5 +1,7 @@
 package org.team340.robot;
 
+import com.ctre.phoenix6.signals.ForwardLimitSourceValue;
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -35,5 +37,10 @@ public final class Constants {
         public static final int kBrEncoder = 13;
 
         public static final int kCanandgyro = 14;
+
+        public static final int kGooseneckRollersMotor = 30;
+        public static final int kGooseneckRollersBeamBreak = 31;
+        public static final ForwardLimitSourceValue kGooseneckRollersBeamBreakPort =
+            ForwardLimitSourceValue.RemoteCANdiS1;
     }
 }
