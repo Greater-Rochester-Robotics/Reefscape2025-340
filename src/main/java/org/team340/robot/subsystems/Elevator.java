@@ -1,76 +1,100 @@
 package org.team340.robot.subsystems;
 
-import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-
-import edu.wpi.first.wpilibj.DigitalInput;
+import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
+import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
-
+import org.team340.lib.util.Tunable;
+import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RobotMap;
 
+@Logged
 public class Elevator extends GRRSubsystem {
+
+    public static enum ElevatorPosition {
+        /** Down position. */
+        kDown(0),
+
+        kL1(0),
+
+        kL2(0),
+
+        kL3(0),
+
+        kL4(0);
+
+        private final TunableDouble rotations;
+
+        private ElevatorPosition(double rotations) {
+            this.rotations = Tunable.doubleValue("Elevator/Positions/" + this.name(), rotations);
+        }
+
+        private double rotations() {
+            return rotations.value();
+        }
+    }
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
-    private final CANcoder leadCanCoder;
-    private final CANcoder followCanCoder;
-    private final DigitalInput bottomLimit;
+    private final MotionMagicVoltage positionControl;
 
     public Elevator() {
         // MOTOR SETUP
         leadMotor = new TalonFX(RobotMap.kElevatorLead, RobotMap.kLowerCANBus);
         followMotor = new TalonFX(RobotMap.kElevatorFollow, RobotMap.kLowerCANBus);
 
-        TalonFXConfiguration leadCfg = new TalonFXConfiguration();
-        TalonFXConfiguration followCfg = new TalonFXConfiguration();
+        TalonFXConfiguration motorCfg = new TalonFXConfiguration();
+
         // TODO: FILL IN CFG
+        motorCfg.CurrentLimits.StatorCurrentLimit = 80;
+        motorCfg.CurrentLimits.SupplyCurrentLimit = 100;
+        motorCfg.Slot0.kP = 0;
+        motorCfg.Slot0.kI = 0;
+        motorCfg.Slot0.kD = 0;
+        motorCfg.Slot0.kG = 0;
+        motorCfg.Slot0.kS = 0;
+        motorCfg.Slot0.kV = 0;
+        motorCfg.MotionMagic.MotionMagicCruiseVelocity = 0;
+        motorCfg.MotionMagic.MotionMagicAcceleration = 0;
+        motorCfg.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
+        motorCfg.HardwareLimitSwitch.ReverseLimitRemoteSensorID = 22;
+        motorCfg.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+        motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
+        motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0;
         PhoenixUtil.run("Clear Lead Motor Sticky Faults", leadMotor, () -> leadMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Follow Motor Sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
-        PhoenixUtil.run("Apply Lead TalonFXConfiguration", leadMotor, () -> leadMotor.getConfigurator().apply(leadCfg));
+        PhoenixUtil.run("Clear Follow Motor sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
+        PhoenixUtil.run("Apply Lead TalonFXConfiguration", leadMotor, () -> leadMotor.getConfigurator().apply(motorCfg)
+        );
         PhoenixUtil.run("Apply Follow TalonFXConfiguration", followMotor, () ->
-            followMotor.getConfigurator().apply(followCfg)
+            followMotor.getConfigurator().apply(motorCfg)
         );
 
+        positionControl = new MotionMagicVoltage(0).withSlot(0);
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
-
-        // CAN CODER SETUP
-        leadCanCoder = new CANcoder(RobotMap.kElevatorLeadEncoder, RobotMap.kLowerCANBus);
-        followCanCoder = new CANcoder(RobotMap.kElevatorFollowEncoder, RobotMap.kLowerCANBus);
-
-        CANcoderConfiguration leadCanCoderConfig = new CANcoderConfiguration();
-        CANcoderConfiguration followCanCoderConfig = new CANcoderConfiguration();
-        //: TODO FILL IN CFG
-        PhoenixUtil.run("Clear Lead Sticky Faults", leadCanCoder, () -> leadCanCoder.clearStickyFaults());
-        PhoenixUtil.run("Apply Lead CANcoderConfiguration", leadCanCoder, () ->
-            leadCanCoder.getConfigurator().apply(leadCanCoderConfig)
-        );
-        PhoenixUtil.run("Clear Follow Sticky Faults", followCanCoder, () -> followCanCoder.clearStickyFaults());
-        PhoenixUtil.run("Apply Follow CANcoderConfiguration", followCanCoder, () ->
-            followCanCoder.getConfigurator().apply(followCanCoderConfig)
-        );
-
-        bottomLimit = new DigitalInput(RobotMap.kElevatorLimitSwitch);
     }
-/**
- * Setting the led motor also sets the follow motor
- * @param position
- */
-    public Command goTo(double position){
+
+    /**
+     * Setting the led motor also sets the follow motor
+     * @param position
+     */
+    public Command goTo(ElevatorPosition position) {
         return commandBuilder("Elevator.goTo()")
-            .onExecute(() ->{
-// distance and direction to goal position
-// determine speed
-// tell the motors to go
+            .onExecute(() -> {
+                leadMotor.setControl(positionControl.withPosition(position.rotations()));
             })
-            .isFinished(()->false
-            // in position within error 
-            // get position average position of CANcoder
-            );
-       
+            .isFinished(
+                () -> false
+                // in position within error
+                // get position average position of CANcoder
+            )
+            .onEnd(() -> {
+                leadMotor.stopMotor();
+            });
     }
 }
