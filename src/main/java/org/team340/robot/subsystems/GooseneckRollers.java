@@ -2,33 +2,39 @@ package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.TalonFXS;
+
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
 import java.util.function.DoubleSupplier;
+
+import org.team340.lib.util.Tunable;
+import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants.RobotMap;
 
+@Logged
 public class GooseneckRollers extends GRRSubsystem {
 
-    final double kIntakeSpeed = 0.0;
-    final double kScoreSpeed = 0.0;
-    final double kIndexingSpeed = 0.0;
+    private static final TunableDouble kIntakeSpeed = Tunable.doubleValue("GooseneckRollers/kIntakeSpeed", 0.0);
+    private static final TunableDouble kScoreSpeed = Tunable.doubleValue("GooseneckRollers/kScoreSpeed",0.0);
+    private static final TunableDouble kIndexingSpeed = Tunable.doubleValue("GooseneckRollers/kIndexingSpeed", 0.0);
 
-    final TalonFXS rollerMotor;
-    final CANdi beamBreak;
+    private final TalonFXS rollerMotor;
+    private final CANdi beamBreak;
 
     public GooseneckRollers() {
         rollerMotor = new TalonFXS(RobotMap.kGooseneckRollersMotor);
-        beamBreak = new CANdi(RobotMap.kGooseneckRollersBeamBreak);
+        beamBreak = new CANdi(RobotMap.kGooseneckRCANdi);
     }
 
-    public void applySpeed(double speed) {
+    private void applySpeed(double speed) {
         rollerMotor.set(speed);
     }
 
-    public void stop() {
+    private void stop() {
         rollerMotor.stopMotor();
     }
 
@@ -51,11 +57,11 @@ public class GooseneckRollers extends GRRSubsystem {
     }
 
     public Command intake() {
-        return runAtSpeed(kIntakeSpeed);
+        return runAtSpeed(kIntakeSpeed::value);
     }
 
     public Command score() {
-        return runAtSpeed(kScoreSpeed);
+        return runAtSpeed(kScoreSpeed::value);
     }
 
     public Command indexPiece() {
@@ -64,7 +70,7 @@ public class GooseneckRollers extends GRRSubsystem {
                 sequence(waitUntil(this::hasPiece), waitUntil(this::notHasPiece)),
                 intake()
             ),
-            runAtSpeed(kIndexingSpeed).until(this::hasPiece)
+            runAtSpeed(kIndexingSpeed::value).until(this::hasPiece)
         );
     }
 }

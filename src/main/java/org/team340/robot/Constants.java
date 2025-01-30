@@ -38,9 +38,9 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
-        public static final int kGooseneckRollersMotor = 30;
-        public static final int kGooseneckRollersBeamBreak = 31;
-        public static final ForwardLimitSourceValue kGooseneckRollersBeamBreakPort =
+        public static final int kGooseneckRollersMotor = 31;
+        public static final int kGooseneckRCANdi = 32;
+        public static final ForwardLimitSourceValue kGooseneckRollersCANdiPort =
             ForwardLimitSourceValue.RemoteCANdiS1;
     }
 }
