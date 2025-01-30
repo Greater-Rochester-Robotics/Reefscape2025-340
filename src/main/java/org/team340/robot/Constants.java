@@ -36,7 +36,7 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
-        public static final int kIntakeMotor = 20;
-        public static final int kIntakeBeamBreak = 21;
+        public static final int kIntakeMotor = 40;
+        public static final int kIntakeBeamBreak = 9;
     }
 }
