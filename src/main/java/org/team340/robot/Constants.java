@@ -36,7 +36,7 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
-        public static final int kGooseneckPivotMotor = 40;
-        public static final int kGooseneckPivotEncoder = 41;
+        public static final int kGooseneckPivotMotor = 30;
+        public static final int kGooseneckPivotEncoder = 33;
     }
 }
