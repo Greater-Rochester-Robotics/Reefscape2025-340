@@ -5,6 +5,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import com.ctre.phoenix6.configs.TalonFXSConfiguration;
 import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.TalonFXS;
+import com.ctre.phoenix6.signals.ForwardLimitSourceValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
@@ -28,17 +29,18 @@ public class GooseBeak extends GRRSubsystem {
     private final CANdi beamBreak;
 
     public GooseBeak() {
-        rollerMotor = new TalonFXS(RobotMap.kGooseneckRollersMotor);
+        rollerMotor = new TalonFXS(RobotMap.kGooseBeakMotor, RobotMap.kUpperCANBus);
 
         TalonFXSConfiguration rollerConfig = new TalonFXSConfiguration();
 
         rollerConfig.CurrentLimits.StatorCurrentLimit = 0.0;
         rollerConfig.CurrentLimits.SupplyCurrentLimit = 0.0;
 
-        PhoenixUtil.run("Apply the TalonFXSConfiguration to the rollerMotor",
-            rollerMotor, () -> rollerMotor.getConfigurator().apply(rollerConfig));
+        PhoenixUtil.run("Apply the TalonFXSConfiguration to the rollerMotor", rollerMotor, () ->
+            rollerMotor.getConfigurator().apply(rollerConfig)
+        );
 
-        beamBreak = new CANdi(RobotMap.kGooseneckRCANdi);
+        beamBreak = new CANdi(RobotMap.kGooseBeakCANdi, RobotMap.kUpperCANBus);
     }
 
     // *************** Helper Functions ***************
@@ -63,7 +65,11 @@ public class GooseBeak extends GRRSubsystem {
      * @return True if the beam break detects an object, false otherwise.
      */
     public boolean hasPiece() {
-        return beamBreak.getS1Closed().getValue();
+        return (
+            RobotMap.kGooseBeakCANdiPort == ForwardLimitSourceValue.RemoteCANdiS1
+                ? beamBreak.getS1Closed()
+                : beamBreak.getS2Closed()
+        ).getValue();
     }
 
     // *************** Commands ***************

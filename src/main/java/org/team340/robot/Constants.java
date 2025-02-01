@@ -20,7 +20,12 @@ public final class Constants {
      */
     public static final class RobotMap {
 
-        public static final String kSwerveCANBus = "Swerve";
+        public static final String kLowerCANBus = "Lower";
+        public static final String kUpperCANBus = "Upper";
+
+        // *************** Lower CAN Bus ***************
+
+        // Swerve
 
         public static final int kFlMove = 2;
         public static final int kFlTurn = 3;
@@ -38,10 +43,14 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
-        public static final int kGooseneckRollersMotor = 31;
-        public static final int kGooseneckRCANdi = 32;
+        // *************** Upper CAN Bus ***************
 
-        public static final ForwardLimitSourceValue kGooseneckRollersCANdiPort = ForwardLimitSourceValue.RemoteCANdiS1;
+        // Goose Beak
+        public static final int kGooseBeakMotor = 31;
+        public static final int kGooseBeakCANdi = 32;
+        public static final ForwardLimitSourceValue kGooseBeakCANdiPort = ForwardLimitSourceValue.RemoteCANdiS1;
+
+        // Intake
         public static final int kIntakeMotor = 40;
         public static final int kIntakeBeamBreak = 9;
     }

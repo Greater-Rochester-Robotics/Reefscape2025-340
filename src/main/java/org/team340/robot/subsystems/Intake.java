@@ -21,7 +21,7 @@ public class Intake extends GRRSubsystem {
     private final DigitalInput beamBreak;
 
     public Intake() {
-        intakeMotor = new TalonFX(RobotMap.kIntakeMotor);
+        intakeMotor = new TalonFX(RobotMap.kIntakeMotor, RobotMap.kUpperCANBus);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
