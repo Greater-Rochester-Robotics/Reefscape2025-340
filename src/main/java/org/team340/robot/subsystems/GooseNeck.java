@@ -123,6 +123,6 @@ public class GooseNeck extends GRRSubsystem {
      * @param position The position to move the pivot to.
      */
     public Command goToPosition(Positions position) {
-        return goToPosition(position.getPosition()).withName(getMethodInfo(position.name()));
+        return goToPosition(position::getPosition).withName(getMethodInfo(position.name()));
     }
 }
