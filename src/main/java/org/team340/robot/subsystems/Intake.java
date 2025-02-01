@@ -15,7 +15,10 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class Intake extends GRRSubsystem {
 
-    private static final TunableDouble kIntakingSpeed = Tunable.doubleValue("Intake/kIntakingSpeed", 0.0);
+    private static final TunableDouble kIntakingSpeed = Tunable.doubleValue(
+        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed",
+        0.0
+    );
 
     private final TalonFX intakeMotor;
     private final DigitalInput beamBreak;

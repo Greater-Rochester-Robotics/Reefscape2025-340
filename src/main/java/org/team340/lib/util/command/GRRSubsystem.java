@@ -36,4 +36,8 @@ public abstract class GRRSubsystem implements Subsystem {
             ")"
         );
     }
+
+    protected static String getEnclosingClassName(Object obj) {
+        return obj.getClass().getEnclosingClass().getSimpleName();
+    }
 }
