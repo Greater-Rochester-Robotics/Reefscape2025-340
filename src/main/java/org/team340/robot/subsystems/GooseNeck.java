@@ -18,8 +18,6 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class GooseNeck extends GRRSubsystem {
 
-    private static final String name = "GooseNeck";
-
     public enum Positions {
         kIn(0.0),
         kScoreForward(0.0),
@@ -29,7 +27,10 @@ public class GooseNeck extends GRRSubsystem {
         private TunableDouble position;
 
         Positions(double position) {
-            this.position = Tunable.doubleValue(name + "/Positions/" + name(), position);
+            this.position = Tunable.doubleValue(
+                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(),
+                position
+            );
         }
 
         public double getPosition() {
@@ -81,7 +82,7 @@ public class GooseNeck extends GRRSubsystem {
         if (position > kUpperLimit || position < kLowerLimit) {
             DriverStation.reportWarning(
                 "The " +
-                name +
+                getName() +
                 " position " +
                 position +
                 " must be less than " +
