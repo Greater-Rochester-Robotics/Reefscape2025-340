@@ -2,12 +2,10 @@ package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
-
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
-
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -40,7 +38,7 @@ public class Intake extends GRRSubsystem {
      * Sets the target speed of the intake wheels.
      * @param speed The target speed between 1.0 and -1.0.
      */
-    private  void setTargetSpeed(double speed) {
+    private void setTargetSpeed(double speed) {
         intakeMotor.set(speed);
     }
 
