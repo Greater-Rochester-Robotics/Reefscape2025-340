@@ -1,5 +1,7 @@
 package org.team340.robot;
 
+import com.ctre.phoenix6.signals.ForwardLimitSourceValue;
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -18,7 +20,12 @@ public final class Constants {
      */
     public static final class RobotMap {
 
-        public static final String kSwerveCANBus = "Swerve";
+        public static final String kLowerCANBus = "Lower";
+        public static final String kUpperCANBus = "Upper";
+
+        // *************** Lower CAN Bus ***************
+
+        // Swerve
 
         public static final int kFlMove = 2;
         public static final int kFlTurn = 3;
@@ -38,5 +45,16 @@ public final class Constants {
 
         public static final int kGooseneckPivotMotor = 30;
         public static final int kGooseneckPivotEncoder = 33;
+        // *************** Upper CAN Bus ***************
+
+        // Goose Beak
+        public static final int kGooseBeakMotor = 31;
+        public static final int kGooseBeakCANdi = 32;
+        public static final ForwardLimitSourceValue kGooseBeakCANdiPort = ForwardLimitSourceValue.RemoteCANdiS1;
+
+        // Intake
+        public static final int kIntakeMotor = 40;
+        // This is a DIO channel (not CAN).
+        public static final int kIntakeBeamBreak = 9;
     }
 }

@@ -70,7 +70,7 @@ public final class Swerve extends GRRSubsystem {
         .setMechanicalProperties(5.4, 12.1, 4.5, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(RobotMap.kCanandgyro))
-        .setPhoenixFeatures(new CANBus(RobotMap.kSwerveCANBus), true, true, true)
+        .setPhoenixFeatures(new CANBus(RobotMap.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
     private static final double kAutoKp = 7.0;
