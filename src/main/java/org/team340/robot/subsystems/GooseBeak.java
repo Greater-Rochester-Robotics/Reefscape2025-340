@@ -20,6 +20,7 @@ import org.team340.robot.Constants.RobotMap;
  */
 @Logged
 public class GooseBeak extends GRRSubsystem {
+
     private static final String name = "GooseBeak";
 
     private static final TunableDouble kIntakeSpeed = Tunable.doubleValue(name + "/kIntakeSpeed", 0.0);
