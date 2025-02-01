@@ -23,8 +23,10 @@ public class Intake extends GRRSubsystem {
     public Intake() {
         intakeMotor = new TalonFX(RobotMap.kIntakeMotor);
 
-        // TODO Add configuration.
         TalonFXConfiguration config = new TalonFXConfiguration();
+
+        config.CurrentLimits.StatorCurrentLimit = 0.0;
+        config.CurrentLimits.SupplyCurrentLimit = 0.0;
 
         PhoenixUtil.run("Clear Intake Motor Sticky Faults", intakeMotor, () -> intakeMotor.clearStickyFaults());
         PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", intakeMotor, () ->
@@ -34,9 +36,18 @@ public class Intake extends GRRSubsystem {
         beamBreak = new DigitalInput(RobotMap.kIntakeBeamBreak);
     }
 
+    // *************** Helper Functions ***************
+
+    /**
+     * Stops the intake.
+     */
+    private void stop() {
+        intakeMotor.stopMotor();
+    }
+
     /**
      * Sets the target speed of the intake wheels.
-     * @param speed The target speed between 1.0 and -1.0.
+     * @param speed The target speed. Speed should be between 1.0 and -1.0.
      */
     private void setTargetSpeed(double speed) {
         intakeMotor.set(speed);
@@ -50,21 +61,21 @@ public class Intake extends GRRSubsystem {
         return beamBreak.get();
     }
 
+    // *************** Commands ***************
+
     /**
      * Runs the intake at the speed supplied by the {@code speedSupplier}.
      * @param speedSupplier Provides the speed the intake will be run at, which should be between 1.0 and -1.0.
      */
     private Command runAtSpeed(DoubleSupplier speedSupplier) {
-        return commandBuilder()
-            .onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble()))
-            .onEnd(() -> intakeMotor.stopMotor());
+        return commandBuilder().onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble())).onEnd(this::stop);
     }
 
     /**
      * Runs the intake at {@code speed}.
      * @param speed The speed to run the intake at, which should be between 1.0 and -1.0.
      */
-    public Command runAtSpeed(double speed) {
+    private Command runAtSpeed(double speed) {
         return runAtSpeed(() -> speed);
     }
 
