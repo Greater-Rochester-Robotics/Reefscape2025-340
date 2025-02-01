@@ -20,10 +20,11 @@ import org.team340.robot.Constants.RobotMap;
  */
 @Logged
 public class GooseBeak extends GRRSubsystem {
+    private static final String name = "GooseBeak";
 
-    private static final TunableDouble kIntakeSpeed = Tunable.doubleValue("GooseBeak/kIntakeSpeed", 0.0);
-    private static final TunableDouble kScoreSpeed = Tunable.doubleValue("GooseBeak/kScoreSpeed", 0.0);
-    private static final TunableDouble kIndexingSpeed = Tunable.doubleValue("GooseBeak/kIndexingSpeed", 0.0);
+    private static final TunableDouble kIntakeSpeed = Tunable.doubleValue(name + "/kIntakeSpeed", 0.0);
+    private static final TunableDouble kScoreSpeed = Tunable.doubleValue(name + "/kScoreSpeed", 0.0);
+    private static final TunableDouble kIndexingSpeed = Tunable.doubleValue(name + "/kIndexingSpeed", 0.0);
 
     private final TalonFXS rollerMotor;
     private final CANdi beamBreak;
@@ -79,7 +80,7 @@ public class GooseBeak extends GRRSubsystem {
      * @param speedSupplier Supplies the speed the rollers are run at. Speeds should be between 1.0 and -1.0
      */
     private Command runAtSpeed(DoubleSupplier speedSupplier) {
-        return commandBuilder("GooseneckRollers.runAtSpeed(supplier)")
+        return commandBuilder(name + ".runAtSpeed(supplier)")
             .onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble()))
             .onEnd(this::stop);
     }
@@ -89,21 +90,21 @@ public class GooseBeak extends GRRSubsystem {
      * @param speed The speed to run the rollers at. Speeds should be between 1.0 and -1.0.
      */
     private Command runAtSpeed(double speed) {
-        return runAtSpeed(() -> speed).withName("GooseneckRollers.runAtSpeed(" + speed + ")");
+        return runAtSpeed(() -> speed).withName(name + ".runAtSpeed(" + speed + ")");
     }
 
     /**
      * Runs the intake at the {@link GooseneckRollers#kIntakeSpeed kIntakeSpeed}.
      */
     public Command intake() {
-        return runAtSpeed(kIntakeSpeed::value).withName("GooseneckRollers.intake()");
+        return runAtSpeed(kIntakeSpeed::value).withName(name + ".intake()");
     }
 
     /**
      * Runs the intake at the {@link GooseneckRollers#kScoreSpeed}.
      */
     public Command score() {
-        return runAtSpeed(kScoreSpeed::value).withName("GooseneckRollers.score()");
+        return runAtSpeed(kScoreSpeed::value).withName(name + ".score()");
     }
 
     /**
@@ -113,6 +114,6 @@ public class GooseBeak extends GRRSubsystem {
         return sequence(
             deadline(sequence(waitUntil(this::hasPiece), waitUntil(() -> !hasPiece())), intake()),
             runAtSpeed(kIndexingSpeed::value).until(this::hasPiece)
-        ).withName("GooseneckRollers.indexPiece()");
+        ).withName(name + ".indexPiece()");
     }
 }
