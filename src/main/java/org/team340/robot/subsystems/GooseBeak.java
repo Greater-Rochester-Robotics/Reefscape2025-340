@@ -15,7 +15,7 @@ import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RobotMap;
 
 /**
- * Controls the rollers and senores used to score the coral.
+ * Controls the rollers and sensors used to score the coral, not including the pivot.
  */
 @Logged
 public class GooseBeak extends GRRSubsystem {
