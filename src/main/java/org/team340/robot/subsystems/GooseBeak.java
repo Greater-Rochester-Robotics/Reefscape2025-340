@@ -21,9 +21,9 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class GooseBeak extends GRRSubsystem {
 
-    private static final TunableDouble kIntakeSpeed = Tunable.doubleValue("GooseneckRollers/kIntakeSpeed", 0.0);
-    private static final TunableDouble kScoreSpeed = Tunable.doubleValue("GooseneckRollers/kScoreSpeed", 0.0);
-    private static final TunableDouble kIndexingSpeed = Tunable.doubleValue("GooseneckRollers/kIndexingSpeed", 0.0);
+    private static final TunableDouble kIntakeSpeed = Tunable.doubleValue("GooseBeak/kIntakeSpeed", 0.0);
+    private static final TunableDouble kScoreSpeed = Tunable.doubleValue("GooseBeak/kScoreSpeed", 0.0);
+    private static final TunableDouble kIndexingSpeed = Tunable.doubleValue("GooseBeak/kIndexingSpeed", 0.0);
 
     private final TalonFXS rollerMotor;
     private final CANdi beamBreak;

@@ -52,6 +52,7 @@ public final class Constants {
 
         // Intake
         public static final int kIntakeMotor = 40;
+        // This is a DIO channel (not CAN).
         public static final int kIntakeBeamBreak = 9;
     }
 }
