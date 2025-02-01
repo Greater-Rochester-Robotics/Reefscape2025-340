@@ -20,8 +20,22 @@ public class GooseNeck extends GRRSubsystem {
 
     private static final String name = "GooseNeck";
 
-    private static final TunableDouble kDeployedPosition = Tunable.doubleValue(name + "/kDeployedPosition", 0.0);
-    private static final TunableDouble kSafePosition = Tunable.doubleValue(name + "/kSafePosition", 0.0);
+    public enum Positions {
+        kIn(0.0),
+        kScoreForward(0.0),
+        kScoreLeft(0.0),
+        kScoreRight(0.0);
+
+        private TunableDouble position;
+
+        Positions(double position) {
+            this.position = Tunable.doubleValue(name + "/Positions/" + name(), position);
+        }
+
+        public double getPosition() {
+            return position.value();
+        }
+    }
 
     // These are intentionally not tunable.
     private static final double kUpperLimit = 0.0;
@@ -90,8 +104,8 @@ public class GooseNeck extends GRRSubsystem {
      * Moves the pivot to the position supplied by {@code positionSupplier}.
      * @param positionSupplier The supplier of the position. Positions should be in radians.
      */
-    public Command goToPosition(DoubleSupplier positionSupplier) {
-        return commandBuilder(name + ".goToPosition(supplier)")
+    private Command goToPosition(DoubleSupplier positionSupplier) {
+        return commandBuilder(getMethodInfo("supplier"))
             .onExecute(() -> setTargetPosition(positionSupplier.getAsDouble()))
             .onEnd(this::stop);
     }
@@ -100,21 +114,15 @@ public class GooseNeck extends GRRSubsystem {
      * Moves the pivot to the {@code position}.
      * @param position The position to move the pivot to. The position should be in radians.
      */
-    public Command goToPosition(double position) {
-        return goToPosition(() -> position).withName(name + ".goToPosition(" + position + ")");
+    private Command goToPosition(double position) {
+        return goToPosition(() -> position).withName(getMethodInfo(String.valueOf(position)));
     }
 
     /**
-     * Moves the pivot to the {@link GooseNeck#kDeployedPosition kDeployedPosition}.
+     * Moves the pivot to the {@code position}.
+     * @param position The position to move the pivot to.
      */
-    public Command deploy() {
-        return goToPosition(kDeployedPosition::value).withName(name + ".deploy()");
-    }
-
-    /**
-     * Moves the pivot to the {@link GooseNeck#kSafePosition kSafePosition}.
-     */
-    public Command retract() {
-        return goToPosition(kSafePosition::value).withName(name + ".retract()");
+    public Command goToPosition(Positions position) {
+        return goToPosition(position.getPosition()).withName(getMethodInfo(position.name()));
     }
 }

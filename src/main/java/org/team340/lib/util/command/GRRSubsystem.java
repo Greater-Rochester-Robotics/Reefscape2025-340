@@ -25,4 +25,15 @@ public abstract class GRRSubsystem implements Subsystem {
     public CommandBuilder commandBuilder(String name) {
         return new CommandBuilder(name, this);
     }
+
+    protected String getMethodInfo(String... args) {
+        return (
+            getName() +
+            "." +
+            Thread.currentThread().getStackTrace()[2].getMethodName() +
+            "(" +
+            String.join(",", args) +
+            ")"
+        );
+    }
 }
