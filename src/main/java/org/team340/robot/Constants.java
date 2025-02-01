@@ -43,9 +43,11 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
-        public static final int kGooseneckPivotMotor = 30;
-        public static final int kGooseneckPivotEncoder = 33;
         // *************** Upper CAN Bus ***************
+
+        // Goose Neck
+        public static final int kGooseNeckMotor = 30;
+        public static final int kGooseNeckEncoder = 33;
 
         // Goose Beak
         public static final int kGooseBeakMotor = 31;

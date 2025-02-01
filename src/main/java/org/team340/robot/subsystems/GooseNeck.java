@@ -16,10 +16,12 @@ import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RobotMap;
 
 @Logged
-public class GooseneckPivot extends GRRSubsystem {
+public class GooseNeck extends GRRSubsystem {
 
-    private static final TunableDouble kDeployedPosition = Tunable.doubleValue("GooseneckPivot/kDeployedPosition", 0.0);
-    private static final TunableDouble kSafePosition = Tunable.doubleValue("GooseneckPivot/kSafePosition", 0.0);
+    private static final String name = "GooseNeck";
+
+    private static final TunableDouble kDeployedPosition = Tunable.doubleValue(name + "/kDeployedPosition", 0.0);
+    private static final TunableDouble kSafePosition = Tunable.doubleValue(name + "/kSafePosition", 0.0);
 
     // These are intentionally not tunable.
     private static final double kUpperLimit = 0.0;
@@ -28,8 +30,8 @@ public class GooseneckPivot extends GRRSubsystem {
     private final TalonFX pivotMotor;
     private final CANdi pivotEncoder;
 
-    public GooseneckPivot() {
-        pivotMotor = new TalonFX(RobotMap.kGooseneckPivotMotor);
+    public GooseNeck() {
+        pivotMotor = new TalonFX(RobotMap.kGooseNeckMotor);
         TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
 
         PhoenixUtil.run("Clear pivotMotor sticky faults", pivotMotor, () -> pivotMotor.clearStickyFaults());
@@ -37,7 +39,7 @@ public class GooseneckPivot extends GRRSubsystem {
             pivotMotor.getConfigurator().apply(pivotConfig)
         );
 
-        pivotEncoder = new CANdi(RobotMap.kGooseneckPivotEncoder);
+        pivotEncoder = new CANdi(RobotMap.kGooseNeckEncoder);
 
         final HardwareLimitSwitchConfigs limitConfigs = new HardwareLimitSwitchConfigs();
         limitConfigs.ForwardLimitSource = ForwardLimitSourceValue.RemoteCANcoder;
@@ -48,6 +50,15 @@ public class GooseneckPivot extends GRRSubsystem {
         );
     }
 
+    // *************** Helper Functions ***************
+
+    /**
+     * Stops the pivot motor. Should be run at the onEnd of commands.
+     */
+    private void stop() {
+        pivotMotor.stopMotor();
+    }
+
     /**
      * Sets the target position of the pivot.
      * @param position The position to target in radians.
@@ -55,7 +66,9 @@ public class GooseneckPivot extends GRRSubsystem {
     private void setTargetPosition(double position) {
         if (position > kUpperLimit || position < kLowerLimit) {
             DriverStation.reportWarning(
-                "The GooseneckPivot position " +
+                "The " +
+                name +
+                " position " +
                 position +
                 " must be less than " +
                 kUpperLimit +
@@ -71,19 +84,14 @@ public class GooseneckPivot extends GRRSubsystem {
         pivotMotor.setPosition(position * kInverseTwoPi);
     }
 
-    /**
-     * Stops the pivot motor. Should be run at the onEnd of commands.
-     */
-    private void stop() {
-        pivotMotor.stopMotor();
-    }
+    // *************** Commands ***************
 
     /**
      * Moves the pivot to the position supplied by {@code positionSupplier}.
      * @param positionSupplier The supplier of the position. Positions should be in radians.
      */
     public Command goToPosition(DoubleSupplier positionSupplier) {
-        return commandBuilder("GooseneckPivot.goToPosition(supplier)")
+        return commandBuilder(name + ".goToPosition(supplier)")
             .onExecute(() -> setTargetPosition(positionSupplier.getAsDouble()))
             .onEnd(this::stop);
     }
@@ -93,20 +101,20 @@ public class GooseneckPivot extends GRRSubsystem {
      * @param position The position to move the pivot to. The position should be in radians.
      */
     public Command goToPosition(double position) {
-        return goToPosition(() -> position).withName("GooseneckPivot.goToPosition(" + position + ")");
+        return goToPosition(() -> position).withName(name + ".goToPosition(" + position + ")");
     }
 
     /**
-     * Moves the pivot to the {@link GooseneckPivot#kDeployedPosition kDeployedPosition}.
+     * Moves the pivot to the {@link GooseNeck#kDeployedPosition kDeployedPosition}.
      */
     public Command deploy() {
-        return goToPosition(kDeployedPosition::value).withName("GooseneckPivot.deploy()");
+        return goToPosition(kDeployedPosition::value).withName(name + ".deploy()");
     }
 
     /**
-     * Moves the pivot to the {@link GooseneckPivot#kSafePosition}.
+     * Moves the pivot to the {@link GooseNeck#kSafePosition kSafePosition}.
      */
     public Command retract() {
-        return goToPosition(kSafePosition::value).withName("GooseneckPivot.retract()");
+        return goToPosition(kSafePosition::value).withName(name + ".retract()");
     }
 }
