@@ -36,24 +36,43 @@ public class Intake extends GRRSubsystem {
         beamBreak = new DigitalInput(RobotMap.kIntakeBeamBreak);
     }
 
+    /**
+     * Sets the target speed of the intake wheels.
+     * @param speed The target speed between 1.0 and -1.0.
+     */
     private  void setTargetSpeed(double speed) {
         intakeMotor.set(speed);
     }
 
+    /**
+     * Returns whether the beam break sees the coral or not.
+     * @return True if the beam break detects an object, false otherwise.
+     */
     public boolean coralDetected() {
         return beamBreak.get();
     }
 
-    private Command runAtSpeed(DoubleSupplier speed) {
+    /**
+     * Runs the intake at the speed supplied by the {@code speedSupplier}.
+     * @param speedSupplier Provides the speed the intake will be run at, which should be between 1.0 and -1.0.
+     */
+    private Command runAtSpeed(DoubleSupplier speedSupplier) {
         return commandBuilder()
-            .onExecute(() -> setTargetSpeed(speed.getAsDouble()))
+            .onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble()))
             .onEnd(() -> intakeMotor.stopMotor());
     }
 
+    /**
+     * Runs the intake at {@code speed}.
+     * @param speed The speed to run the intake at, which should be between 1.0 and -1.0.
+     */
     public Command runAtSpeed(double speed) {
         return runAtSpeed(() -> speed);
     }
 
+    /**
+     * Runs the intake at the {@link Intake#kIntakingSpeed kIntakingSpeed}.
+     */
     public Command intake() {
         return runAtSpeed(kIntakingSpeed::value);
     }
