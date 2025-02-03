@@ -25,4 +25,30 @@ public abstract class GRRSubsystem implements Subsystem {
     public CommandBuilder commandBuilder(String name) {
         return new CommandBuilder(name, this);
     }
+
+    /**
+     * Creates a commands name in the form subsystemName.methodName(args).
+     * @param args The args to use as strings.
+     * @return The name of the command.
+     */
+    protected String getMethodInfo(String... args) {
+        return (
+            getName() +
+            "." +
+            Thread.currentThread().getStackTrace()[2].getMethodName() +
+            "(" +
+            String.join(",", args) +
+            ")"
+        );
+    }
+
+    /**
+     * Gets the name of the class enclosing the specified object.
+     * Use {@code getEnclosingClassName(new Object() {})} to get the name of the enclosing class.
+     * @param obj The object to use.
+     * @return The name of the objects enclosing class.
+     */
+    protected static String getEnclosingClassName(Object obj) {
+        return obj.getClass().getEnclosingClass().getSimpleName();
+    }
 }
