@@ -8,6 +8,7 @@ import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -18,15 +19,10 @@ import org.team340.robot.Constants.RobotMap;
 public class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
-        /** Down position. */
         kDown(0),
-
         kL1(0),
-
         kL2(0),
-
         kL3(0),
-
         kL4(0);
 
         private final TunableDouble rotations;
@@ -51,22 +47,25 @@ public class Elevator extends GRRSubsystem {
 
         TalonFXConfiguration motorCfg = new TalonFXConfiguration();
 
-        // TODO: FILL IN CFG
         motorCfg.CurrentLimits.StatorCurrentLimit = 80;
         motorCfg.CurrentLimits.SupplyCurrentLimit = 100;
+
         motorCfg.Slot0.kP = 0;
         motorCfg.Slot0.kI = 0;
         motorCfg.Slot0.kD = 0;
         motorCfg.Slot0.kG = 0;
         motorCfg.Slot0.kS = 0;
         motorCfg.Slot0.kV = 0;
+
         motorCfg.MotionMagic.MotionMagicCruiseVelocity = 0;
         motorCfg.MotionMagic.MotionMagicAcceleration = 0;
+
         motorCfg.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
         motorCfg.HardwareLimitSwitch.ReverseLimitRemoteSensorID = 22;
         motorCfg.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
         motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0;
+
         PhoenixUtil.run("Clear Lead Motor Sticky Faults", leadMotor, () -> leadMotor.clearStickyFaults());
         PhoenixUtil.run("Clear Follow Motor sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
         PhoenixUtil.run("Apply Lead TalonFXConfiguration", leadMotor, () -> leadMotor.getConfigurator().apply(motorCfg)
@@ -79,20 +78,26 @@ public class Elevator extends GRRSubsystem {
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
     }
 
+    // *************** Helper Functions ***************
+
+    public boolean isAtPosition(ElevatorPosition position) {
+        double averagePosition =
+            (leadMotor.getPosition().getValueAsDouble() + followMotor.getPosition().getValueAsDouble()) / 2.0;
+        return Math2.epsilonEquals(averagePosition, position.rotations());
+    }
+
+    // *************** Commands ***************
     /**
-     * Setting the led motor also sets the follow motor
-     * @param position
+     * Move elevator to predetermined positions.
+     * @param position - The predetermined positions.
      */
     public Command goTo(ElevatorPosition position) {
         return commandBuilder("Elevator.goTo()")
             .onExecute(() -> {
+                // Setting lead motor also sets the follow motor
                 leadMotor.setControl(positionControl.withPosition(position.rotations()));
             })
-            .isFinished(
-                () -> false
-                // in position within error
-                // get position average position of CANcoder
-            )
+            .isFinished(() -> isAtPosition(position))
             .onEnd(() -> {
                 leadMotor.stopMotor();
             });
