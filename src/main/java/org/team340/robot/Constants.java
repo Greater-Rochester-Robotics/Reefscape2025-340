@@ -58,7 +58,7 @@ public final class Constants {
         public static final int kGooseBeakMotor = 31;
         public static final int kGooseCANdi = 32;
         public static final ReverseLimitSourceValue kGooseBeamBreak = ReverseLimitSourceValue.RemoteCANdiS1;
-        public static final FeedbackSensorSourceValue kGooseEncoder = FeedbackSensorSourceValue.RemoteCANdiPWM2;
+        public static final FeedbackSensorSourceValue kGooseEncoder = FeedbackSensorSourceValue.FusedCANdiPWM2;
 
         // Intake
         public static final int kIntakeMotor = 40;
