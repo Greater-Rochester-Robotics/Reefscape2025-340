@@ -4,7 +4,6 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -60,8 +59,8 @@ public class Elevator extends GRRSubsystem {
         motorCfg.MotionMagic.MotionMagicCruiseVelocity = 0;
         motorCfg.MotionMagic.MotionMagicAcceleration = 0;
 
-        motorCfg.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
-        motorCfg.HardwareLimitSwitch.ReverseLimitRemoteSensorID = 22;
+        motorCfg.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kElevatorLimitPort;
+        motorCfg.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kElevatorCANdi;
         motorCfg.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
         motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0;

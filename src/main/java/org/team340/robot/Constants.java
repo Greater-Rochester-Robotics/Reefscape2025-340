@@ -1,6 +1,7 @@
 package org.team340.robot;
 
-import com.ctre.phoenix6.signals.ForwardLimitSourceValue;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -40,27 +41,28 @@ public final class Constants {
         public static final int kBlEncoder = 12;
         public static final int kBrEncoder = 13;
 
+        // *On the upper CAN bus.
+        // TODO revist organization / comments of RobotMap
         public static final int kCanandgyro = 14;
 
         // Elevator
-        public static final int kElevatorLead = 15;
-        public static final int kElevatorFollow = 16;
-        public static final int kElevatorLeadEncoder = 17;
-        public static final int kElevatorFollowEncoder = 18;
+        public static final int kElevatorLead = 20;
+        public static final int kElevatorFollow = 21;
+        public static final int kElevatorCANdi = 22;
+        public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.RemoteCANdiS1;
 
         // *************** Upper CAN Bus ***************
 
-        // Goose Neck
+        // Goose
         public static final int kGooseNeckMotor = 30;
-        public static final int kGooseNeckEncoder = 33;
-
-        // Goose Beak
         public static final int kGooseBeakMotor = 31;
-        public static final int kGooseBeakCANdi = 32;
-        public static final ForwardLimitSourceValue kGooseBeakCANdiPort = ForwardLimitSourceValue.RemoteCANdiS1;
+        public static final int kGooseCANdi = 32;
+        public static final ReverseLimitSourceValue kGooseBeamBreak = ReverseLimitSourceValue.RemoteCANdiS1;
+        public static final FeedbackSensorSourceValue kGooseEncoder = FeedbackSensorSourceValue.RemoteCANdiPWM2;
 
         // Intake
         public static final int kIntakeMotor = 40;
+
         // This is a DIO channel (not CAN).
         public static final int kIntakeBeamBreak = 9;
     }

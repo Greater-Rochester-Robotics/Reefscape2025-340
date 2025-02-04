@@ -2,7 +2,6 @@ package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.configs.HardwareLimitSwitchConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.ForwardLimitSourceValue;
 import edu.wpi.first.epilogue.Logged;
@@ -43,22 +42,21 @@ public class GooseNeck extends GRRSubsystem {
     private static final double kLowerLimit = 0.0;
 
     private final TalonFX pivotMotor;
-    private final CANdi pivotEncoder;
 
     public GooseNeck() {
         pivotMotor = new TalonFX(RobotMap.kGooseNeckMotor);
         TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
+
+        // TODO fix config
 
         PhoenixUtil.run("Clear pivotMotor sticky faults", pivotMotor, () -> pivotMotor.clearStickyFaults());
         PhoenixUtil.run("Apply pivotMotor TalonFXConfiguration", pivotMotor, () ->
             pivotMotor.getConfigurator().apply(pivotConfig)
         );
 
-        pivotEncoder = new CANdi(RobotMap.kGooseNeckEncoder);
-
         final HardwareLimitSwitchConfigs limitConfigs = new HardwareLimitSwitchConfigs();
-        limitConfigs.ForwardLimitSource = ForwardLimitSourceValue.RemoteCANcoder;
-        limitConfigs.ForwardLimitRemoteSensorID = pivotEncoder.getDeviceID();
+        limitConfigs.ForwardLimitRemoteSensorID = RobotMap.kGooseCANdi;
+        limitConfigs.ForwardLimitSource = ForwardLimitSourceValue.RemoteCANdiS2;
 
         PhoenixUtil.run("Apply pivotMotor HardwareLimitSwitchConfigs", pivotMotor, () ->
             pivotMotor.getConfigurator().apply(limitConfigs)
