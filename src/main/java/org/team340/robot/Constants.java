@@ -20,8 +20,7 @@ public final class Constants {
      */
     public static final class RobotMap {
 
-        public static final String kLowerCANBus = "Lower";
-        public static final String kUpperCANBus = "Upper";
+        public static final String kLowerCANBus = "LowerCAN";
 
         // *************** Lower CAN Bus ***************
 

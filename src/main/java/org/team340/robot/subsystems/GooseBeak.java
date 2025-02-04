@@ -44,7 +44,7 @@ public class GooseBeak extends GRRSubsystem {
     private final CANdi beamBreak;
 
     public GooseBeak() {
-        rollerMotor = new TalonFXS(RobotMap.kGooseBeakMotor, RobotMap.kUpperCANBus);
+        rollerMotor = new TalonFXS(RobotMap.kGooseBeakMotor);
 
         TalonFXSConfiguration rollerConfig = new TalonFXSConfiguration();
 
@@ -55,7 +55,7 @@ public class GooseBeak extends GRRSubsystem {
             rollerMotor.getConfigurator().apply(rollerConfig)
         );
 
-        beamBreak = new CANdi(RobotMap.kGooseBeakCANdi, RobotMap.kUpperCANBus);
+        beamBreak = new CANdi(RobotMap.kGooseBeakCANdi);
     }
 
     // *************** Helper Functions ***************
