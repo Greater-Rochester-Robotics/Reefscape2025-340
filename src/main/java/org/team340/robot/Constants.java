@@ -43,6 +43,12 @@ public final class Constants {
 
         public static final int kCanandgyro = 14;
 
+        // Elevator
+        public static final int kElevatorLead = 15;
+        public static final int kElevatorFollow = 16;
+        public static final int kElevatorLeadEncoder = 17;
+        public static final int kElevatorFollowEncoder = 18;
+
         // *************** Upper CAN Bus ***************
 
         // Goose Neck

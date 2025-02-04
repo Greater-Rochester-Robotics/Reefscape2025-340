@@ -16,12 +16,14 @@ import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
+import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Swerve;
 
 @Logged
 public final class Robot extends TimedRobot {
 
     public final Swerve swerve;
+    public final Elevator elevator;
 
     public final Routines routines;
     public final Autos autos;
@@ -40,6 +42,9 @@ public final class Robot extends TimedRobot {
 
         // Initialize subsystems
         swerve = new Swerve();
+
+        // Initialize elevator
+        elevator = new Elevator();
 
         // Initialize compositions
         routines = new Routines(this);
