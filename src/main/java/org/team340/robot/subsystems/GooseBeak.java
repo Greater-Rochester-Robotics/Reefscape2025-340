@@ -30,7 +30,7 @@ public class GooseBeak extends GRRSubsystem {
 
         Speeds(double speed) {
             this.speed = Tunable.doubleValue(
-                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(),
+                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(), // TODO is this necessary?
                 speed
             );
         }
@@ -40,32 +40,36 @@ public class GooseBeak extends GRRSubsystem {
         }
     }
 
-    private final TalonFXS rollerMotor;
+    private final TalonFXS motor;
 
     public GooseBeak() {
-        rollerMotor = new TalonFXS(RobotMap.kGooseBeakMotor);
+        motor = new TalonFXS(RobotMap.kGooseBeakMotor);
 
-        TalonFXSConfiguration rollerConfig = new TalonFXSConfiguration();
+        TalonFXSConfiguration config = new TalonFXSConfiguration();
 
-        rollerConfig.CurrentLimits.StatorCurrentLimit = 0.0;
-        rollerConfig.CurrentLimits.SupplyCurrentLimit = 0.0;
+        config.CurrentLimits.StatorCurrentLimit = 0.0;
+        config.CurrentLimits.SupplyCurrentLimit = 0.0;
 
-        rollerConfig.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
-        rollerConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
-        rollerConfig.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+        config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
+        config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
+        config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+        config.HardwareLimitSwitch.ReverseLimitEnable = false; // TODO this may change depending on sensor mounting
 
-        PhoenixUtil.run("Apply the TalonFXSConfiguration to the rollerMotor", rollerMotor, () ->
-            rollerMotor.getConfigurator().apply(rollerConfig)
+        PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
+        PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () ->
+            motor.getConfigurator().apply(config)
         );
     }
 
     // *************** Helper Functions ***************
 
+    // TODO we probably don't need all of these methods
+
     /**
      * Stops the roller motor.
      */
     private void stop() {
-        rollerMotor.stopMotor();
+        motor.stopMotor();
     }
 
     /**
@@ -73,7 +77,8 @@ public class GooseBeak extends GRRSubsystem {
      * @param speed The target speed. Speeds should be between 1.0 and -1.0.
      */
     private void setTargetSpeed(double speed) {
-        rollerMotor.set(speed);
+        // TODO Should be voltage control
+        motor.set(speed);
     }
 
     /**
@@ -81,7 +86,8 @@ public class GooseBeak extends GRRSubsystem {
      * @return True if the beam break detects an object, false otherwise.
      */
     public boolean hasPiece() {
-        return rollerMotor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+        // TODO determine sensor default state
+        return motor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
     }
 
     // *************** Commands ***************
@@ -91,7 +97,7 @@ public class GooseBeak extends GRRSubsystem {
      * @param speedSupplier Supplies the speed the rollers are run at. Speeds should be between 1.0 and -1.0
      */
     private Command runAtSpeed(DoubleSupplier speedSupplier) {
-        return commandBuilder(getMethodInfo("supplier"))
+        return commandBuilder(getMethodInfo("supplier")) // TODO we should figure out how to log objects
             .onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble()))
             .onEnd(this::stop);
     }
