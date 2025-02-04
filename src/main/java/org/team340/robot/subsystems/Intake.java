@@ -16,36 +16,35 @@ import org.team340.robot.Constants.RobotMap;
 public class Intake extends GRRSubsystem {
 
     private static final TunableDouble kIntakingSpeed = Tunable.doubleValue(
-        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed",
+        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed", // TODO is this necessary?
         0.0
     );
 
-    private final TalonFX intakeMotor;
+    private final TalonFX motor;
     private final DigitalInput beamBreak;
 
     public Intake() {
-        intakeMotor = new TalonFX(RobotMap.kIntakeMotor);
+        motor = new TalonFX(RobotMap.kIntakeMotor);
+        beamBreak = new DigitalInput(RobotMap.kIntakeBeamBreak);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 0.0;
-        config.CurrentLimits.SupplyCurrentLimit = 0.0;
+        config.CurrentLimits.StatorCurrentLimit = 40.0;
+        config.CurrentLimits.SupplyCurrentLimit = 30.0;
 
-        PhoenixUtil.run("Clear Intake Motor Sticky Faults", intakeMotor, () -> intakeMotor.clearStickyFaults());
-        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", intakeMotor, () ->
-            intakeMotor.getConfigurator().apply(config)
-        );
-
-        beamBreak = new DigitalInput(RobotMap.kIntakeBeamBreak);
+        PhoenixUtil.run("Clear Intake Motor Sticky Faults", motor, () -> motor.clearStickyFaults());
+        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", motor, () -> motor.getConfigurator().apply(config));
     }
 
     // *************** Helper Functions ***************
+
+    // TODO we probably don't need all of these methods
 
     /**
      * Stops the intake.
      */
     private void stop() {
-        intakeMotor.stopMotor();
+        motor.stopMotor();
     }
 
     /**
@@ -53,7 +52,8 @@ public class Intake extends GRRSubsystem {
      * @param speed The target speed. Speed should be between 1.0 and -1.0.
      */
     private void setTargetSpeed(double speed) {
-        intakeMotor.set(speed);
+        // TODO Should be voltage control
+        motor.set(speed);
     }
 
     /**
