@@ -15,22 +15,24 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class GooseNeck extends GRRSubsystem {
 
-    public enum Positions {
+    public static enum GoosePosition {
         kIn(0.0),
         kScoreForward(0.0),
         kScoreLeft(0.0),
         kScoreRight(0.0);
 
+        // TODO these variable/method names should denote units
         private TunableDouble position;
 
-        Positions(double position) {
+        private GoosePosition(double position) {
             this.position = Tunable.doubleValue(
                 getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(), // TODO is this necessary?
                 position
             );
         }
 
-        public double getPosition() {
+        // TODO see Elevator for naming convention
+        private double getPosition() {
             return position.value();
         }
     }
@@ -48,8 +50,16 @@ public class GooseNeck extends GRRSubsystem {
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 40.0;
-        config.CurrentLimits.SupplyCurrentLimit = 20.0;
+        config.CurrentLimits.StatorCurrentLimit = 60.0;
+        config.CurrentLimits.SupplyCurrentLimit = 40.0;
+
+        config.Feedback.FeedbackSensorSource = RobotMap.kGooseEncoder;
+        config.Feedback.FeedbackRemoteSensorID = RobotMap.kGooseCANdi;
+        config.Feedback.FeedbackRotorOffset = 0.0;
+        config.Feedback.RotorToSensorRatio = 1.0; // TODO get this value from mechanical
+
+        config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
+        config.MotionMagic.MotionMagicAcceleration = 0.0;
 
         config.Slot0.kP = 0.0;
         config.Slot0.kI = 0.0;
@@ -57,16 +67,11 @@ public class GooseNeck extends GRRSubsystem {
         config.Slot0.kS = 0.0;
         config.Slot0.kV = 0.0;
 
-        config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
-        config.MotionMagic.MotionMagicAcceleration = 0.0;
-
-        config.Feedback.FeedbackSensorSource = RobotMap.kGooseEncoder;
-        config.Feedback.FeedbackRemoteSensorID = RobotMap.kGooseCANdi;
-        config.Feedback.FeedbackRotorOffset = 0.0;
-        config.Feedback.RotorToSensorRatio = 1.0; // TODO get this value from mechanical
-
         PhoenixUtil.run("Clear Goose Neck Sticky Faults", motor, () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Goose Neck TalonFXConfiguration", motor, () -> motor.getConfigurator().apply(config));
+
+        Tunable.pidController("gooseNeck/pid", motor);
+        Tunable.motionProfile("gooseNeck/motion", motor);
     }
 
     // *************** Helper Functions ***************
@@ -123,17 +128,9 @@ public class GooseNeck extends GRRSubsystem {
 
     /**
      * Moves the pivot to the {@code position}.
-     * @param position The position to move the pivot to. The position should be in radians.
-     */
-    private Command goToPosition(double position) {
-        return goToPosition(() -> position).withName(getMethodInfo(String.valueOf(position)));
-    }
-
-    /**
-     * Moves the pivot to the {@code position}.
      * @param position The position to move the pivot to.
      */
-    public Command goToPosition(Positions position) {
+    public Command goToPosition(GoosePosition position) {
         return goToPosition(position::getPosition).withName(getMethodInfo(position.name()));
     }
 }

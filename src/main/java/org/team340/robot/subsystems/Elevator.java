@@ -1,5 +1,6 @@
 package org.team340.robot.subsystems;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -20,16 +21,16 @@ import org.team340.robot.Constants.RobotMap;
 public class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
-        kDown(0),
-        kL1(0),
-        kL2(0),
-        kL3(0),
-        kL4(0);
+        kDown(0.0),
+        kL1(0.0),
+        kL2(0.0),
+        kL3(0.0),
+        kL4(0.0);
 
         private final TunableDouble rotations;
 
         private ElevatorPosition(double rotations) {
-            this.rotations = Tunable.doubleValue("Elevator/Positions/" + this.name(), rotations);
+            this.rotations = Tunable.doubleValue("elevator/positions/" + this.name(), rotations);
         }
 
         private double rotations() {
@@ -54,21 +55,21 @@ public class Elevator extends GRRSubsystem {
         config.CurrentLimits.StatorCurrentLimit = 80;
         config.CurrentLimits.SupplyCurrentLimit = 100;
 
-        config.Slot0.kP = 0;
-        config.Slot0.kI = 0;
-        config.Slot0.kD = 0;
-        config.Slot0.kG = 0;
-        config.Slot0.kS = 0;
-        config.Slot0.kV = 0;
-
-        config.MotionMagic.MotionMagicCruiseVelocity = 0;
-        config.MotionMagic.MotionMagicAcceleration = 0;
-
         config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kElevatorLimitPort;
         config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kElevatorCANdi;
-        config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+        config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
         config.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
-        config.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0;
+        config.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
+
+        config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
+        config.MotionMagic.MotionMagicAcceleration = 0.0;
+
+        config.Slot0.kP = 0.0;
+        config.Slot0.kI = 0.0;
+        config.Slot0.kD = 0.0;
+        config.Slot0.kG = 0.0;
+        config.Slot0.kS = 0.0;
+        config.Slot0.kV = 0.0;
 
         PhoenixUtil.run("Clear Elevator Lead Sticky Faults", leadMotor, () -> leadMotor.clearStickyFaults());
         PhoenixUtil.run("Clear Elevator Follow Sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
@@ -81,9 +82,19 @@ public class Elevator extends GRRSubsystem {
 
         leadPosition = leadMotor.getPosition();
         followPosition = followMotor.getPosition();
-
         positionControl = new MotionMagicVoltage(0).withSlot(0);
+
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
+
+        Tunable.pidController("elevator/pid", leadMotor);
+        Tunable.pidController("elevator/pid", followMotor);
+        Tunable.motionProfile("elevator/motion", leadMotor);
+        Tunable.motionProfile("elevator/motion", followMotor);
+    }
+
+    @Override
+    public void periodic() {
+        BaseStatusSignal.refreshAll(leadPosition, followPosition);
     }
 
     // *************** Helper Functions ***************

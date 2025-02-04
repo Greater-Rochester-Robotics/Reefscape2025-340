@@ -77,14 +77,6 @@ public class Intake extends GRRSubsystem {
     }
 
     /**
-     * Runs the intake at {@code speed}.
-     * @param speed The speed to run the intake at, which should be between 1.0 and -1.0.
-     */
-    private Command runAtSpeed(double speed) {
-        return runAtSpeed(() -> speed).withName(getMethodInfo(String.valueOf(speed)));
-    }
-
-    /**
      * Runs the intake at the {@link Intake#kIntakingSpeed kIntakingSpeed}.
      */
     public Command intake() {
