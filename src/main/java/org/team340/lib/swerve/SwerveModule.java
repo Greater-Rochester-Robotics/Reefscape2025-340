@@ -159,7 +159,7 @@ class SwerveModule implements AutoCloseable {
         moveMotor.setVelocity(state.speedMetersPerSecond * (config.moveGearRatio / (config.wheelDiameter * Math.PI)));
 
         if (hookStatus.applyAbsolute()) {
-            turnMotor.setPosition(MathUtil.inputModulus(state.angle.getRotations(), -0.5, 0.5));
+            turnMotor.setPosition(state.angle.getRotations());
         } else {
             double optimizedDelta =
                 angleDelta.getRadians() - (flipped ? Math.copySign(Math.PI, angleDelta.getRadians()) : 0.0);

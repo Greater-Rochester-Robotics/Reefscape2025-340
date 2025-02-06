@@ -2,17 +2,17 @@ package org.team340.robot.subsystems;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
-import com.ctre.phoenix6.configs.TalonFXSConfiguration;
-import com.ctre.phoenix6.hardware.TalonFXS;
-import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
-import com.ctre.phoenix6.signals.ReverseLimitValue;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
-import org.team340.lib.util.vendors.PhoenixUtil;
+import org.team340.lib.util.vendors.RevUtil;
 import org.team340.robot.Constants.RobotMap;
 
 /**
@@ -22,8 +22,8 @@ import org.team340.robot.Constants.RobotMap;
 public class GooseBeak extends GRRSubsystem {
 
     public static enum GooseSpeed {
-        kIntake(0.0),
-        kScore(0.0),
+        kIntake(-0.4),
+        kScore(1.0),
         kIndexing(0.0);
 
         // TODO these variable/method names should denote units
@@ -42,23 +42,32 @@ public class GooseBeak extends GRRSubsystem {
         }
     }
 
-    private final TalonFXS motor;
+    // private final TalonFXS motor;
+    private final SparkMax motor;
 
     public GooseBeak() {
-        motor = new TalonFXS(RobotMap.kGooseBeakMotor);
+        // motor = new TalonFXS(RobotMap.kGooseBeakMotor);
 
-        TalonFXSConfiguration config = new TalonFXSConfiguration();
+        // TalonFXSConfiguration config = new TalonFXSConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 30.0;
-        config.CurrentLimits.SupplyCurrentLimit = 20.0;
+        // config.CurrentLimits.StatorCurrentLimit = 30.0;
+        // config.CurrentLimits.SupplyCurrentLimit = 20.0;
 
-        config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
-        config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
-        config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
-        config.HardwareLimitSwitch.ReverseLimitEnable = false; // TODO this may change depending on sensor mounting
+        // config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
+        // config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
+        // config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
+        // config.HardwareLimitSwitch.ReverseLimitEnable = false; // TODO this may change depending on sensor mounting
 
-        PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
+        // PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
+        // PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
+
+        motor = new SparkMax(RobotMap.kGooseBeakMotor, MotorType.kBrushless);
+
+        SparkMaxConfig config = new SparkMaxConfig();
+
+        config.smartCurrentLimit(30).idleMode(IdleMode.kCoast).inverted(true);
+
+        RevUtil.config(motor, config);
     }
 
     // *************** Helper Functions ***************
@@ -87,7 +96,8 @@ public class GooseBeak extends GRRSubsystem {
      */
     public boolean hasPiece() {
         // TODO check this
-        return motor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+        // return motor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+        return false;
     }
 
     // *************** Commands ***************

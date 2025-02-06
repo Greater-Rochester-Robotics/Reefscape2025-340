@@ -6,6 +6,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
@@ -22,10 +23,10 @@ public class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kL1(0.0),
-        kL2(0.0),
-        kL3(0.0),
-        kL4(0.0);
+        kL1(10.0),
+        kL2(20.0),
+        kL3(30.0),
+        kL4(40.0);
 
         private final TunableDouble rotations;
 
@@ -52,8 +53,8 @@ public class Elevator extends GRRSubsystem {
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 80;
-        config.CurrentLimits.SupplyCurrentLimit = 100;
+        config.CurrentLimits.StatorCurrentLimit = 80.0;
+        config.CurrentLimits.SupplyCurrentLimit = 100.0;
 
         config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kElevatorLimitPort;
         config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kElevatorCANdi;
@@ -61,15 +62,17 @@ public class Elevator extends GRRSubsystem {
         config.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         config.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
 
-        config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
-        config.MotionMagic.MotionMagicAcceleration = 0.0;
+        config.MotionMagic.MotionMagicCruiseVelocity = 120.0;
+        config.MotionMagic.MotionMagicAcceleration = 300.0;
 
-        config.Slot0.kP = 0.0;
+        config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+
+        config.Slot0.kP = 0.6;
         config.Slot0.kI = 0.0;
         config.Slot0.kD = 0.0;
-        config.Slot0.kG = 0.0;
+        config.Slot0.kG = 0.4;
         config.Slot0.kS = 0.0;
-        config.Slot0.kV = 0.0;
+        config.Slot0.kV = 0.15;
 
         PhoenixUtil.run("Clear Elevator Lead Sticky Faults", leadMotor, () -> leadMotor.clearStickyFaults());
         PhoenixUtil.run("Clear Elevator Follow Sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
@@ -119,7 +122,6 @@ public class Elevator extends GRRSubsystem {
                 // Setting lead motor also sets the follow motor
                 leadMotor.setControl(positionControl.withPosition(position.rotations()));
             })
-            .isFinished(() -> isAtPosition(position)) // TODO maybe remove for scheduling purposes?
             .onEnd(() -> {
                 leadMotor.stopMotor();
             });

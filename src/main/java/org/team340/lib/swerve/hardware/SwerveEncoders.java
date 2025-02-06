@@ -296,6 +296,8 @@ public final class SwerveEncoders {
 
             if (turnMotor.getAPI() instanceof TalonFX talonFX) {
                 var feedbackConfig = new FeedbackConfigs();
+                talonFX.getConfigurator().refresh(feedbackConfig);
+
                 feedbackConfig.FeedbackRemoteSensorID = id;
                 feedbackConfig.RotorToSensorRatio = config.turnGearRatio;
                 feedbackConfig.FeedbackSensorSource = config.phoenixPro
@@ -303,6 +305,7 @@ public final class SwerveEncoders {
                     : FeedbackSensorSourceValue.RemoteCANcoder;
 
                 var closedLoopConfig = new ClosedLoopGeneralConfigs();
+                talonFX.getConfigurator().refresh(closedLoopConfig);
                 closedLoopConfig.ContinuousWrap = true;
 
                 PhoenixUtil.run("Apply FeedbackConfigs", talonFX, () -> talonFX.getConfigurator().apply(feedbackConfig)

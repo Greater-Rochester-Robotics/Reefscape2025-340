@@ -35,39 +35,39 @@ public final class Swerve extends GRRSubsystem {
         .setLocation(0.28, 0.28)
         .setMoveMotor(SwerveMotors.talonFX(RobotMap.kFlMove, true))
         .setTurnMotor(SwerveMotors.talonFX(RobotMap.kFlTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFlEncoder, 0.0, true));
+        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFlEncoder, 0.296, false));
 
     private static final SwerveModuleConfig kFrontRight = new SwerveModuleConfig()
         .setName("frontRight")
         .setLocation(0.28, -0.28)
         .setMoveMotor(SwerveMotors.talonFX(RobotMap.kFrMove, true))
         .setTurnMotor(SwerveMotors.talonFX(RobotMap.kFrTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFrEncoder, 0.0, true));
+        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFrEncoder, -0.395, false));
 
     private static final SwerveModuleConfig kBackLeft = new SwerveModuleConfig()
         .setName("backLeft")
         .setLocation(-0.28, 0.28)
         .setMoveMotor(SwerveMotors.talonFX(RobotMap.kBlMove, true))
         .setTurnMotor(SwerveMotors.talonFX(RobotMap.kBlTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBlEncoder, 0.0, true));
+        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBlEncoder, 0.190, false));
 
     private static final SwerveModuleConfig kBackRight = new SwerveModuleConfig()
         .setName("backRight")
         .setLocation(-0.28, -0.28)
         .setMoveMotor(SwerveMotors.talonFX(RobotMap.kBrMove, true))
         .setTurnMotor(SwerveMotors.talonFX(RobotMap.kBrTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBrEncoder, 0.0, true));
+        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBrEncoder, -0.079, false));
 
     private static final SwerveConfig kConfig = new SwerveConfig()
         .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02)
         .setMovePID(0.01, 0.0, 0.0)
         .setMoveFF(0.05, 0.1)
-        .setTurnPID(0.2, 0.0, 0.1)
+        .setTurnPID(100.0, 0.0, 0.2)
         .setBrakeMode(true, true)
         .setLimits(5.0, 13.0, 7.0, 27.5)
         .setDriverProfile(4.5, 1.0, 0.15, 4.2, 2.0, 0.05)
-        .setPowerProperties(Constants.kVoltage, 80.0, 60.0)
-        .setMechanicalProperties(5.4, 12.1, 4.5, Units.inchesToMeters(4.0))
+        .setPowerProperties(Constants.kVoltage, 80.0, 70.0, 60.0, 60.0)
+        .setMechanicalProperties(5.4, 12.1, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(RobotMap.kCanandgyro))
         .setPhoenixFeatures(new CANBus(RobotMap.kLowerCANBus), true, true, true)
