@@ -26,8 +26,11 @@ public abstract class GRRSubsystem implements Subsystem {
         return new CommandBuilder(name, this);
     }
 
+    // This is the index of the calling method in the array returned by getStackTrace().
+    private static int kCallingMethodIndex = 2;
+
     protected static String getSubsystemName() {
-        return Thread.currentThread().getStackTrace()[2].getClassName();
+        return Thread.currentThread().getStackTrace()[kCallingMethodIndex].getClassName();
     }
 
     /**
@@ -36,18 +39,8 @@ public abstract class GRRSubsystem implements Subsystem {
      * @return The name of the command.
      */
     protected static String getMethodInfo(String... args) {
-        StackTraceElement element = Thread.currentThread().getStackTrace()[2];
+        StackTraceElement element = Thread.currentThread().getStackTrace()[kCallingMethodIndex];
         return (element.getClassName() + "." + element.getMethodName() + "(" + String.join(",", args) + ")");
-    }
-
-    /**
-     * Gets the name of the class enclosing the specified object.
-     * Use {@code getEnclosingClassName(new Object() {})} to get the name of the enclosing class.
-     * @param obj The object to use.
-     * @return The name of the objects enclosing class.
-     */
-    protected static String getEnclosingClassName(Object obj) {
-        return obj.getClass().getEnclosingClass().getSimpleName();
     }
 
     /**
