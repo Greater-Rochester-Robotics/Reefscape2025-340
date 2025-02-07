@@ -17,7 +17,6 @@ import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
 import org.team340.robot.subsystems.Elevator;
-import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseBeak;
 import org.team340.robot.subsystems.Swerve;
 
@@ -69,7 +68,7 @@ public final class Robot extends TimedRobot {
         RobotModeTriggers.autonomous().whileTrue(GRRDashboard.runSelectedAuto());
 
         // TODO Temp
-        driver.a().whileTrue(elevator.goTo(ElevatorPosition.kL1));
+        driver.a().whileTrue(elevator.goTo(Elevator.Position.kL1));
         driver.b().whileTrue(gooseBeak.intake());
         driver.y().whileTrue(gooseBeak.score());
 

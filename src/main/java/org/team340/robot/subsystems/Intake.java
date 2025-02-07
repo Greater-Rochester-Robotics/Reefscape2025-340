@@ -10,13 +10,14 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
+import org.team340.robot.Constants;
 import org.team340.robot.Constants.RobotMap;
 
 @Logged
 public class Intake extends GRRSubsystem {
 
     private static final TunableDouble kIntakingSpeed = Tunable.doubleValue(
-        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed", // TODO is this necessary?
+        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed",
         0.0
     );
 
@@ -38,8 +39,6 @@ public class Intake extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
-    // TODO we probably don't need all of these methods
-
     /**
      * Stops the intake.
      */
@@ -52,8 +51,7 @@ public class Intake extends GRRSubsystem {
      * @param speed The target speed. Speed should be between 1.0 and -1.0.
      */
     private void setTargetSpeed(double speed) {
-        // TODO Should be voltage control
-        motor.set(speed);
+        motor.setVoltage(speed * Constants.kVoltage);
     }
 
     /**

@@ -21,23 +21,28 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class Elevator extends GRRSubsystem {
 
-    public static enum ElevatorPosition {
+    public static enum Position {
         kDown(0.0),
         kL1(10.0),
         kL2(20.0),
         kL3(30.0),
         kL4(40.0);
 
-        private final TunableDouble rotations;
+        private final TunableDouble kRotations;
 
-        private ElevatorPosition(double rotations) {
-            this.rotations = Tunable.doubleValue("elevator/positions/" + this.name(), rotations);
+        private Position(final double rotations) {
+            kRotations = Tunable.doubleValue(getEnumName(this), rotations);
         }
 
-        private double rotations() {
-            return rotations.value();
+        public double getRotations() {
+            return kRotations.value();
         }
     }
+
+    private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue(
+        getEnclosingClassName(new Object() {}) + "/kAtPositionEpsilon",
+        1e-6
+    );
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -89,10 +94,10 @@ public class Elevator extends GRRSubsystem {
 
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
 
-        Tunable.pidController("elevator/pid", leadMotor);
-        Tunable.pidController("elevator/pid", followMotor);
-        Tunable.motionProfile("elevator/motion", leadMotor);
-        Tunable.motionProfile("elevator/motion", followMotor);
+        Tunable.pidController("Elevator/pid", leadMotor);
+        Tunable.pidController("Elevator/pid", followMotor);
+        Tunable.motionProfile("Elevator/motion", leadMotor);
+        Tunable.motionProfile("Elevator/motion", followMotor);
     }
 
     @Override
@@ -102,12 +107,11 @@ public class Elevator extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
-    public boolean isAtPosition(ElevatorPosition position) {
+    public boolean isAtPosition(Position position) {
         // TODO Latency compensation
         double averagePosition = (leadPosition.getValueAsDouble() + followPosition.getValueAsDouble()) / 2.0;
 
-        // TODO Define epsilon
-        return Math2.epsilonEquals(averagePosition, position.rotations());
+        return Math2.epsilonEquals(averagePosition, position.getRotations(), kAtPositionEpsilon.value());
     }
 
     // *************** Commands ***************
@@ -116,11 +120,11 @@ public class Elevator extends GRRSubsystem {
      * Move elevator to predetermined positions.
      * @param position - The predetermined positions.
      */
-    public Command goTo(ElevatorPosition position) {
-        return commandBuilder("Elevator.goTo()")
+    public Command goTo(Position position) {
+        return commandBuilder(getMethodInfo())
             .onExecute(() -> {
                 // Setting lead motor also sets the follow motor
-                leadMotor.setControl(positionControl.withPosition(position.rotations()));
+                leadMotor.setControl(positionControl.withPosition(position.getRotations()));
             })
             .onEnd(() -> {
                 leadMotor.stopMotor();

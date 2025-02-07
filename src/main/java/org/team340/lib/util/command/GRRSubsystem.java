@@ -51,4 +51,18 @@ public abstract class GRRSubsystem implements Subsystem {
     protected static String getEnclosingClassName(Object obj) {
         return obj.getClass().getEnclosingClass().getSimpleName();
     }
+
+    /**
+     * Gets the name of the provided enum for use in tunable names.
+     * @param innerEnum The enum to get the name of.
+     */
+    protected static String getEnumName(Enum<?> innerEnum) {
+        return (
+            innerEnum.getClass().getEnclosingClass().getSimpleName() +
+            "/" +
+            innerEnum.getClass().getSimpleName() +
+            "/" +
+            innerEnum.name()
+        );
+    }
 }

@@ -13,6 +13,7 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.RevUtil;
+import org.team340.robot.Constants;
 import org.team340.robot.Constants.RobotMap;
 
 /**
@@ -21,24 +22,19 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class GooseBeak extends GRRSubsystem {
 
-    public static enum GooseSpeed {
+    public static enum Speed {
         kIntake(-0.4),
         kScore(1.0),
         kIndexing(0.0);
 
-        // TODO these variable/method names should denote units
-        private final TunableDouble speed;
+        private final TunableDouble kPercentOutput;
 
-        private GooseSpeed(double speed) {
-            this.speed = Tunable.doubleValue(
-                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(), // TODO is this necessary?
-                speed
-            );
+        private Speed(final double percentOutput) {
+            kPercentOutput = Tunable.doubleValue(getEnumName(this), percentOutput);
         }
 
-        // TODO see Elevator for naming convention
-        private double getSpeed() {
-            return speed.value();
+        public double getPercentOutput() {
+            return kPercentOutput.value();
         }
     }
 
@@ -72,8 +68,6 @@ public class GooseBeak extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
-    // TODO we probably don't need all of these methods
-
     /**
      * Stops the roller motor.
      */
@@ -85,9 +79,8 @@ public class GooseBeak extends GRRSubsystem {
      * Sets the target speed of the rollers.
      * @param speed The target speed. Speeds should be between 1.0 and -1.0.
      */
-    private void setTargetSpeed(double speed) {
-        // TODO Should be voltage control
-        motor.set(speed);
+    private void setTargetSpeed(double percentOutput) {
+        motor.setVoltage(percentOutput * Constants.kVoltage);
     }
 
     /**
@@ -116,14 +109,14 @@ public class GooseBeak extends GRRSubsystem {
      * Runs the intake at the {@link GooseneckRollers#kIntakeSpeed kIntakeSpeed}.
      */
     public Command intake() {
-        return runAtSpeed(GooseSpeed.kIntake::getSpeed).withName(getMethodInfo());
+        return runAtSpeed(Speed.kIntake::getPercentOutput).withName(getMethodInfo());
     }
 
     /**
      * Runs the intake at the {@link GooseneckRollers#kScoreSpeed}.
      */
     public Command score() {
-        return runAtSpeed(GooseSpeed.kScore::getSpeed).withName(getMethodInfo());
+        return runAtSpeed(Speed.kScore::getPercentOutput).withName(getMethodInfo());
     }
 
     /**
@@ -132,7 +125,7 @@ public class GooseBeak extends GRRSubsystem {
     public Command indexPiece() {
         return sequence(
             deadline(sequence(waitUntil(this::hasPiece), waitUntil(() -> !hasPiece())), intake()),
-            runAtSpeed(GooseSpeed.kIndexing::getSpeed).until(this::hasPiece)
+            runAtSpeed(Speed.kIndexing::getPercentOutput).until(this::hasPiece)
         ).withName(getMethodInfo());
     }
 }
