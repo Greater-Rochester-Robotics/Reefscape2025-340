@@ -40,7 +40,7 @@ public class Elevator extends GRRSubsystem {
     }
 
     private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue(
-        getEnclosingClassName(new Object() {}) + "/kAtPositionEpsilon",
+        getSubsystemName() + "/kAtPositionEpsilon",
         1e-6
     );
 
@@ -94,10 +94,10 @@ public class Elevator extends GRRSubsystem {
 
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
 
-        Tunable.pidController("Elevator/pid", leadMotor);
-        Tunable.pidController("Elevator/pid", followMotor);
-        Tunable.motionProfile("Elevator/motion", leadMotor);
-        Tunable.motionProfile("Elevator/motion", followMotor);
+        Tunable.pidController(getName() + "/pid", leadMotor);
+        Tunable.pidController(getName() + "/pid", followMotor);
+        Tunable.motionProfile(getName() + "/motion", leadMotor);
+        Tunable.motionProfile(getName() + "/motion", followMotor);
     }
 
     @Override

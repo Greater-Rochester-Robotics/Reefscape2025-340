@@ -26,20 +26,18 @@ public abstract class GRRSubsystem implements Subsystem {
         return new CommandBuilder(name, this);
     }
 
+    protected static String getSubsystemName() {
+        return Thread.currentThread().getStackTrace()[2].getClassName();
+    }
+
     /**
      * Creates a commands name in the form subsystemName.methodName(args).
      * @param args The args to use as strings.
      * @return The name of the command.
      */
-    protected String getMethodInfo(String... args) {
-        return (
-            getName() +
-            "." +
-            Thread.currentThread().getStackTrace()[2].getMethodName() +
-            "(" +
-            String.join(",", args) +
-            ")"
-        );
+    protected static String getMethodInfo(String... args) {
+        StackTraceElement element = Thread.currentThread().getStackTrace()[2];
+        return (element.getClassName() + "." + element.getMethodName() + "(" + String.join(",", args) + ")");
     }
 
     /**
