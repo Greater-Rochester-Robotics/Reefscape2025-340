@@ -22,7 +22,7 @@ import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.LowerCAN;
 
 /**
  * The robot's swerve drivetrain.
@@ -33,30 +33,30 @@ public final class Swerve extends GRRSubsystem {
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
         .setLocation(0.28, 0.28)
-        .setMoveMotor(SwerveMotors.talonFX(RobotMap.kFlMove, true))
-        .setTurnMotor(SwerveMotors.talonFX(RobotMap.kFlTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFlEncoder, 0.296, false));
+        .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kFlMove, true))
+        .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kFlTurn, true))
+        .setEncoder(SwerveEncoders.canCoder(LowerCAN.kFlEncoder, 0.296, false));
 
     private static final SwerveModuleConfig kFrontRight = new SwerveModuleConfig()
         .setName("frontRight")
         .setLocation(0.28, -0.28)
-        .setMoveMotor(SwerveMotors.talonFX(RobotMap.kFrMove, true))
-        .setTurnMotor(SwerveMotors.talonFX(RobotMap.kFrTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kFrEncoder, -0.395, false));
+        .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kFrMove, true))
+        .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kFrTurn, true))
+        .setEncoder(SwerveEncoders.canCoder(LowerCAN.kFrEncoder, -0.395, false));
 
     private static final SwerveModuleConfig kBackLeft = new SwerveModuleConfig()
         .setName("backLeft")
         .setLocation(-0.28, 0.28)
-        .setMoveMotor(SwerveMotors.talonFX(RobotMap.kBlMove, true))
-        .setTurnMotor(SwerveMotors.talonFX(RobotMap.kBlTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBlEncoder, 0.190, false));
+        .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kBlMove, true))
+        .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kBlTurn, true))
+        .setEncoder(SwerveEncoders.canCoder(LowerCAN.kBlEncoder, 0.190, false));
 
     private static final SwerveModuleConfig kBackRight = new SwerveModuleConfig()
         .setName("backRight")
         .setLocation(-0.28, -0.28)
-        .setMoveMotor(SwerveMotors.talonFX(RobotMap.kBrMove, true))
-        .setTurnMotor(SwerveMotors.talonFX(RobotMap.kBrTurn, true))
-        .setEncoder(SwerveEncoders.canCoder(RobotMap.kBrEncoder, -0.079, false));
+        .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kBrMove, true))
+        .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kBrTurn, true))
+        .setEncoder(SwerveEncoders.canCoder(LowerCAN.kBrEncoder, -0.079, false));
 
     private static final SwerveConfig kConfig = new SwerveConfig()
         .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02)
@@ -69,8 +69,8 @@ public final class Swerve extends GRRSubsystem {
         .setPowerProperties(Constants.kVoltage, 80.0, 70.0, 60.0, 60.0)
         .setMechanicalProperties(5.4, 12.1, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
-        .setIMU(SwerveIMUs.canandgyro(RobotMap.kCanandgyro))
-        .setPhoenixFeatures(new CANBus(RobotMap.kLowerCANBus), true, true, true)
+        .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
+        .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
     private static final double kAutoKp = 7.0;

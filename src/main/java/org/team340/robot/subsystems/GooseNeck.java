@@ -11,7 +11,7 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.UpperCAN;
 
 @Logged
 public class GooseNeck extends GRRSubsystem {
@@ -42,7 +42,7 @@ public class GooseNeck extends GRRSubsystem {
     private final MotionMagicVoltage controller;
 
     public GooseNeck() {
-        motor = new TalonFX(RobotMap.kGooseNeckMotor);
+        motor = new TalonFX(UpperCAN.kGooseNeckMotor);
         controller = new MotionMagicVoltage(0.0);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
@@ -50,8 +50,8 @@ public class GooseNeck extends GRRSubsystem {
         config.CurrentLimits.StatorCurrentLimit = 60.0;
         config.CurrentLimits.SupplyCurrentLimit = 40.0;
 
-        config.Feedback.FeedbackSensorSource = RobotMap.kGooseEncoder;
-        config.Feedback.FeedbackRemoteSensorID = RobotMap.kGooseCANdi;
+        config.Feedback.FeedbackSensorSource = UpperCAN.kGooseEncoder;
+        config.Feedback.FeedbackRemoteSensorID = UpperCAN.kGooseCANdi;
         config.Feedback.FeedbackRotorOffset = 0.0;
         config.Feedback.RotorToSensorRatio = 1.0; // TODO get this value from mechanical
 

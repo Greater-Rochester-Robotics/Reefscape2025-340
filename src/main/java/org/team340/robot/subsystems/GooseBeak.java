@@ -14,7 +14,7 @@ import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.RevUtil;
 import org.team340.robot.Constants;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.UpperCAN;
 
 /**
  * Controls the rollers and sensors used to score the coral, not including the pivot.
@@ -57,7 +57,7 @@ public class GooseBeak extends GRRSubsystem {
         // PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
         // PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
 
-        motor = new SparkMax(RobotMap.kGooseBeakMotor, MotorType.kBrushless);
+        motor = new SparkMax(UpperCAN.kGooseBeakMotor, MotorType.kBrushless);
 
         SparkMaxConfig config = new SparkMaxConfig();
 

@@ -11,7 +11,8 @@ import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.DIO;
+import org.team340.robot.Constants.UpperCAN;
 
 @Logged
 public class Intake extends GRRSubsystem {
@@ -25,8 +26,8 @@ public class Intake extends GRRSubsystem {
     private final DigitalInput beamBreak;
 
     public Intake() {
-        motor = new TalonFX(RobotMap.kIntakeMotor);
-        beamBreak = new DigitalInput(RobotMap.kIntakeBeamBreak);
+        motor = new TalonFX(UpperCAN.kIntakeMotor);
+        beamBreak = new DigitalInput(DIO.kIntakeBeamBreak);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 

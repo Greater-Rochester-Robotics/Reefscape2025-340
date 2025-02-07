@@ -16,7 +16,7 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.LowerCAN;
 
 @Logged
 public class Elevator extends GRRSubsystem {
@@ -53,16 +53,16 @@ public class Elevator extends GRRSubsystem {
 
     public Elevator() {
         // MOTOR SETUP
-        leadMotor = new TalonFX(RobotMap.kElevatorLead, RobotMap.kLowerCANBus);
-        followMotor = new TalonFX(RobotMap.kElevatorFollow, RobotMap.kLowerCANBus);
+        leadMotor = new TalonFX(LowerCAN.kElevatorLead, LowerCAN.kLowerCANBus);
+        followMotor = new TalonFX(LowerCAN.kElevatorFollow, LowerCAN.kLowerCANBus);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
         config.CurrentLimits.StatorCurrentLimit = 80.0;
         config.CurrentLimits.SupplyCurrentLimit = 100.0;
 
-        config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kElevatorLimitPort;
-        config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kElevatorCANdi;
+        config.HardwareLimitSwitch.ReverseLimitSource = LowerCAN.kElevatorLimitPort;
+        config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = LowerCAN.kElevatorCANdi;
         config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
         config.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         config.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
