@@ -17,7 +17,7 @@ import org.team340.robot.Constants.RobotMap;
 public class Intake extends GRRSubsystem {
 
     private static final TunableDouble kIntakingSpeed = Tunable.doubleValue(
-        getEnclosingClassName(new Object() {}) + "/kIntakingSpeed",
+        getSubsystemName() + "/kIntakingSpeed",
         0.0
     );
 
