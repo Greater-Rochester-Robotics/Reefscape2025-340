@@ -49,7 +49,7 @@ public final class Constants {
         public static final int kElevatorLead = 20;
         public static final int kElevatorFollow = 21;
         public static final int kElevatorCANdi = 22;
-        public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.RemoteCANdiS1;
+        public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.Disabled;
     }
 
     public static final class UpperCAN {
@@ -65,15 +65,17 @@ public final class Constants {
 
         // Intake
         public static final int kIntakeMotor = 40;
+
+        // Climber
+        public static final int kClimberMotor = 50;
+        public static final int kClimberEncoder = 51;
+        public static final FeedbackSensorSourceValue kClimberEnoderSourceValue =
+            FeedbackSensorSourceValue.RemoteCANcoder;
     }
 
     public static final class DIO {
 
         // This is a DIO channel (not CAN).
         public static final int kIntakeBeamBreak = 9;
-
-        // Climber
-        public static final int kClimberMotor = 50;
-        public static final int kClimberEncoder = 51;
     }
 }
