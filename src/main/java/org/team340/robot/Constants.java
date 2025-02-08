@@ -65,6 +65,12 @@ public final class Constants {
 
         // Intake
         public static final int kIntakeMotor = 40;
+
+        // Climber
+        public static final int kClimberMotor = 50;
+        public static final int kClimberEncoder = 51;
+        public static final FeedbackSensorSourceValue kClimberEnoderSourceValue =
+            FeedbackSensorSourceValue.RemoteCANcoder;
     }
 
     public static final class DIO {
