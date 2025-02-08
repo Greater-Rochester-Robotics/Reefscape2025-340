@@ -1,7 +1,6 @@
 package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -10,37 +9,39 @@ import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 
 import edu.wpi.first.wpilibj2.command.Command;
 
-import static edu.wpi.first.wpilibj2.command.Commands.waitUntil;
-
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.DIO;
 
 public class Climber extends GRRSubsystem {
  	public static enum ClimberPosition {
-        kStore(0),
-        kOut(0),
-        kClimb(0);
+        kStore(0.0),
+        kOut(0.0),
+        kClimb(0.0);
 
-        private final TunableDouble angle;
+        private final TunableDouble kAngle;
 
-        private ClimberPosition(double angle) {
-            this.angle = Tunable.doubleValue("Climber/Positions/" + this.name(), angle);
+        private ClimberPosition(final double angle) {
+            kAngle = Tunable.doubleValue(getEnumName(this), angle);
         }
 
-        private double angle() {
-            return angle.value();
+        private double getAngle() {
+            return kAngle.value();
         }
     }
+
     private final TalonFX climberMotor;
-    private final CANcoder climbCoder;
+    private final MotionMagicVoltage climberMotorController;
+    private final CANcoder climberEncoder;
+
 
     public Climber() {
 		
-		climberMotor = new TalonFX(RobotMap.kClimberMotor, RobotMap.kUpperCANBus);
-		climbCoder = new CANcoder (RobotMap.kClimberEncoder, RobotMap.kUpperCANBus);
+		climberMotor = new TalonFX(DIO.kClimberMotor);
+        climberMotorController = new MotionMagicVoltage(0.0);
+		climberEncoder = new CANcoder (DIO.kClimberEncoder);
 
 	   TalonFXConfiguration motorCfg = new TalonFXConfiguration();
 
@@ -61,22 +62,38 @@ public class Climber extends GRRSubsystem {
         motorCfg.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0;
 
         PhoenixUtil.run("Clear Lead Motor Sticky Faults", climberMotor, () -> climberMotor.clearStickyFaults());
-       
+
         PhoenixUtil.run("Apply Lead TalonFXConfiguration", climberMotor, () -> climberMotor.getConfigurator().apply(motorCfg)
         );
-	   
-       
        
     }
-    public Command climb (){
-		return commandBuilder(getMethodInfo())
+
+    // *************** Helper Functions ***************
+
+    /**
+     * Stops the climber.
+     */
+    private void stop() {
+        climberMotor.stopMotor();
+    }
+
+    /**
+     * Sets the climber motor to target the specified position.
+     * @param position The position to target.
+     */
+    private void setTargetPosition(double position) {
+        climberMotor.setControl(climberMotorController.withPosition(position));
+    }
+
+    // *************** Commands ***************
+
+    public Command climb () {
+		return commandBuilder()
 		//.onExecute(() -> {
 			// Setting lead motor also sets the follow motor
 			//climberMotor.setPosition(0)(positionControl.withPosition(position.rotations()));
 	//	})
 		//.isFinished(() -> isAtPosition(position))
-		.onEnd(() -> {
-			climberMotor.stopMotor();
-		});
+		.onEnd(this::stop);
     }
 }
