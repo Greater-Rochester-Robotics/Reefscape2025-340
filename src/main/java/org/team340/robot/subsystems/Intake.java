@@ -70,7 +70,7 @@ public class Intake extends GRRSubsystem {
      * @param speedSupplier Provides the speed the intake will be run at, which should be between 1.0 and -1.0.
      */
     private Command runAtSpeed(DoubleSupplier speedSupplier) {
-        return commandBuilder(getMethodInfo("supplier"))
+        return commandBuilder("supplier")
             .onExecute(() -> setTargetSpeed(speedSupplier.getAsDouble()))
             .onEnd(this::stop);
     }

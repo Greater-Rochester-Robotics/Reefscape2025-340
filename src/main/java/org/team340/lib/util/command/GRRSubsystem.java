@@ -20,10 +20,10 @@ public abstract class GRRSubsystem implements Subsystem {
 
     /**
      * Creates a command builder that requires this subsystem.
-     * @param name The name of the command.
+     * @param args The arguments of the command.
      */
-    public CommandBuilder commandBuilder(String name) {
-        return new CommandBuilder(name, this);
+    public CommandBuilder commandBuilder(String... args) {
+        return new CommandBuilder(getMethodInfo(args), this);
     }
 
     // This is the index of the calling method in the array returned by getStackTrace().
