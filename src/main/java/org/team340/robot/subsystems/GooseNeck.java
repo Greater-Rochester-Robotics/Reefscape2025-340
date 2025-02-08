@@ -1,6 +1,7 @@
 package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -10,51 +11,47 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.robot.Constants.UpperCAN;
 
 @Logged
 public class GooseNeck extends GRRSubsystem {
 
-    public static enum GoosePosition {
+    public static enum Position {
         kIn(0.0),
         kScoreForward(0.0),
         kScoreLeft(0.0),
         kScoreRight(0.0);
 
-        // TODO these variable/method names should denote units
-        private TunableDouble position;
+        private TunableDouble kRotations;
 
-        private GoosePosition(double position) {
-            this.position = Tunable.doubleValue(
-                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(), // TODO is this necessary?
-                position
-            );
+        private Position(final double rotations) {
+            kRotations = Tunable.doubleValue(getEnumName(this), rotations);
         }
 
-        // TODO see Elevator for naming convention
-        private double getPosition() {
-            return position.value();
+        private double getRotations() {
+            return kRotations.value();
         }
     }
 
-    // These are intentionally not tunable.
-    // TODO why?
-    // TODO could be one varibale
-    private static final double kUpperLimit = 0.0;
-    private static final double kLowerLimit = 0.0;
+    // These are intentionally not tunable, because the upper and lower limits should not be changed
+    // while the robot is in normal operation (They should be measured and hardcoded once and then left alone).
+    private static final double kUpperLimitRotations = 0.0;
+    private static final double kLowerLimitRotations = 0.0;
 
     private final TalonFX motor;
+    private final MotionMagicVoltage controller;
 
     public GooseNeck() {
-        motor = new TalonFX(RobotMap.kGooseNeckMotor);
+        motor = new TalonFX(UpperCAN.kGooseNeckMotor);
+        controller = new MotionMagicVoltage(0.0);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
         config.CurrentLimits.StatorCurrentLimit = 60.0;
         config.CurrentLimits.SupplyCurrentLimit = 40.0;
 
-        config.Feedback.FeedbackSensorSource = RobotMap.kGooseEncoder;
-        config.Feedback.FeedbackRemoteSensorID = RobotMap.kGooseCANdi;
+        config.Feedback.FeedbackSensorSource = UpperCAN.kGooseEncoder;
+        config.Feedback.FeedbackRemoteSensorID = UpperCAN.kGooseCANdi;
         config.Feedback.FeedbackRotorOffset = 0.0;
         config.Feedback.RotorToSensorRatio = 1.0; // TODO get this value from mechanical
 
@@ -70,13 +67,11 @@ public class GooseNeck extends GRRSubsystem {
         PhoenixUtil.run("Clear Goose Neck Sticky Faults", motor, () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Goose Neck TalonFXConfiguration", motor, () -> motor.getConfigurator().apply(config));
 
-        Tunable.pidController("gooseNeck/pid", motor);
-        Tunable.motionProfile("gooseNeck/motion", motor);
+        Tunable.pidController("GooseNeck/pid", motor);
+        Tunable.motionProfile("GooseNeck/motion", motor);
     }
 
     // *************** Helper Functions ***************
-
-    // TODO we probably don't need all of these methods
 
     /**
      * Stops the pivot motor. Should be run at the onEnd of commands.
@@ -87,50 +82,45 @@ public class GooseNeck extends GRRSubsystem {
 
     /**
      * Sets the target position of the pivot.
-     * @param position The position to target in radians.
+     * @param rotations The position to target in rotations.
      */
-    private void setTargetPosition(double position) {
-        if (position > kUpperLimit || position < kLowerLimit) {
+    private void setTargetPosition(double rotations) {
+        if (rotations > kUpperLimitRotations || rotations < kLowerLimitRotations) {
             DriverStation.reportWarning(
                 "The " +
                 getName() +
                 " position " +
-                position +
-                " must be less than " +
-                kUpperLimit +
-                " and greater than " +
-                kLowerLimit +
-                ".",
+                rotations +
+                " rotations must be less than " +
+                kUpperLimitRotations +
+                " rotations and greater than " +
+                kLowerLimitRotations +
+                " rotations.",
                 false
             );
             return;
         }
 
-        // TODO discuss if radians are needed, we aren't doing any other math with the stored positions
-        // TODO that would make radians useful over using the motor's native units.
-        final double kInverseTwoPi = 1 / (Math.PI * 2);
-        // TODO this sets the position of the motor's encoder, it does not command a new position.
-        // TODO use a motion magic control request
-        motor.setPosition(position * kInverseTwoPi);
+        motor.setControl(controller.withPosition(rotations));
     }
 
     // *************** Commands ***************
 
     /**
-     * Moves the pivot to the position supplied by {@code positionSupplier}.
-     * @param positionSupplier The supplier of the position. Positions should be in radians.
+     * Moves the pivot to the position supplied by {@code rotationsSupplier}.
+     * @param rotationsSupplier The supplier of the position. Positions should be in rotations.
      */
-    private Command goToPosition(DoubleSupplier positionSupplier) {
+    private Command goToPosition(DoubleSupplier rotationsSupplier) {
         return commandBuilder(getMethodInfo("supplier"))
-            .onExecute(() -> setTargetPosition(positionSupplier.getAsDouble()))
+            .onExecute(() -> setTargetPosition(rotationsSupplier.getAsDouble()))
             .onEnd(this::stop);
     }
 
     /**
-     * Moves the pivot to the {@code position}.
+     * Moves the pivot to predetermined positions.
      * @param position The position to move the pivot to.
      */
-    public Command goToPosition(GoosePosition position) {
-        return goToPosition(position::getPosition).withName(getMethodInfo(position.name()));
+    public Command goToPosition(Position position) {
+        return goToPosition(position::getRotations).withName(getMethodInfo(position.name()));
     }
 }

@@ -17,13 +17,15 @@ import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
 import org.team340.robot.subsystems.Elevator;
+import org.team340.robot.subsystems.GooseBeak;
 import org.team340.robot.subsystems.Swerve;
 
 @Logged
 public final class Robot extends TimedRobot {
 
-    public final Swerve swerve;
     public final Elevator elevator;
+    public final GooseBeak gooseBeak;
+    public final Swerve swerve;
 
     public final Routines routines;
     public final Autos autos;
@@ -41,10 +43,9 @@ public final class Robot extends TimedRobot {
         Epilogue.getConfig().root = "/Telemetry";
 
         // Initialize subsystems
-        swerve = new Swerve();
-
-        // Initialize elevator
         elevator = new Elevator();
+        gooseBeak = new GooseBeak();
+        swerve = new Swerve();
 
         // Initialize compositions
         routines = new Routines(this);
@@ -65,6 +66,11 @@ public final class Robot extends TimedRobot {
 
         // Create triggers
         RobotModeTriggers.autonomous().whileTrue(GRRDashboard.runSelectedAuto());
+
+        // TODO Temp
+        driver.a().whileTrue(elevator.goTo(Elevator.Position.kL1));
+        driver.b().whileTrue(gooseBeak.intake());
+        driver.y().whileTrue(gooseBeak.score());
 
         // Driver bindings
         driver.povLeft().onTrue(swerve.tareRotation());

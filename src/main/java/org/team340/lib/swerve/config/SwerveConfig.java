@@ -53,10 +53,14 @@ public class SwerveConfig {
     public double driverAngularVelDeadband = -1.0;
     /** The robot's nominal voltage. Typically {@code 12.0}. */
     public double voltage = -1.0;
-    /** The current limit in amps for move motors. */
-    public double moveCurrentLimit = -1.0;
-    /** The current limit in amps for turn motors. */
-    public double turnCurrentLimit = -1.0;
+    /** The stator current limit in amps for move motors. */
+    public double moveStatorLimit = -1.0;
+    /** The supply current limit in amps for move motors. */
+    public double moveSupplyLimit = -1.0;
+    /** The stator current limit in amps for turn motors. */
+    public double turnStatorLimit = -1.0;
+    /** The supply current limit in amps for turn motors. */
+    public double turnSupplyLimit = -1.0;
     /** The move gear ratio, in motor rotations/wheel rotation. */
     public double moveGearRatio = -1.0;
     /** The turn gear ratio, in motor rotations/module rotation. */
@@ -187,13 +191,23 @@ public class SwerveConfig {
     /**
      * Sets power properties.
      * @param voltage The robot's nominal voltage. Typically {@code 12.0}.
-     * @param moveCurrentLimit The current limit in amps for move motors.
-     * @param turnCurrentLimit The current limit in amps for turn motors.
+     * @param moveStatorLimit The stator current limit in amps for move motors.
+     * @param moveSupplyLimit The supply current limit in amps for move motors. Note that this value is ignored for REV devices.
+     * @param turnStatorLimit The stator current limit in amps for turn motors.
+     * @param turnSupplyLimit The supply current limit in amps for turn motors. Note that this value is ignored for REV devices.
      */
-    public SwerveConfig setPowerProperties(double voltage, double moveCurrentLimit, double turnCurrentLimit) {
+    public SwerveConfig setPowerProperties(
+        double voltage,
+        double moveStatorLimit,
+        double moveSupplyLimit,
+        double turnStatorLimit,
+        double turnSupplyLimit
+    ) {
         this.voltage = voltage;
-        this.moveCurrentLimit = moveCurrentLimit;
-        this.turnCurrentLimit = turnCurrentLimit;
+        this.moveStatorLimit = moveStatorLimit;
+        this.moveSupplyLimit = moveSupplyLimit;
+        this.turnStatorLimit = turnStatorLimit;
+        this.turnSupplyLimit = turnSupplyLimit;
         return this;
     }
 
@@ -287,8 +301,10 @@ public class SwerveConfig {
         if (driverAngularVelExp == -1.0) missing.add("Driver Angular Velocity Exponential");
         if (driverAngularVelDeadband == -1.0) missing.add("Driver Angular Velocity Deadband");
         if (voltage == -1.0) missing.add("Voltage");
-        if (moveCurrentLimit == -1.0) missing.add("Move Current Limit");
-        if (turnCurrentLimit == -1.0) missing.add("Turn Current Limit");
+        if (moveStatorLimit == -1.0) missing.add("Move Stator Current Limit");
+        if (moveSupplyLimit == -1.0) missing.add("Move Supply Current Limit");
+        if (turnStatorLimit == -1.0) missing.add("Turn Stator Current Limit");
+        if (turnSupplyLimit == -1.0) missing.add("Turn Supply Current Limit");
         if (moveGearRatio == -1.0) missing.add("Move Gear Ratio");
         if (turnGearRatio == -1.0) missing.add("Turn Gear Ratio");
         if (couplingRatio == -1.0) missing.add("Coupling Ratio");

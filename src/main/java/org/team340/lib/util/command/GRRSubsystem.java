@@ -26,29 +26,34 @@ public abstract class GRRSubsystem implements Subsystem {
         return new CommandBuilder(name, this);
     }
 
+    // This is the index of the calling method in the array returned by getStackTrace().
+    private static int kCallingMethodIndex = 2;
+
+    protected static String getSubsystemName() {
+        return Thread.currentThread().getStackTrace()[kCallingMethodIndex].getClassName();
+    }
+
     /**
      * Creates a commands name in the form subsystemName.methodName(args).
      * @param args The args to use as strings.
      * @return The name of the command.
      */
-    protected String getMethodInfo(String... args) {
-        return (
-            getName() +
-            "." +
-            Thread.currentThread().getStackTrace()[2].getMethodName() +
-            "(" +
-            String.join(",", args) +
-            ")"
-        );
+    protected static String getMethodInfo(String... args) {
+        StackTraceElement element = Thread.currentThread().getStackTrace()[kCallingMethodIndex];
+        return (element.getClassName() + "." + element.getMethodName() + "(" + String.join(",", args) + ")");
     }
 
     /**
-     * Gets the name of the class enclosing the specified object.
-     * Use {@code getEnclosingClassName(new Object() {})} to get the name of the enclosing class.
-     * @param obj The object to use.
-     * @return The name of the objects enclosing class.
+     * Gets the name of the provided enum for use in tunable names.
+     * @param innerEnum The enum to get the name of.
      */
-    protected static String getEnclosingClassName(Object obj) {
-        return obj.getClass().getEnclosingClass().getSimpleName();
+    protected static String getEnumName(Enum<?> innerEnum) {
+        return (
+            innerEnum.getClass().getEnclosingClass().getSimpleName() +
+            "/" +
+            innerEnum.getClass().getSimpleName() +
+            "/" +
+            innerEnum.name()
+        );
     }
 }

@@ -19,8 +19,10 @@ public final class Constants {
      * The RobotMap class defines CAN IDs, CAN bus names, DIO/PWM/PH/PCM channel
      * IDs, and other relevant identifiers for addressing robot hardware.
      */
-    public static final class RobotMap {
+    public static final class LowerCAN {
 
+        // upper CAN bus is the default CAN bus.
+        // Talon FX default constructor uses "" and we can't change it.
         public static final String kLowerCANBus = "LowerCAN";
 
         // *************** Lower CAN Bus ***************
@@ -41,8 +43,6 @@ public final class Constants {
         public static final int kBlEncoder = 12;
         public static final int kBrEncoder = 13;
 
-        // *On the upper CAN bus.
-        // TODO revist organization / comments of RobotMap
         public static final int kCanandgyro = 14;
 
         // Elevator
@@ -50,8 +50,11 @@ public final class Constants {
         public static final int kElevatorFollow = 21;
         public static final int kElevatorCANdi = 22;
         public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.RemoteCANdiS1;
+    }
 
-        // *************** Upper CAN Bus ***************
+    public static final class UpperCAN {
+
+        //*************** Upper CAN Bus ***************
 
         // Goose
         public static final int kGooseNeckMotor = 30;
@@ -62,6 +65,9 @@ public final class Constants {
 
         // Intake
         public static final int kIntakeMotor = 40;
+    }
+
+    public static final class DIO {
 
         // This is a DIO channel (not CAN).
         public static final int kIntakeBeamBreak = 9;

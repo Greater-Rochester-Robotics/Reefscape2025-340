@@ -2,18 +2,19 @@ package org.team340.robot.subsystems;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
-import com.ctre.phoenix6.configs.TalonFXSConfiguration;
-import com.ctre.phoenix6.hardware.TalonFXS;
-import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
-import com.ctre.phoenix6.signals.ReverseLimitValue;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
-import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RobotMap;
+import org.team340.lib.util.vendors.RevUtil;
+import org.team340.robot.Constants;
+import org.team340.robot.Constants.UpperCAN;
 
 /**
  * Controls the rollers and sensors used to score the coral, not including the pivot.
@@ -21,49 +22,51 @@ import org.team340.robot.Constants.RobotMap;
 @Logged
 public class GooseBeak extends GRRSubsystem {
 
-    public static enum GooseSpeed {
-        kIntake(0.0),
-        kScore(0.0),
+    public static enum Speed {
+        kIntake(-0.4),
+        kScore(1.0),
         kIndexing(0.0);
 
-        // TODO these variable/method names should denote units
-        private final TunableDouble speed;
+        private final TunableDouble kPercentOutput;
 
-        private GooseSpeed(double speed) {
-            this.speed = Tunable.doubleValue(
-                getClass().getEnclosingClass().getSimpleName() + "/" + getClass().getSimpleName() + "/" + name(), // TODO is this necessary?
-                speed
-            );
+        private Speed(final double percentOutput) {
+            kPercentOutput = Tunable.doubleValue(getEnumName(this), percentOutput);
         }
 
-        // TODO see Elevator for naming convention
-        private double getSpeed() {
-            return speed.value();
+        public double getPercentOutput() {
+            return kPercentOutput.value();
         }
     }
 
-    private final TalonFXS motor;
+    // private final TalonFXS motor;
+    private final SparkMax motor;
 
     public GooseBeak() {
-        motor = new TalonFXS(RobotMap.kGooseBeakMotor);
+        // motor = new TalonFXS(RobotMap.kGooseBeakMotor);
 
-        TalonFXSConfiguration config = new TalonFXSConfiguration();
+        // TalonFXSConfiguration config = new TalonFXSConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 30.0;
-        config.CurrentLimits.SupplyCurrentLimit = 20.0;
+        // config.CurrentLimits.StatorCurrentLimit = 30.0;
+        // config.CurrentLimits.SupplyCurrentLimit = 20.0;
 
-        config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
-        config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
-        config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
-        config.HardwareLimitSwitch.ReverseLimitEnable = false; // TODO this may change depending on sensor mounting
+        // config.HardwareLimitSwitch.ReverseLimitSource = RobotMap.kGooseBeamBreak;
+        // config.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RobotMap.kGooseCANdi;
+        // config.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen; // TODO check this
+        // config.HardwareLimitSwitch.ReverseLimitEnable = false; // TODO this may change depending on sensor mounting
 
-        PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
+        // PhoenixUtil.run("Clear Goose Beak Sticky Faults", motor, () -> motor.clearStickyFaults());
+        // PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
+
+        motor = new SparkMax(UpperCAN.kGooseBeakMotor, MotorType.kBrushless);
+
+        SparkMaxConfig config = new SparkMaxConfig();
+
+        config.smartCurrentLimit(30).idleMode(IdleMode.kCoast).inverted(true);
+
+        RevUtil.config(motor, config);
     }
 
     // *************** Helper Functions ***************
-
-    // TODO we probably don't need all of these methods
 
     /**
      * Stops the roller motor.
@@ -76,9 +79,8 @@ public class GooseBeak extends GRRSubsystem {
      * Sets the target speed of the rollers.
      * @param speed The target speed. Speeds should be between 1.0 and -1.0.
      */
-    private void setTargetSpeed(double speed) {
-        // TODO Should be voltage control
-        motor.set(speed);
+    private void setTargetSpeed(double percentOutput) {
+        motor.setVoltage(percentOutput * Constants.kVoltage);
     }
 
     /**
@@ -87,7 +89,8 @@ public class GooseBeak extends GRRSubsystem {
      */
     public boolean hasPiece() {
         // TODO check this
-        return motor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+        // return motor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+        return false;
     }
 
     // *************** Commands ***************
@@ -106,14 +109,14 @@ public class GooseBeak extends GRRSubsystem {
      * Runs the intake at the {@link GooseneckRollers#kIntakeSpeed kIntakeSpeed}.
      */
     public Command intake() {
-        return runAtSpeed(GooseSpeed.kIntake::getSpeed).withName(getMethodInfo());
+        return runAtSpeed(Speed.kIntake::getPercentOutput).withName(getMethodInfo());
     }
 
     /**
      * Runs the intake at the {@link GooseneckRollers#kScoreSpeed}.
      */
     public Command score() {
-        return runAtSpeed(GooseSpeed.kScore::getSpeed).withName(getMethodInfo());
+        return runAtSpeed(Speed.kScore::getPercentOutput).withName(getMethodInfo());
     }
 
     /**
@@ -122,7 +125,7 @@ public class GooseBeak extends GRRSubsystem {
     public Command indexPiece() {
         return sequence(
             deadline(sequence(waitUntil(this::hasPiece), waitUntil(() -> !hasPiece())), intake()),
-            runAtSpeed(GooseSpeed.kIndexing::getSpeed).until(this::hasPiece)
+            runAtSpeed(Speed.kIndexing::getPercentOutput).until(this::hasPiece)
         ).withName(getMethodInfo());
     }
 }
