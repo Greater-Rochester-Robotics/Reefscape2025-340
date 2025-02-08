@@ -49,7 +49,7 @@ public final class Constants {
         public static final int kElevatorLead = 20;
         public static final int kElevatorFollow = 21;
         public static final int kElevatorCANdi = 22;
-        public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.Disabled;
+        public static final ReverseLimitSourceValue kElevatorLimitPort = ReverseLimitSourceValue.RemoteCANdiS1;
     }
 
     public static final class UpperCAN {
