@@ -111,7 +111,7 @@ public class GooseNeck extends GRRSubsystem {
      * @param rotationsSupplier The supplier of the position. Positions should be in rotations.
      */
     private Command goToPosition(DoubleSupplier rotationsSupplier) {
-        return commandBuilder(getMethodInfo("supplier"))
+        return commandBuilder("supplier")
             .onExecute(() -> setTargetPosition(rotationsSupplier.getAsDouble()))
             .onEnd(this::stop);
     }

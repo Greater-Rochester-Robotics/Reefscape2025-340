@@ -121,7 +121,7 @@ public class Elevator extends GRRSubsystem {
      * @param position - The predetermined positions.
      */
     public Command goTo(Position position) {
-        return commandBuilder(getMethodInfo())
+        return commandBuilder(position.name())
             .onExecute(() -> {
                 // Setting lead motor also sets the follow motor
                 leadMotor.setControl(positionControl.withPosition(position.getRotations()));
