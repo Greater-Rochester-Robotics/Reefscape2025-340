@@ -3,15 +3,28 @@ package org.team340.robot.subsystems;
 import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.CANBus;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFieldLayout.OriginPosition;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.DoubleSupplier;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonUtils;
 import org.team340.lib.swerve.Perspective;
 import org.team340.lib.swerve.SwerveAPI;
 import org.team340.lib.swerve.config.SwerveConfig;
@@ -81,6 +94,13 @@ public final class Swerve extends GRRSubsystem {
     private static final double kAutoAngularKi = 0.0;
     private static final double kAutoAngularKd = 0.0;
 
+    private final AprilTagFieldLayout aprilTags;
+    private final PhotonCamera[] cameras;
+    private final Transform3d[] cameraLocations;
+    private final List<Pose2d> measurements = new ArrayList<>();
+    private final List<Pose3d> measurements3d = new ArrayList<>();
+    private final List<Pose3d> targets = new ArrayList<>();
+
     private final SwerveAPI api;
 
     private final PIDController autoPIDx;
@@ -89,6 +109,15 @@ public final class Swerve extends GRRSubsystem {
 
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
+
+    private static final Transform3d kBackLeftCamera = new Transform3d(
+        new Translation3d(-0.29153, 0.19629, 0.24511),
+        new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(155.0))
+    );
+    private static final Transform3d kBackRightCamera = new Transform3d(
+        new Translation3d(-0.29153, -0.19629, 0.24511),
+        new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(-155.0))
+    );
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
@@ -102,11 +131,66 @@ public final class Swerve extends GRRSubsystem {
         Tunable.pidController("swerve/autoPID", autoPIDx);
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
+
+        aprilTags = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+        aprilTags.setOrigin(OriginPosition.kBlueAllianceWallRightSide);
+        cameras = new PhotonCamera[] { new PhotonCamera("backleft"), new PhotonCamera("backright") };
+        cameraLocations = new Transform3d[] { kBackLeftCamera, kBackRightCamera };
     }
 
     @Override
     public void periodic() {
         api.refresh();
+
+        // resetting local measurements
+        measurements.clear();
+        measurements3d.clear();
+        targets.clear();
+
+        // update local pose and targets based on all cameras and april tags
+        for (int i = 0; i < cameras.length; i++) {
+            // get all results at once because they will change over time
+            // TODO use different update function to grab all results since last update
+            var result = cameras[i].getLatestResult();
+            for (var target : result.getTargets()) {
+                // skip calculation for bad targets
+                if (target.getPoseAmbiguity() > 0.09) continue;
+
+                // checks what april tag we are looking at
+                int id = target.getFiducialId();
+                boolean important = id == 3 || id == 4 || id == 7 || id == 8;
+                Optional<Pose3d> tagPose = aprilTags.getTagPose(id);
+                if (tagPose.isEmpty()) continue;
+
+                double distance = api.state.pose
+                    .getTranslation()
+                    .getDistance(tagPose.get().getTranslation().toTranslation2d());
+
+                Pose3d estimate = PhotonUtils.estimateFieldToRobotAprilTag(
+                    target.getBestCameraToTarget(),
+                    tagPose.get(),
+                    cameraLocations[i]
+                );
+
+                // if flying abort
+                if (estimate.getZ() > 0.75) continue;
+
+                // update all measurements, weight important april tags higher
+                double stdScale = Math.pow(distance * (important ? 0.5 : 1.0), 2.0);
+                double xyStd = 0.2 * stdScale;
+                double angStd = 0.3 * stdScale;
+
+                api.addVisionMeasurement(
+                    estimate.toPose2d(),
+                    result.getTimestampSeconds(),
+                    VecBuilder.fill(xyStd, xyStd, angStd)
+                );
+
+                targets.add(tagPose.get());
+                measurements.add(estimate.toPose2d());
+                measurements3d.add(estimate);
+            }
+        }
     }
 
     /**
