@@ -25,8 +25,10 @@ import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonUtils;
+import org.photonvision.targeting.PhotonTrackedTarget;
 import org.team340.lib.swerve.Perspective;
 import org.team340.lib.swerve.SwerveAPI;
+import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.config.SwerveModuleConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders;
@@ -168,41 +170,8 @@ public final class Swerve extends GRRSubsystem {
             // TODO split out into different methods
             var result = cameras[i].getLatestResult();
             for (var target : result.getTargets()) {
-                // skip calculation for bad targets
-                if (target.getPoseAmbiguity() > 0.09) continue;
-
-                // checks what april tag we are looking at
-                int id = target.getFiducialId();
-                boolean important = determineIsImportant(id);
-                Optional<Pose3d> tagPose = aprilTags.getTagPose(id);
-                if (tagPose.isEmpty()) continue;
-
-                double distance = api.state.pose
-                    .getTranslation()
-                    .getDistance(tagPose.get().getTranslation().toTranslation2d());
-
-                Pose3d estimate = PhotonUtils.estimateFieldToRobotAprilTag(
-                    target.getBestCameraToTarget(),
-                    tagPose.get(),
-                    cameraLocations[i]
-                );
-
-                // if flying abort
-                if (estimate.getZ() > 0.75) continue;
-
-                // update all measurements, weight important april tags higher
-                double stdScale = Math.pow(distance * (important ? 0.5 : 1.0), 2.0);
-                double xyStd = 0.2 * stdScale; // TODO no magic numbers
-                double angStd = 0.3 * stdScale;
-
-                api.addVisionMeasurement(
-                    estimate.toPose2d(),
-                    result.getTimestampSeconds(),
-                    VecBuilder.fill(xyStd, xyStd, angStd)
-                );
-
-                targets.add(tagPose.get());
-                measurements.add(estimate.toPose2d());
+                // TODO check for null, save to vector, use other addVisionMeasurement to update all at once
+                calculateVisionMeasurement(target, cameraLocations[i], result.getTimestampSeconds());
             }
         }
     }
@@ -216,6 +185,43 @@ public final class Swerve extends GRRSubsystem {
     private boolean determineIsImportant(int id) {
         // TODO replace with configurable id numbers
         return id == 3 || id == 4 || id == 7 || id == 8;
+    }
+
+    private VisionMeasurement calculateVisionMeasurement(
+        PhotonTrackedTarget target,
+        Transform3d cameraLocation,
+        double timeStamp
+    ) {
+        // skip calculation for bad targets
+        if (target.getPoseAmbiguity() > 0.09) return null;
+
+        // checks what april tag we are looking at
+        int id = target.getFiducialId();
+        boolean important = determineIsImportant(id);
+        Optional<Pose3d> tagPose = aprilTags.getTagPose(id);
+        if (tagPose.isEmpty()) return null;
+
+        double distance = api.state.pose.getTranslation().getDistance(tagPose.get().getTranslation().toTranslation2d());
+
+        Pose3d estimate = PhotonUtils.estimateFieldToRobotAprilTag(
+            target.getBestCameraToTarget(),
+            tagPose.get(),
+            cameraLocation
+        );
+
+        // if flying abort
+        if (estimate.getZ() > 0.75) return null;
+
+        // update all measurements, weight important april tags higher
+        double stdScale = Math.pow(distance * (important ? 0.5 : 1.0), 2.0);
+        double xyStd = 0.2 * stdScale; // TODO no magic numbers
+        double angStd = 0.3 * stdScale;
+
+        api.addVisionMeasurement(estimate.toPose2d(), timeStamp, VecBuilder.fill(xyStd, xyStd, angStd));
+
+        targets.add(tagPose.get());
+        measurements.add(estimate.toPose2d());
+        return new VisionMeasurement(estimate.toPose2d(), timeStamp);
     }
 
     /**
