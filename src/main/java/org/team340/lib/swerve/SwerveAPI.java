@@ -128,6 +128,7 @@ public class SwerveAPI implements AutoCloseable {
     }
 
     /**
+     * TODO use other call and remove this one
      * Adds a vision measurement to the pose estimator.
      * @see {@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
      * @param visionPose The pose of the robot as measured by the vision camera.
@@ -151,7 +152,7 @@ public class SwerveAPI implements AutoCloseable {
     public void addVisionMeasurements(VisionMeasurement... measurements) {
         odometryMutex.lock();
         try {
-            for (var measurement : measurements) {
+            for (VisionMeasurement measurement : measurements) {
                 if (measurement.stdDevs == null) {
                     poseEstimator.addVisionMeasurement(measurement.visionPose, measurement.timestamp);
                 } else {

@@ -98,7 +98,6 @@ public final class Swerve extends GRRSubsystem {
     private final PhotonCamera[] cameras;
     private final Transform3d[] cameraLocations;
     private final List<Pose2d> measurements = new ArrayList<>();
-    private final List<Pose3d> measurements3d = new ArrayList<>();
     private final List<Pose3d> targets = new ArrayList<>();
 
     private final SwerveAPI api;
@@ -110,11 +109,20 @@ public final class Swerve extends GRRSubsystem {
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
 
+    // TODO fill in
     private static final Transform3d kBackLeftCamera = new Transform3d(
         new Translation3d(-0.29153, 0.19629, 0.24511),
         new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(155.0))
     );
     private static final Transform3d kBackRightCamera = new Transform3d(
+        new Translation3d(-0.29153, -0.19629, 0.24511),
+        new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(-155.0))
+    );
+    private static final Transform3d kFrontLeftCamera = new Transform3d(
+        new Translation3d(-0.29153, -0.19629, 0.24511),
+        new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(-155.0))
+    );
+    private static final Transform3d kFrontRightCamera = new Transform3d(
         new Translation3d(-0.29153, -0.19629, 0.24511),
         new Rotation3d(0.0, Math.toRadians(-22.0), Math.toRadians(-155.0))
     );
@@ -132,25 +140,32 @@ public final class Swerve extends GRRSubsystem {
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
 
+        // TODO update to 2025 field
         aprilTags = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
         aprilTags.setOrigin(OriginPosition.kBlueAllianceWallRightSide);
-        cameras = new PhotonCamera[] { new PhotonCamera("backleft"), new PhotonCamera("backright") };
-        cameraLocations = new Transform3d[] { kBackLeftCamera, kBackRightCamera };
+        cameras = new PhotonCamera[] {
+            new PhotonCamera("backLeft"),
+            new PhotonCamera("backRight"),
+            new PhotonCamera("frontLeft"),
+            new PhotonCamera("frontRight")
+        };
+        cameraLocations = new Transform3d[] { kBackLeftCamera, kBackRightCamera, kFrontLeftCamera, kFrontRightCamera };
     }
 
     @Override
     public void periodic() {
         api.refresh();
 
+        // TODO before merge, disable all vision code using tunable boolean
         // resetting local measurements
         measurements.clear();
-        measurements3d.clear();
         targets.clear();
 
         // update local pose and targets based on all cameras and april tags
         for (int i = 0; i < cameras.length; i++) {
             // get all results at once because they will change over time
-            // TODO use different update function to grab all results since last update
+            // TODO use different update function to grab all results since last update, loop over all results
+            // TODO split out into different methods
             var result = cameras[i].getLatestResult();
             for (var target : result.getTargets()) {
                 // skip calculation for bad targets
@@ -158,7 +173,7 @@ public final class Swerve extends GRRSubsystem {
 
                 // checks what april tag we are looking at
                 int id = target.getFiducialId();
-                boolean important = id == 3 || id == 4 || id == 7 || id == 8;
+                boolean important = determineIsImportant(id);
                 Optional<Pose3d> tagPose = aprilTags.getTagPose(id);
                 if (tagPose.isEmpty()) continue;
 
@@ -177,7 +192,7 @@ public final class Swerve extends GRRSubsystem {
 
                 // update all measurements, weight important april tags higher
                 double stdScale = Math.pow(distance * (important ? 0.5 : 1.0), 2.0);
-                double xyStd = 0.2 * stdScale;
+                double xyStd = 0.2 * stdScale; // TODO no magic numbers
                 double angStd = 0.3 * stdScale;
 
                 api.addVisionMeasurement(
@@ -188,9 +203,19 @@ public final class Swerve extends GRRSubsystem {
 
                 targets.add(tagPose.get());
                 measurements.add(estimate.toPose2d());
-                measurements3d.add(estimate);
             }
         }
+    }
+
+    /**
+     * Returns whether april tags should be weighted higher
+     * @param id april tag id
+     * @return true if tag should be weighted higher
+     */
+    @NotLogged
+    private boolean determineIsImportant(int id) {
+        // TODO replace with configurable id numbers
+        return id == 3 || id == 4 || id == 7 || id == 8;
     }
 
     /**
