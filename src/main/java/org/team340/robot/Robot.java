@@ -18,6 +18,7 @@ import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.GooseBeak;
+import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Swerve;
 
 @Logged
@@ -25,6 +26,7 @@ public final class Robot extends TimedRobot {
 
     public final Elevator elevator;
     public final GooseBeak gooseBeak;
+    public final GooseNeck gooseNeck;
     public final Swerve swerve;
 
     public final Routines routines;
@@ -45,6 +47,7 @@ public final class Robot extends TimedRobot {
         // Initialize subsystems
         elevator = new Elevator();
         gooseBeak = new GooseBeak();
+        gooseNeck = new GooseNeck();
         swerve = new Swerve();
 
         // Initialize compositions
@@ -71,6 +74,8 @@ public final class Robot extends TimedRobot {
         driver.a().whileTrue(elevator.goTo(Elevator.Position.kL1));
         driver.b().whileTrue(gooseBeak.intake());
         driver.y().whileTrue(gooseBeak.score());
+        driver.leftBumper().whileTrue(gooseNeck.goToPosition(GooseNeck.Position.kIn));
+        driver.rightBumper().whileTrue(gooseNeck.goToPosition(GooseNeck.Position.kScoreForward));
 
         // Driver bindings
         driver.povLeft().onTrue(swerve.tareRotation());

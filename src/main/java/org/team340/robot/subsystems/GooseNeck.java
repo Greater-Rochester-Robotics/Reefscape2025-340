@@ -1,7 +1,9 @@
 package org.team340.robot.subsystems;
 
+import com.ctre.phoenix6.configs.CANdiConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -40,10 +42,19 @@ public class GooseNeck extends GRRSubsystem {
 
     private final TalonFX motor;
     private final MotionMagicVoltage controller;
+    private final CANdi encoder;
+    private double candiPosition = 0.0;
 
     public GooseNeck() {
         motor = new TalonFX(UpperCAN.kGooseNeckMotor);
         controller = new MotionMagicVoltage(0.0);
+        encoder = new CANdi(UpperCAN.kGooseCANdi);
+
+        CANdiConfiguration candiConfig = new CANdiConfiguration();
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.0;
+        candiConfig.PWM2.SensorDirection = true;
+
+        encoder.getConfigurator().apply(candiConfig);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -52,13 +63,12 @@ public class GooseNeck extends GRRSubsystem {
 
         config.Feedback.FeedbackSensorSource = UpperCAN.kGooseEncoder;
         config.Feedback.FeedbackRemoteSensorID = UpperCAN.kGooseCANdi;
-        config.Feedback.FeedbackRotorOffset = 0.0;
-        config.Feedback.RotorToSensorRatio = 1.0; // TODO get this value from mechanical
+        config.Feedback.RotorToSensorRatio = 22.5;
 
         config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
         config.MotionMagic.MotionMagicAcceleration = 0.0;
 
-        config.Slot0.kP = 0.0;
+        config.Slot0.kP = 1.0;
         config.Slot0.kI = 0.0;
         config.Slot0.kD = 0.0;
         config.Slot0.kS = 0.0;
@@ -69,6 +79,11 @@ public class GooseNeck extends GRRSubsystem {
 
         Tunable.pidController("GooseNeck/pid", motor);
         Tunable.motionProfile("GooseNeck/motion", motor);
+    }
+
+    @Override
+    public void periodic() {
+        candiPosition = encoder.getPWM2Position().getValueAsDouble();
     }
 
     // *************** Helper Functions ***************
