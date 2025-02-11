@@ -5,11 +5,14 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
@@ -43,13 +46,20 @@ public class Elevator extends GRRSubsystem {
         getSubsystemName() + "/kAtPositionEpsilon",
         1e-6
     );
+    private static final TunableDouble kTunableVoltage = Tunable.doubleValue(
+        getSubsystemName() + "/kTunableVoltage",
+        0
+    );
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
 
     private final StatusSignal<Angle> leadPosition;
     private final StatusSignal<Angle> followPosition;
+    private final StatusSignal<AngularVelocity> leadVelocity;
+    private final StatusSignal<AngularVelocity> followVelocity;
     private final MotionMagicVoltage positionControl;
+    private final VoltageOut voltageControl;
 
     public Elevator() {
         // MOTOR SETUP
@@ -90,8 +100,19 @@ public class Elevator extends GRRSubsystem {
 
         leadPosition = leadMotor.getPosition();
         followPosition = followMotor.getPosition();
+        leadVelocity = leadMotor.getVelocity();
+        followVelocity = followMotor.getVelocity();
         positionControl = new MotionMagicVoltage(0).withSlot(0);
+        voltageControl = new VoltageOut(0);
 
+        BaseStatusSignal.setUpdateFrequencyForAll(50, leadPosition, followPosition);
+        BaseStatusSignal.setUpdateFrequencyForAll(
+            1000,
+            leadMotor.getDutyCycle(),
+            leadMotor.getMotorVoltage(),
+            leadMotor.getTorqueCurrent()
+        );
+        ParentDevice.optimizeBusUtilizationForAll(10, leadMotor, followMotor);
         followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
 
         Tunable.pidController(getName() + "/pid", leadMotor);
@@ -108,9 +129,10 @@ public class Elevator extends GRRSubsystem {
     // *************** Helper Functions ***************
 
     public boolean isAtPosition(Position position) {
-        // TODO Latency compensation
-        double averagePosition = (leadPosition.getValueAsDouble() + followPosition.getValueAsDouble()) / 2.0;
-
+        double averagePosition =
+            (BaseStatusSignal.getLatencyCompensatedValueAsDouble(leadPosition, leadVelocity) +
+                BaseStatusSignal.getLatencyCompensatedValueAsDouble(followPosition, followVelocity)) /
+            2.0;
         return Math2.epsilonEquals(averagePosition, position.getRotations(), kAtPositionEpsilon.value());
     }
 
@@ -125,6 +147,17 @@ public class Elevator extends GRRSubsystem {
             .onExecute(() -> {
                 // Setting lead motor also sets the follow motor
                 leadMotor.setControl(positionControl.withPosition(position.getRotations()));
+            })
+            .onEnd(() -> {
+                leadMotor.stopMotor();
+            });
+    }
+
+    public Command applyTunableVoltage() {
+        return commandBuilder()
+            .onExecute(() -> {
+                // Setting lead motor also sets the follow motor
+                leadMotor.setControl(voltageControl.withOutput(kTunableVoltage.value()));
             })
             .onEnd(() -> {
                 leadMotor.stopMotor();
