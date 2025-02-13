@@ -58,13 +58,18 @@ public class Elevator extends GRRSubsystem {
     private final StatusSignal<Angle> followPosition;
     private final StatusSignal<AngularVelocity> leadVelocity;
     private final StatusSignal<AngularVelocity> followVelocity;
+
     private final MotionMagicVoltage positionControl;
     private final VoltageOut voltageControl;
+    private final Follower followControl;
 
     public Elevator() {
         // MOTOR SETUP
         leadMotor = new TalonFX(LowerCAN.kElevatorLead, LowerCAN.kLowerCANBus);
         followMotor = new TalonFX(LowerCAN.kElevatorFollow, LowerCAN.kLowerCANBus);
+
+        PhoenixUtil.run("Clear Elevator Lead Sticky Faults", () -> leadMotor.clearStickyFaults());
+        PhoenixUtil.run("Clear Elevator Follow Sticky Faults", () -> followMotor.clearStickyFaults());
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -89,31 +94,35 @@ public class Elevator extends GRRSubsystem {
         config.Slot0.kS = 0.0;
         config.Slot0.kV = 0.15;
 
-        PhoenixUtil.run("Clear Elevator Lead Sticky Faults", leadMotor, () -> leadMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Elevator Follow Sticky Faults", followMotor, () -> followMotor.clearStickyFaults());
-        PhoenixUtil.run("Apply Elevator Lead TalonFXConfiguration", leadMotor, () ->
-            leadMotor.getConfigurator().apply(config)
-        );
-        PhoenixUtil.run("Apply Elevator Follow TalonFXConfiguration", followMotor, () ->
-            followMotor.getConfigurator().apply(config)
+        PhoenixUtil.run("Apply Elevator Lead TalonFXConfiguration", () -> leadMotor.getConfigurator().apply(config));
+        PhoenixUtil.run("Apply Elevator Follow TalonFXConfiguration", () -> followMotor.getConfigurator().apply(config)
         );
 
         leadPosition = leadMotor.getPosition();
         followPosition = followMotor.getPosition();
         leadVelocity = leadMotor.getVelocity();
         followVelocity = followMotor.getVelocity();
+
+        PhoenixUtil.run("Set Elevator Position/Velocity Signal Frequencies", () ->
+            BaseStatusSignal.setUpdateFrequencyForAll(200, leadPosition, followPosition, leadVelocity, followVelocity)
+        );
+        PhoenixUtil.run("Set Elevator Signal Frequencies for Following", () ->
+            BaseStatusSignal.setUpdateFrequencyForAll(
+                1000,
+                leadMotor.getDutyCycle(),
+                leadMotor.getMotorVoltage(),
+                leadMotor.getTorqueCurrent()
+            )
+        );
+        PhoenixUtil.run("Optimize Elevator CAN Utilization", () ->
+            ParentDevice.optimizeBusUtilizationForAll(5, leadMotor, followMotor)
+        );
+
         positionControl = new MotionMagicVoltage(0).withSlot(0);
         voltageControl = new VoltageOut(0);
+        followControl = new Follower(leadMotor.getDeviceID(), false);
 
-        BaseStatusSignal.setUpdateFrequencyForAll(50, leadPosition, followPosition);
-        BaseStatusSignal.setUpdateFrequencyForAll(
-            1000,
-            leadMotor.getDutyCycle(),
-            leadMotor.getMotorVoltage(),
-            leadMotor.getTorqueCurrent()
-        );
-        ParentDevice.optimizeBusUtilizationForAll(10, leadMotor, followMotor);
-        followMotor.setControl(new Follower(leadMotor.getDeviceID(), false));
+        PhoenixUtil.run("Set Elevator Follow Motor Control", () -> followMotor.setControl(followControl));
 
         Tunable.pidController(getName() + "/pid", leadMotor);
         Tunable.pidController(getName() + "/pid", followMotor);
@@ -123,7 +132,7 @@ public class Elevator extends GRRSubsystem {
 
     @Override
     public void periodic() {
-        BaseStatusSignal.refreshAll(leadPosition, followPosition);
+        BaseStatusSignal.refreshAll(leadPosition, followPosition, leadVelocity, followVelocity);
     }
 
     // *************** Helper Functions ***************

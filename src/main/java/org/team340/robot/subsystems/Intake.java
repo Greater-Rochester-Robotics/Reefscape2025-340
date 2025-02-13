@@ -34,8 +34,8 @@ public class Intake extends GRRSubsystem {
         config.CurrentLimits.StatorCurrentLimit = 40.0;
         config.CurrentLimits.SupplyCurrentLimit = 30.0;
 
-        PhoenixUtil.run("Clear Intake Motor Sticky Faults", motor, () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", motor, () -> motor.getConfigurator().apply(config));
+        PhoenixUtil.run("Clear Intake Motor Sticky Faults", () -> motor.clearStickyFaults());
+        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", () -> motor.getConfigurator().apply(config));
     }
 
     // *************** Helper Functions ***************

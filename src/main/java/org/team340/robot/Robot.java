@@ -74,8 +74,8 @@ public final class Robot extends TimedRobot {
         driver.a().whileTrue(elevator.goTo(Elevator.Position.kL1));
         driver.b().whileTrue(gooseBeak.intake());
         driver.y().whileTrue(gooseBeak.score());
-        driver.leftBumper().whileTrue(gooseNeck.goToPosition(GooseNeck.Position.kIn));
-        driver.rightBumper().whileTrue(gooseNeck.goToPosition(GooseNeck.Position.kScoreForward));
+        driver.leftBumper().whileTrue(gooseNeck.goTo(GooseNeck.Position.kIn, false));
+        driver.rightBumper().whileTrue(gooseNeck.goTo(GooseNeck.Position.kScoreForward, false));
 
         // Driver bindings
         driver.povLeft().onTrue(swerve.tareRotation());

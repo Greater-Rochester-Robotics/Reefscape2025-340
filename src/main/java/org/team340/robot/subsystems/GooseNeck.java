@@ -1,14 +1,19 @@
 package org.team340.robot.subsystems;
 
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANdi;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import java.util.function.DoubleSupplier;
+import org.team340.lib.util.Mutable;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -18,15 +23,21 @@ import org.team340.robot.Constants.UpperCAN;
 @Logged
 public class GooseNeck extends GRRSubsystem {
 
+    /**
+     * A position for the goose neck. All positions in this enum should be
+     * a positive value, moving the goose neck to the *right* of the robot
+     * (CCW+). Moving the goose neck to the left should be specified in
+     * method arguments, with the applied rotation being inverted from
+     * the values specified here.
+     */
     public static enum Position {
         kIn(0.0),
-        kScoreForward(0.0),
-        kScoreLeft(0.0),
-        kScoreRight(0.0);
+        kScoreL1(0.7),
+        kScoreForward(1.0);
 
         private TunableDouble kRotations;
 
-        private Position(final double rotations) {
+        private Position(double rotations) {
             kRotations = Tunable.doubleValue(getEnumName(this), rotations);
         }
 
@@ -35,47 +46,71 @@ public class GooseNeck extends GRRSubsystem {
         }
     }
 
-    // These are intentionally not tunable, because the upper and lower limits should not be changed
-    // while the robot is in normal operation (They should be measured and hardcoded once and then left alone).
-    private static final double kUpperLimitRotations = 0.0;
-    private static final double kLowerLimitRotations = 0.0;
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue("kAtPositionTolerance", 0.05);
+    private static final TunableDouble kTorqueTolerance = Tunable.doubleValue("kTorqueTolerance", 0.1);
 
     private final TalonFX motor;
-    private final MotionMagicVoltage controller;
-    private final CANdi encoder;
-    private double candiPosition = 0.0;
+    private final CANdi candi;
+
+    private final StatusSignal<Angle> position;
+    private final StatusSignal<AngularVelocity> velocity;
+
+    private final MotionMagicVoltage positionControl;
+    private final TorqueCurrentFOC torqueControl;
 
     public GooseNeck() {
         motor = new TalonFX(UpperCAN.kGooseNeckMotor);
-        controller = new MotionMagicVoltage(0.0);
-        encoder = new CANdi(UpperCAN.kGooseCANdi);
+        candi = new CANdi(UpperCAN.kGooseCANdi);
+
+        PhoenixUtil.run("Clear Goose Neck Motor Sticky Faults", () -> motor.clearStickyFaults());
+        PhoenixUtil.run("Clear Goose Neck CANdi Sticky Faults", () -> candi.clearStickyFaults());
+
+        TalonFXConfiguration motorConfig = new TalonFXConfiguration();
+
+        motorConfig.CurrentLimits.StatorCurrentLimit = 60.0;
+        motorConfig.CurrentLimits.SupplyCurrentLimit = 40.0;
+
+        motorConfig.Feedback.FeedbackSensorSource = UpperCAN.kGooseEncoder;
+        motorConfig.Feedback.FeedbackRemoteSensorID = UpperCAN.kGooseCANdi;
+        motorConfig.Feedback.RotorToSensorRatio = (50.0 / 10.0) * (72.0 / 14.0);
+
+        motorConfig.MotionMagic.MotionMagicCruiseVelocity = 0.0;
+        motorConfig.MotionMagic.MotionMagicAcceleration = 0.0;
+
+        motorConfig.Slot0.kP = 1.0;
+        motorConfig.Slot0.kI = 0.0;
+        motorConfig.Slot0.kD = 0.0;
+        motorConfig.Slot0.kS = 0.0;
+        motorConfig.Slot0.kV = 0.0;
+
+        motorConfig.TorqueCurrent.PeakForwardTorqueCurrent = motorConfig.CurrentLimits.StatorCurrentLimit;
+        motorConfig.TorqueCurrent.PeakReverseTorqueCurrent = -motorConfig.CurrentLimits.StatorCurrentLimit;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
         candiConfig.PWM2.AbsoluteSensorOffset = 0.0;
         candiConfig.PWM2.SensorDirection = true;
 
-        encoder.getConfigurator().apply(candiConfig);
+        PhoenixUtil.run("Apply Goose Neck TalonFXConfiguration", () -> motor.getConfigurator().apply(motorConfig));
+        PhoenixUtil.run("Apply Goose Neck CANdiConfiguration", () -> candi.getConfigurator().apply(candiConfig));
 
-        TalonFXConfiguration config = new TalonFXConfiguration();
+        position = motor.getPosition();
+        velocity = motor.getVelocity();
 
-        config.CurrentLimits.StatorCurrentLimit = 60.0;
-        config.CurrentLimits.SupplyCurrentLimit = 40.0;
+        PhoenixUtil.run("Set Goose Neck Position/Velocity Signal Frequencies", () ->
+            BaseStatusSignal.setUpdateFrequencyForAll(
+                100,
+                position,
+                velocity,
+                candi.getPWM2Position(),
+                candi.getPWM2Velocity()
+            )
+        );
+        PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
+            ParentDevice.optimizeBusUtilizationForAll(5, motor, candi)
+        );
 
-        config.Feedback.FeedbackSensorSource = UpperCAN.kGooseEncoder;
-        config.Feedback.FeedbackRemoteSensorID = UpperCAN.kGooseCANdi;
-        config.Feedback.RotorToSensorRatio = 22.5;
-
-        config.MotionMagic.MotionMagicCruiseVelocity = 0.0;
-        config.MotionMagic.MotionMagicAcceleration = 0.0;
-
-        config.Slot0.kP = 1.0;
-        config.Slot0.kI = 0.0;
-        config.Slot0.kD = 0.0;
-        config.Slot0.kS = 0.0;
-        config.Slot0.kV = 0.0;
-
-        PhoenixUtil.run("Clear Goose Neck Sticky Faults", motor, () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Goose Neck TalonFXConfiguration", motor, () -> motor.getConfigurator().apply(config));
+        positionControl = new MotionMagicVoltage(0.0);
+        torqueControl = new TorqueCurrentFOC(0.0);
 
         Tunable.pidController("GooseNeck/pid", motor);
         Tunable.motionProfile("GooseNeck/motion", motor);
@@ -83,59 +118,29 @@ public class GooseNeck extends GRRSubsystem {
 
     @Override
     public void periodic() {
-        candiPosition = encoder.getPWM2Position().getValueAsDouble();
+        BaseStatusSignal.refreshAll(position, velocity);
     }
 
     // *************** Helper Functions ***************
 
-    /**
-     * Stops the pivot motor. Should be run at the onEnd of commands.
-     */
-    private void stop() {
-        motor.stopMotor();
-    }
-
-    /**
-     * Sets the target position of the pivot.
-     * @param rotations The position to target in rotations.
-     */
-    private void setTargetPosition(double rotations) {
-        if (rotations > kUpperLimitRotations || rotations < kLowerLimitRotations) {
-            DriverStation.reportWarning(
-                "The " +
-                getName() +
-                " position " +
-                rotations +
-                " rotations must be less than " +
-                kUpperLimitRotations +
-                " rotations and greater than " +
-                kLowerLimitRotations +
-                " rotations.",
-                false
-            );
-            return;
-        }
-
-        motor.setControl(controller.withPosition(rotations));
+    private double getPosition() {
+        return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
     }
 
     // *************** Commands ***************
 
     /**
-     * Moves the pivot to the position supplied by {@code rotationsSupplier}.
-     * @param rotationsSupplier The supplier of the position. Positions should be in rotations.
-     */
-    private Command goToPosition(DoubleSupplier rotationsSupplier) {
-        return commandBuilder("supplier")
-            .onExecute(() -> setTargetPosition(rotationsSupplier.getAsDouble()))
-            .onEnd(this::stop);
-    }
-
-    /**
      * Moves the pivot to predetermined positions.
      * @param position The position to move the pivot to.
      */
-    public Command goToPosition(Position position) {
-        return goToPosition(position::getRotations).withName(getMethodInfo(position.name()));
+    public Command goTo(Position position, boolean left) {
+        Mutable<Boolean> reachedPosition = new Mutable<>(false);
+
+        return commandBuilder(position.name())
+            .onInitialize(() -> reachedPosition.accept(false))
+            .onExecute(() ->
+                motor.setControl(positionControl.withPosition(position.getRotations() * (left ? -1.0 : 1.0)))
+            )
+            .onEnd(() -> motor.stopMotor());
     }
 }

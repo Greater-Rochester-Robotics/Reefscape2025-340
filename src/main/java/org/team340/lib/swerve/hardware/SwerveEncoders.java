@@ -283,14 +283,12 @@ public final class SwerveEncoders {
                 ? SensorDirectionValue.Clockwise_Positive
                 : SensorDirectionValue.CounterClockwise_Positive;
 
-            PhoenixUtil.run("Clear Sticky Faults", canCoder, () -> canCoder.clearStickyFaults());
-            PhoenixUtil.run("Apply CANcoderConfiguration", canCoder, () ->
-                canCoder.getConfigurator().apply(canCoderConfig)
-            );
-            PhoenixUtil.run("Set Update Frequency", canCoder, () ->
+            PhoenixUtil.run("Clear Sticky Faults", () -> canCoder.clearStickyFaults());
+            PhoenixUtil.run("Apply CANcoderConfiguration", () -> canCoder.getConfigurator().apply(canCoderConfig));
+            PhoenixUtil.run("Set Update Frequency", () ->
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
-            PhoenixUtil.run("Optimize Bus Utilization", canCoder, () ->
+            PhoenixUtil.run("Optimize Bus Utilization", () ->
                 canCoder.optimizeBusUtilization(1.0 / SwerveBaseHardware.kTelemetryCANPeriod, 0.05)
             );
 
@@ -308,9 +306,8 @@ public final class SwerveEncoders {
                 talonFX.getConfigurator().refresh(closedLoopConfig);
                 closedLoopConfig.ContinuousWrap = true;
 
-                PhoenixUtil.run("Apply FeedbackConfigs", talonFX, () -> talonFX.getConfigurator().apply(feedbackConfig)
-                );
-                PhoenixUtil.run("Apply ClosedLoopGeneralConfigs", talonFX, () ->
+                PhoenixUtil.run("Apply FeedbackConfigs", () -> talonFX.getConfigurator().apply(feedbackConfig));
+                PhoenixUtil.run("Apply ClosedLoopGeneralConfigs", () ->
                     talonFX.getConfigurator().apply(closedLoopConfig)
                 );
 
