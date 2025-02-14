@@ -1,5 +1,8 @@
 package org.team340.robot.subsystems;
 
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static org.team340.lib.util.command.GRRUtilities.*;
+
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -8,6 +11,7 @@ import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
+import com.ctre.phoenix6.signals.ReverseLimitValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -23,6 +27,7 @@ public class Elevator extends GRRSubsystem {
 
     public static enum Position {
         kDown(0.0),
+        kLoad(0.0),
         kL1(10.0),
         kL2(20.0),
         kL3(30.0),
@@ -50,6 +55,9 @@ public class Elevator extends GRRSubsystem {
     private final StatusSignal<Angle> leadPosition;
     private final StatusSignal<Angle> followPosition;
     private final MotionMagicVoltage positionControl;
+
+    private final double kHomingSpeed = 0.0;
+    private boolean hasBeenHomed = false;
 
     public Elevator() {
         // MOTOR SETUP
@@ -114,20 +122,38 @@ public class Elevator extends GRRSubsystem {
         return Math2.epsilonEquals(averagePosition, position.getRotations(), kAtPositionEpsilon.value());
     }
 
+    public boolean isAtLimit() {
+        return leadMotor.getReverseLimit().getValue().equals(ReverseLimitValue.ClosedToGround);
+    }
+
     // *************** Commands ***************
+
+    /**
+     * Homes the elevator.
+     */
+    public Command home() {
+        return commandBuilder()
+            .onExecute(() -> leadMotor.set(kHomingSpeed))
+            .isFinished(this::isAtLimit)
+            .onEnd(() -> hasBeenHomed = true)
+            .onlyIf(() -> !hasBeenHomed);
+    }
 
     /**
      * Move elevator to predetermined positions.
      * @param position - The predetermined positions.
      */
     public Command goTo(Position position) {
-        return commandBuilder(position.name())
-            .onExecute(() -> {
-                // Setting lead motor also sets the follow motor
-                leadMotor.setControl(positionControl.withPosition(position.getRotations()));
-            })
-            .onEnd(() -> {
-                leadMotor.stopMotor();
-            });
+        return sequence(
+            home(),
+            commandBuilder(position.name())
+                .onExecute(() -> {
+                    // Setting lead motor also sets the follow motor
+                    leadMotor.setControl(positionControl.withPosition(position.getRotations()));
+                })
+                .onEnd(() -> {
+                    leadMotor.stopMotor();
+                })
+        );
     }
 }

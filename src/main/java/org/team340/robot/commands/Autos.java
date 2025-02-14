@@ -41,7 +41,7 @@ public final class Autos {
         AutoTrajectory exampleTraj = routine.trajectory("example");
 
         routine.active().onTrue(sequence(exampleTraj.resetOdometry(), exampleTraj.cmd()));
-        exampleTraj.done().onTrue(sequence(routines.example(), swerve.finishAuto()));
+        // exampleTraj.done().onTrue(sequence(routines.example(), swerve.finishAuto()));
 
         return routine.cmd();
     }
