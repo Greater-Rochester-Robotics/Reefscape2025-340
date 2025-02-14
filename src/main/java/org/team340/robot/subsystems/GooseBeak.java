@@ -10,7 +10,6 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-
 import java.util.function.DoubleSupplier;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
@@ -49,7 +48,7 @@ public class GooseBeak extends GRRSubsystem {
 
     public GooseBeak() {
         motor = new TalonFXS(UpperCAN.kGooseBeakMotor);
-        
+
         TalonFXSConfiguration config = new TalonFXSConfiguration();
 
         config.CurrentLimits.StatorCurrentLimit = 30.0;
@@ -64,7 +63,8 @@ public class GooseBeak extends GRRSubsystem {
         PhoenixUtil.run("Apply Goose Beak TalonFXSConfiguration", motor, () -> motor.getConfigurator().apply(config));
 
         debouncedBeamBroken = beamBroken();
-        new Trigger( this::beamBroken).debounce(kIntakeDelaySeconds, DebounceType.kBoth)
+        new Trigger(this::beamBroken)
+            .debounce(kIntakeDelaySeconds, DebounceType.kBoth)
             .onTrue(runOnce(() -> debouncedBeamBroken = true))
             .onFalse(runOnce(() -> debouncedBeamBroken = false));
     }
