@@ -118,6 +118,15 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
+     * Returns true if the elevator and goose neck are safe
+     * to move, based on the robot's position on the field.
+     */
+    public boolean safeForGoose() {
+        // TODO
+        return true;
+    }
+
+    /**
      * Tares the rotation of the robot. Useful for
      * fixing an out of sync or drifting IMU.
      */
