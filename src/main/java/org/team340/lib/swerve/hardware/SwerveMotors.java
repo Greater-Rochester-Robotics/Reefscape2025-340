@@ -394,16 +394,16 @@ public final class SwerveMotors {
             talonConfig.Slot0.kS = ffGains[0];
             talonConfig.Slot0.kV = ffGains[1];
 
-            PhoenixUtil.run("Clear Sticky Faults", talonFX, () -> talonFX.clearStickyFaults());
-            PhoenixUtil.run("Apply TalonFXConfiguration", talonFX, () -> talonFX.getConfigurator().apply(talonConfig));
-            PhoenixUtil.run("Set Update Frequency", talonFX, () ->
+            PhoenixUtil.run("Clear Sticky Faults", () -> talonFX.clearStickyFaults());
+            PhoenixUtil.run("Apply TalonFXConfiguration", () -> talonFX.getConfigurator().apply(talonConfig));
+            PhoenixUtil.run("Set Update Frequency", () ->
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
-            PhoenixUtil.run("Optimize Bus Utilization", talonFX, () ->
+            PhoenixUtil.run("Optimize Bus Utilization", () ->
                 talonFX.optimizeBusUtilization(1.0 / SwerveBaseHardware.kTelemetryCANPeriod, 0.05)
             );
 
-            if (isMoveMotor) PhoenixUtil.run("Zero Encoder", talonFX, () -> talonFX.setPosition(0.0));
+            if (isMoveMotor) PhoenixUtil.run("Zero Rotor Encoder", () -> talonFX.setPosition(0.0));
 
             return new SwerveMotor() {
                 @Override
