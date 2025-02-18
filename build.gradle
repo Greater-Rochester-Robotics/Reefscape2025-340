@@ -1,7 +1,7 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2025.2.1"
-    id "com.diffplug.spotless" version "6.25.0"
+    id "edu.wpi.first.GradleRIO" version "2025.3.1"
+    id "com.diffplug.spotless" version "7.0.2"
 }
 
 java {
@@ -86,7 +86,7 @@ spotless {
         endWithNewline()
         removeUnusedImports()
         trimTrailingWhitespace()
-        prettier(['prettier': '3.4.2', 'prettier-plugin-java': '2.6.5'])
+        prettier(['prettier': '3.5.1', 'prettier-plugin-java': '2.6.7'])
             .config([
                 'parser': 'java',
                 'plugins': ['prettier-plugin-java'],
