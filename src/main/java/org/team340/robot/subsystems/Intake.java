@@ -25,7 +25,8 @@ import org.team340.robot.Constants.UpperCAN;
 public class Intake extends GRRSubsystem {
 
     private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 7.0);
-    private static final TunableDouble kUnjamVoltage = Tunable.doubleValue("intake/kUnjamVoltage", -6.0);
+    private static final TunableDouble kBarfVoltage = Tunable.doubleValue("intake/kBarfVoltage", 7.0);
+    private static final TunableDouble kSwallowVoltage = Tunable.doubleValue("intake/kSwallowVoltage", -6.0);
     private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.3);
     private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 18.0);
 
@@ -100,7 +101,7 @@ public class Intake extends GRRSubsystem {
                 }
 
                 if (unjamTimer.isRunning() && !unjamTimer.hasElapsed(kUnjamTime.value())) {
-                    motor.setControl(voltageControl.withOutput(kUnjamVoltage.value()));
+                    motor.setControl(voltageControl.withOutput(kSwallowVoltage.value()));
                 } else {
                     motor.setControl(voltageControl.withOutput(kIntakeVoltage.value()));
                     unjamTimer.stop();
@@ -111,11 +112,20 @@ public class Intake extends GRRSubsystem {
     }
 
     /**
-     * Unjams the intake.
+     * Sets the intake to barf.
      */
-    public Command unjam() {
-        return commandBuilder("Intake.unjam()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(kUnjamVoltage.value())))
+    public Command barf() {
+        return commandBuilder("Intake.barf()")
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(kBarfVoltage.value())))
+            .onEnd(motor::stopMotor);
+    }
+
+    /**
+     * Sets the intake to swallow.
+     */
+    public Command swallow() {
+        return commandBuilder("Intake.swallow()")
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(kSwallowVoltage.value())))
             .onEnd(motor::stopMotor);
     }
 }

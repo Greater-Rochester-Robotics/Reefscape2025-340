@@ -12,33 +12,57 @@ import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
+import org.team340.robot.subsystems.Lights;
 import org.team340.robot.subsystems.Swerve;
 
 /**
  * The Routines class contains command compositions, such as sequences
  * or parallel command groups, that require multiple subsystems.
  */
+@SuppressWarnings("unused")
 @Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
 
     private final Elevator elevator;
     private final GooseNeck gooseNeck;
     private final Intake intake;
+    private final Lights lights;
     private final Swerve swerve;
+
+    private final BooleanSupplier safeForGoose;
 
     public Routines(Robot robot) {
         elevator = robot.elevator;
         gooseNeck = robot.gooseNeck;
         intake = robot.intake;
+        lights = robot.lights;
         swerve = robot.swerve;
+
+        safeForGoose = robot::safeForGoose;
     }
 
     public Command intake(BooleanSupplier button) {
         return deadline(
-            gooseNeck.intake(button, swerve::safeForGoose),
-            intake.intake(),
-            elevator.goTo(ElevatorPosition.kIntake, swerve::safeForGoose)
+            gooseNeck.intake(button, safeForGoose),
+            intake.intake().asProxy(),
+            elevator.goTo(ElevatorPosition.kIntake, safeForGoose)
         ).withName("Routines.intake()");
+    }
+
+    public Command barf() {
+        return parallel(
+            gooseNeck.barf(safeForGoose),
+            intake.barf(),
+            elevator.goTo(ElevatorPosition.kBarf, safeForGoose)
+        ).withName("Routines.barf()");
+    }
+
+    public Command swallow() {
+        return parallel(
+            gooseNeck.swallow(safeForGoose),
+            intake.swallow(),
+            elevator.goTo(ElevatorPosition.kSwallow, safeForGoose)
+        ).withName("Routines.swallow()");
     }
 
     public Command scoreForward(
@@ -48,14 +72,10 @@ public final class Routines {
         boolean allowMovement
     ) {
         return parallel(
-            elevator.goTo(position, swerve::safeForGoose),
-            gooseNeck.score(
-                runManual,
-                () -> position.get().equals(ElevatorPosition.kL1),
-                swerve::safeForGoose,
-                left,
-                allowMovement
-            )
+            elevator.goTo(position, safeForGoose),
+            gooseNeck
+                .score(runManual, () -> position.get().equals(ElevatorPosition.kL1), safeForGoose, left, allowMovement)
+                .asProxy()
         ).withName("Routines.scoreForward()");
     }
 }

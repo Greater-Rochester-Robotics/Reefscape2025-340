@@ -6,6 +6,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -69,18 +70,19 @@ public final class Robot extends TimedRobot {
         // Create triggers
         RobotModeTriggers.autonomous().whileTrue(GRRDashboard.runSelectedAuto());
 
-        // Light triggers
+        // Setup lights
+        lights.disabled().until(this::isEnabled).schedule();
         RobotModeTriggers.disabled().whileTrue(lights.disabled());
         RobotModeTriggers.autonomous().whileTrue(parallel(lights.sides.flames(), lights.top.off()));
         RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(() -> selectedLevel));
         RobotModeTriggers.teleop()
             .and(gooseNeck::hasCoral)
-            .onTrue(lights.top.hasCoral())
+            .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition))
             .onFalse(lights.top.scored().onlyIf(this::isTeleop));
 
         // Set default commands
-        elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, swerve::safeForGoose));
-        gooseNeck.setDefaultCommand(gooseNeck.stow(swerve::safeForGoose));
+        elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, this::safeForGoose));
+        gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
         swerve.setDefaultCommand(
             swerve.drive(
                 driver::getLeftX,
@@ -91,34 +93,41 @@ public final class Robot extends TimedRobot {
 
         // Driver bindings
         driver.a().onTrue(routines.intake(driver.a()));
-        driver.b().whileTrue(intake.unjam());
+        driver.b().whileTrue(routines.swallow());
+
+        driver
+            .x()
+            .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), true, false));
         driver
             .leftBumper()
             .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), true, true));
         driver
             .rightBumper()
             .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), false, true));
+
+        driver.axisLessThan(kRightY.value, -0.5).onTrue(incrementLevel());
+        driver.axisGreaterThan(kRightY.value, 0.5).onTrue(decrementLevel());
+
         driver.povLeft().onTrue(swerve.tareRotation());
-
-        driver
-            .x()
-            .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), true, false));
-
-        driver.axisLessThan(kRightY.value, -0.3).onTrue(incrementLevel());
-        driver.axisGreaterThan(kRightY.value, 0.3).onTrue(decrementLevel());
+        driver.povUp().whileTrue(routines.barf());
+        driver.povDown().whileTrue(routines.swallow());
 
         // Co-driver bindings
         coDriver.a().onTrue(none());
     }
 
+    public boolean safeForGoose() {
+        return !gooseNeck.beamBroken() && swerve.safeForGoose();
+    }
+
     private Command incrementLevel() {
-        return runOnce(() -> selectedLevel = Math.min(selectedLevel + 1, 4))
+        return runOnce(() -> selectedLevel = (int) MathUtil.inputModulus(selectedLevel + 1, 0.5, 4.5))
             .ignoringDisable(true)
             .withName("Robot.incrementLevel()");
     }
 
     private Command decrementLevel() {
-        return runOnce(() -> selectedLevel = Math.max(selectedLevel - 1, 1))
+        return runOnce(() -> selectedLevel = (int) MathUtil.inputModulus(selectedLevel - 1, 0.5, 4.5))
             .ignoringDisable(true)
             .withName("Robot.decrementLevel()");
     }

@@ -1,11 +1,14 @@
 package org.team340.robot.subsystems;
 
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
@@ -18,8 +21,9 @@ public class Lights {
 
     private static enum Color {
         kLx(255, 255, 255),
-        kScored(0, 255, 0),
         kHasCoral(255, 255, 255),
+        kGoose(255, 255, 255),
+        kScored(0, 255, 0),
         kDisabled(255, 11, 0),
         kOff(0, 0, 0);
 
@@ -64,8 +68,6 @@ public class Lights {
 
         sides = new Sides();
         top = new Top();
-
-        setAll(Color.kDisabled);
     }
 
     public void update() {
@@ -210,21 +212,46 @@ public class Lights {
          * @param color The color to apply.
          */
         private void set(Color color) {
-            for (int i = kStripLength; i < kStripLength * 2; i++) {
-                buffer.setRGB(i, color.r(), color.g(), color.b());
-            }
+            for (int i = 0; i < kStripLength; i++) set(i, color);
+        }
+
+        private void set(int i, Color color) {
+            if (i >= kStripLength) return;
+            buffer.setRGB(kStripLength + i, color.r(), color.g(), color.b());
         }
 
         /**
          * Displays the "Has Coral" animation.
          * @return
          */
-        public Command hasCoral() {
+        public Command hasCoral(BooleanSupplier goosing, DoubleSupplier goosePosition) {
+            final double kGooseRange = 0.15;
+            final double kHalfRange = kGooseRange / 2.0;
+
             Timer timer = new Timer();
 
             return commandBuilder()
                 .onInitialize(() -> timer.restart())
-                .onExecute(() -> set(timer.get() % 0.4 > 0.2 ? Color.kHasCoral : Color.kOff))
+                .onExecute(() -> {
+                    if (!goosing.getAsBoolean()) {
+                        set(timer.get() % 0.4 > 0.2 ? Color.kHasCoral : Color.kOff);
+                    } else {
+                        double position = goosePosition.getAsDouble();
+                        double percent =
+                            (MathUtil.clamp(Math.abs(position), 0.5 - kHalfRange, 0.5 + kHalfRange) -
+                                (0.5 - kHalfRange)) *
+                            (1.0 / kGooseRange);
+                        if (position < 0.0) percent = 1.0 - percent;
+                        int closestLED = (int) Math.round(percent * (kStripLength - 1));
+                        for (int i = 0; i < kStripLength; i++) {
+                            if (Math.abs(closestLED - i) <= 1) {
+                                set(i, Color.kGoose);
+                            } else {
+                                set(i, Color.kOff);
+                            }
+                        }
+                    }
+                })
                 .onEnd(() -> set(Color.kOff))
                 .ignoringDisable(true)
                 .withName("Lights.Top.hasCoral()");

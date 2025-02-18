@@ -30,6 +30,9 @@ import org.team340.robot.Constants.LowerCAN;
 @Logged
 public final class Swerve extends GRRSubsystem {
 
+    private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
+    private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
+
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
         .setLocation(0.28, 0.28)
@@ -60,14 +63,14 @@ public final class Swerve extends GRRSubsystem {
 
     private static final SwerveConfig kConfig = new SwerveConfig()
         .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02)
-        .setMovePID(0.01, 0.0, 0.0)
-        .setMoveFF(0.05, 0.1)
+        .setMovePID(0.27, 0.0, 0.0)
+        .setMoveFF(0.0, 0.126)
         .setTurnPID(100.0, 0.0, 0.2)
-        .setBrakeMode(true, true)
-        .setLimits(5.0, 13.0, 7.0, 27.5)
-        .setDriverProfile(4.5, 1.0, 0.15, 4.2, 2.0, 0.05)
-        .setPowerProperties(Constants.kVoltage, 80.0, 70.0, 60.0, 60.0)
-        .setMechanicalProperties(5.4, 12.1, 0.0, Units.inchesToMeters(4.0))
+        .setBrakeMode(false, true)
+        .setLimits(4.0, 17.5, 14.0, 30.0)
+        .setDriverProfile(4.0, 1.5, 0.15, 4.2, 2.0, 0.05)
+        .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
+        .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)

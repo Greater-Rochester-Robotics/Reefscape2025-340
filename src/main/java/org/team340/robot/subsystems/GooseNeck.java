@@ -19,6 +19,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Timer;
@@ -48,7 +49,7 @@ public class GooseNeck extends GRRSubsystem {
      */
     private static enum GoosePosition {
         kIn(0.0),
-        kScoreL1(-0.15),
+        kScoreL1(-0.12),
         kScoreForward(0.5);
 
         private TunableDouble rotations;
@@ -72,18 +73,31 @@ public class GooseNeck extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.35);
-    private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.05);
+    private static enum GooseSpeed {
+        kIntakeFast(-4.0),
+        kIntakeSlow(-2.0),
+        kScoreL1(-3.5),
+        kScoreForward(10.0),
+        kBarf(-8.0),
+        kSwallow(8.0);
 
+        private TunableDouble voltage;
+
+        private GooseSpeed(double voltage) {
+            this.voltage = Tunable.doubleValue("gooseNeck/speeds/" + name(), voltage);
+        }
+
+        private double voltage() {
+            return voltage.value();
+        }
+    }
+
+    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
+    private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.01);
+
+    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.02);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
-    private static final TunableDouble kTorqueCurrent = Tunable.doubleValue("gooseNeck/kTorqueCurrent", 5.0);
-
-    private static final TunableDouble kIntakeFastVoltage = Tunable.doubleValue("gooseNeck/kIntakeFastVoltage", -4.0);
-    private static final TunableDouble kIntakeSlowVoltage = Tunable.doubleValue("gooseNeck/kIntakeSlowVoltage", -2.0);
-    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.03);
-
-    private static final TunableDouble kScoreVoltage = Tunable.doubleValue("gooseNeck/kScoreVoltage", 6.0);
-    private static final TunableDouble kScoreL1Voltage = Tunable.doubleValue("gooseNeck/kScoreL1Voltage", -3.5);
+    private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
 
     private final TalonFX pivotMotor;
     private final TalonFXS beakMotor;
@@ -98,7 +112,9 @@ public class GooseNeck extends GRRSubsystem {
     private final TorqueCurrentFOC torqueControl;
     private final VoltageOut beakVoltageControl;
 
+    private final PIDController torquePID = new PIDController(165.0, 0.0, 12.0);
     private final AtomicBoolean hasCoral = new AtomicBoolean(false);
+    private boolean goosing = false;
 
     public GooseNeck() {
         pivotMotor = new TalonFX(UpperCAN.kGooseNeckMotor);
@@ -129,8 +145,8 @@ public class GooseNeck extends GRRSubsystem {
 
         beakConfig.Commutation.MotorArrangement = MotorArrangementValue.Minion_JST;
 
-        beakConfig.CurrentLimits.StatorCurrentLimit = 30.0;
-        beakConfig.CurrentLimits.SupplyCurrentLimit = 20.0;
+        beakConfig.CurrentLimits.StatorCurrentLimit = 40.0;
+        beakConfig.CurrentLimits.SupplyCurrentLimit = 30.0;
 
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -177,9 +193,12 @@ public class GooseNeck extends GRRSubsystem {
 
         Tunable.pidController("gooseNeck/pid", pivotMotor);
         Tunable.motionProfile("gooseNeck/motion", pivotMotor);
+        Tunable.pidController("gooseNeck/torquePID", torquePID);
 
         PhoenixUtil.run("Sync Goose Neck Position", () ->
-            pivotMotor.setPosition(MathUtil.inputModulus(candi.getPWM2Position().getValueAsDouble(), -0.5, 0.5))
+            pivotMotor.setPosition(
+                MathUtil.inputModulus(candi.getPWM2Position(false).waitForUpdate(1.0).getValueAsDouble(), -0.5, 0.5)
+            )
         );
     }
 
@@ -195,6 +214,15 @@ public class GooseNeck extends GRRSubsystem {
         return hasCoral.get();
     }
 
+    @NotLogged
+    public boolean goosing() {
+        return goosing;
+    }
+
+    public double getPosition() {
+        return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
+    }
+
     /**
      * Checks if the beam break detects an object.
      * @return True if the beam break detects an object, false otherwise.
@@ -203,14 +231,10 @@ public class GooseNeck extends GRRSubsystem {
         return !beamBreak.getValue();
     }
 
-    private double getPosition() {
-        return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
-    }
-
     // *************** Commands ***************
 
     public Command stow(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, safe, false, false);
+        return goTo(() -> GoosePosition.kIn, safe, false, false).withName("GooseNeck.stow()");
     }
 
     public Command intake(BooleanSupplier button, BooleanSupplier safe) {
@@ -220,21 +244,21 @@ public class GooseNeck extends GRRSubsystem {
         return goTo(() -> GoosePosition.kIn, safe, false, false).withDeadline(
             new NotifierCommand(
                 () -> {
-                    boolean beamBroken = !beamBreakVolatile.refresh().getValue();
+                    boolean beamBroken = !beamBreakVolatile.waitForUpdate(0.02).getValue();
 
                     if (beamBroken) sawCoral.value = true;
                     if (sawCoral.value && !beamBroken) delay.start();
 
                     if (!sawCoral.value) {
-                        beakMotor.setControl(beakVoltageControl.withOutput(kIntakeFastVoltage.value()));
+                        beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntakeFast.voltage()));
                     } else if (!delay.hasElapsed(kIntakeSeatDelay.value())) {
-                        beakMotor.setControl(beakVoltageControl.withOutput(kIntakeSlowVoltage.value()));
+                        beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntakeSlow.voltage()));
                     } else {
                         hasCoral.set(true);
                         beakMotor.stopMotor();
                     }
                 },
-                0.004
+                0.0
             )
                 .until(() -> hasCoral() || (!button.getAsBoolean() && !sawCoral.value))
                 .beforeStarting(() -> {
@@ -243,6 +267,8 @@ public class GooseNeck extends GRRSubsystem {
                     delay.reset();
                 })
                 .finallyDo(beakMotor::stopMotor)
+                .onlyIf(() -> !hasCoral())
+                .withName("GooseNeck.intake()")
         );
     }
 
@@ -268,7 +294,9 @@ public class GooseNeck extends GRRSubsystem {
                         if (beamBroken() || beamTrigger.value || runManual.getAsBoolean()) {
                             beakMotor.setControl(
                                 beakVoltageControl.withOutput(
-                                    l1.getAsBoolean() ? kScoreL1Voltage.value() : kScoreVoltage.value()
+                                    l1.getAsBoolean()
+                                        ? GooseSpeed.kScoreL1.voltage()
+                                        : GooseSpeed.kScoreForward.voltage()
                                 )
                             );
                             hasCoral.set(false);
@@ -279,6 +307,28 @@ public class GooseNeck extends GRRSubsystem {
             )
             .onlyIf(this::hasCoral)
             .withName("GooseNeck.score(" + left + ")");
+    }
+
+    public Command barf(BooleanSupplier safe) {
+        return goTo(() -> GoosePosition.kIn, safe, false, false)
+            .alongWith(
+                new CommandBuilder()
+                    .onInitialize(() -> hasCoral.set(false))
+                    .onExecute(() -> beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kBarf.voltage())))
+                    .onEnd(beakMotor::stopMotor)
+            )
+            .withName("GooseNeck.barf()");
+    }
+
+    public Command swallow(BooleanSupplier safe) {
+        return goTo(() -> GoosePosition.kIn, safe, false, false)
+            .alongWith(
+                new CommandBuilder()
+                    .onInitialize(() -> hasCoral.set(false))
+                    .onExecute(() -> beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSwallow.voltage())))
+                    .onEnd(beakMotor::stopMotor)
+            )
+            .withName("GooseNeck.swallow()");
     }
 
     /**
@@ -294,6 +344,7 @@ public class GooseNeck extends GRRSubsystem {
             .onInitialize(() -> {
                 timer.stop();
                 timer.reset();
+                torquePID.reset();
             })
             .onExecute(() -> {
                 double target = position.get().rotations() * (left ? -1.0 : 1.0);
@@ -304,11 +355,10 @@ public class GooseNeck extends GRRSubsystem {
 
                 lastTarget.value = target;
 
-                if (allowMovement && !position.get().equals(GoosePosition.kScoreL1)) {
+                if (allowMovement && position.get().equals(GoosePosition.kScoreForward)) {
                     double currentPosition = getPosition();
                     boolean atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionEpsilon.value());
-
-                    System.out.println(target - currentPosition);
+                    goosing = true;
 
                     if (timer.hasElapsed(kTorqueDelay.value())) {
                         if (atPosition) {
@@ -316,7 +366,11 @@ public class GooseNeck extends GRRSubsystem {
                         } else {
                             pivotMotor.setControl(
                                 torqueControl.withOutput(
-                                    Math.copySign(kTorqueCurrent.value(), target - currentPosition)
+                                    MathUtil.clamp(
+                                        torquePID.calculate(currentPosition, target),
+                                        -kTorqueMax.value(),
+                                        kTorqueMax.value()
+                                    )
                                 )
                             );
                         }
@@ -325,6 +379,8 @@ public class GooseNeck extends GRRSubsystem {
                     } else if (atPosition) {
                         timer.start();
                     }
+                } else {
+                    goosing = false;
                 }
 
                 if (!safe.getAsBoolean()) {
@@ -339,6 +395,9 @@ public class GooseNeck extends GRRSubsystem {
                     holdPosition.value = -1.0;
                 }
             })
-            .onEnd(() -> pivotMotor.stopMotor());
+            .onEnd(() -> {
+                pivotMotor.stopMotor();
+                goosing = false;
+            });
     }
 }
