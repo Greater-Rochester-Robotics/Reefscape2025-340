@@ -2,7 +2,12 @@ package org.team340.robot;
 
 import choreo.util.ChoreoAllianceFlipUtil;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -18,6 +23,10 @@ public final class Constants {
 
     public static final class FieldConstants {
 
+        public static final AprilTagFieldLayout kAprilTags = AprilTagFieldLayout.loadField(
+            AprilTagFields.k2025ReefscapeWelded
+        );
+
         public static final double kLength = 17.548;
         public static final double kWidth = 8.052;
 
@@ -25,6 +34,27 @@ public final class Constants {
         public static final Translation2d kReefCenterRed = ChoreoAllianceFlipUtil.flip(kReefCenterBlue);
 
         public static final double kPipeOffsetY = 0.164;
+    }
+
+    public final class Cameras {
+
+        // TODO Get measurements from CAD
+        public static final Transform3d kMiddle = new Transform3d(
+            new Translation3d(0.0, 0.0, 0.0),
+            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+        );
+        public static final Transform3d kLeft = new Transform3d(
+            new Translation3d(0.0, 0.0, 0.0),
+            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+        );
+        public static final Transform3d kRight = new Transform3d(
+            new Translation3d(0.0, 0.0, 0.0),
+            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+        );
+        public static final Transform3d kBack = new Transform3d(
+            new Translation3d(0.0, 0.0, 0.0),
+            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+        );
     }
 
     /**
