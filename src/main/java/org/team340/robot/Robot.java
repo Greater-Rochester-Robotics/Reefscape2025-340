@@ -83,13 +83,7 @@ public final class Robot extends TimedRobot {
         // Set default commands
         elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
-        swerve.setDefaultCommand(
-            swerve.drive(
-                driver::getLeftX,
-                driver::getLeftY,
-                () -> driver.getLeftTriggerAxis() - driver.getRightTriggerAxis()
-            )
-        );
+        swerve.setDefaultCommand(swerve.driveReef(driver::getLeftX, driver::getLeftY));
 
         // Driver bindings
         driver.a().onTrue(routines.intake(driver.a()));

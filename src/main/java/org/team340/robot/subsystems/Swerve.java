@@ -6,8 +6,12 @@ import com.ctre.phoenix6.CANBus;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -19,9 +23,12 @@ import org.team340.lib.swerve.config.SwerveModuleConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders;
 import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
+import org.team340.lib.util.Alliance;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
+import org.team340.robot.Constants.FieldConstants;
 import org.team340.robot.Constants.LowerCAN;
 
 /**
@@ -76,19 +83,13 @@ public final class Swerve extends GRRSubsystem {
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
-    private static final double kAutoKp = 7.0;
-    private static final double kAutoKi = 0.0;
-    private static final double kAutoKd = 0.0;
-
-    private static final double kAutoAngularKp = 5.0;
-    private static final double kAutoAngularKi = 0.0;
-    private static final double kAutoAngularKd = 0.0;
-
     private final SwerveAPI api;
 
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
     private final PIDController autoPIDangular;
+
+    private final ProfiledPIDController faceReefPID;
 
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
@@ -96,10 +97,14 @@ public final class Swerve extends GRRSubsystem {
     public Swerve() {
         api = new SwerveAPI(kConfig);
 
-        autoPIDx = new PIDController(kAutoKp, kAutoKi, kAutoKd);
-        autoPIDy = new PIDController(kAutoKp, kAutoKi, kAutoKd);
-        autoPIDangular = new PIDController(kAutoAngularKp, kAutoAngularKi, kAutoAngularKd);
+        autoPIDx = new PIDController(7.0, 0.0, 0.0);
+        autoPIDy = new PIDController(7.0, 0.0, 0.0);
+        autoPIDangular = new PIDController(5.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
+
+        faceReefPID = new ProfiledPIDController(6.25, 0.5, 0.0, new Constraints(9.5, 24.0));
+        faceReefPID.enableContinuousInput(-Math.PI, Math.PI);
+        faceReefPID.setIZone(0.8);
 
         api.enableTunables("swerve/api");
         Tunable.pidController("swerve/autoPID", autoPIDx);
@@ -157,6 +162,29 @@ public final class Swerve extends GRRSubsystem {
                 true
             )
         );
+    }
+
+    /**
+     * Drives the robot using driver input while facing the reef.
+     * @param x The X value from the driver's joystick.
+     * @param y The Y value from the driver's joystick.
+     */
+    public Command driveReef(DoubleSupplier x, DoubleSupplier y) {
+        return commandBuilder("Swerve.driveReef()")
+            .onInitialize(() -> faceReefPID.reset(api.state.yaw.getRadians(), api.state.speeds.omegaRadiansPerSecond))
+            .onExecute(() -> {
+                Translation2d reefCenter = Alliance.isBlue()
+                    ? FieldConstants.kReefCenterBlue
+                    : FieldConstants.kReefCenterRed;
+
+                Rotation2d angle = reefCenter.minus(api.state.translation).getAngle();
+                double target =
+                    Math.floor(angle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
+                    Math2.kThirdPi;
+
+                double angularVel = faceReefPID.calculate(api.state.yaw.getRadians(), target);
+                api.applyDriverInput(x.getAsDouble(), y.getAsDouble(), angularVel, Perspective.kOperator, true, true);
+            });
     }
 
     /**

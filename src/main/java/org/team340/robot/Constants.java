@@ -1,6 +1,8 @@
 package org.team340.robot;
 
+import choreo.util.ChoreoAllianceFlipUtil;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import edu.wpi.first.math.geometry.Translation2d;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -13,6 +15,17 @@ public final class Constants {
 
     public static final int kDriver = 0;
     public static final int kCoDriver = 1;
+
+    public static final class FieldConstants {
+
+        public static final double kLength = 17.548;
+        public static final double kWidth = 8.052;
+
+        public static final Translation2d kReefCenterBlue = new Translation2d(4.489, kWidth / 2.0);
+        public static final Translation2d kReefCenterRed = ChoreoAllianceFlipUtil.flip(kReefCenterBlue);
+
+        public static final double kPipeOffsetY = 0.164;
+    }
 
     /**
      * The RobotMap class defines CAN IDs, CAN bus names, DIO/PWM/PH/PCM channel
