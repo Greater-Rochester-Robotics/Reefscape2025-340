@@ -10,12 +10,16 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -34,9 +38,12 @@ import org.team340.lib.swerve.config.SwerveModuleConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders;
 import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
+import org.team340.lib.util.Alliance;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
+import org.team340.robot.Constants.FieldConstants;
 import org.team340.robot.Constants.LowerCAN;
 
 /**
@@ -44,6 +51,9 @@ import org.team340.robot.Constants.LowerCAN;
  */
 @Logged
 public final class Swerve extends GRRSubsystem {
+
+    private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
+    private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
 
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
@@ -75,38 +85,32 @@ public final class Swerve extends GRRSubsystem {
 
     private static final SwerveConfig kConfig = new SwerveConfig()
         .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02)
-        .setMovePID(0.01, 0.0, 0.0)
-        .setMoveFF(0.05, 0.1)
+        .setMovePID(0.27, 0.0, 0.0)
+        .setMoveFF(0.0, 0.126)
         .setTurnPID(100.0, 0.0, 0.2)
-        .setBrakeMode(true, true)
-        .setLimits(5.0, 13.0, 7.0, 27.5)
-        .setDriverProfile(4.5, 1.0, 0.15, 4.2, 2.0, 0.05)
-        .setPowerProperties(Constants.kVoltage, 80.0, 70.0, 60.0, 60.0)
-        .setMechanicalProperties(5.4, 12.1, 0.0, Units.inchesToMeters(4.0))
+        .setBrakeMode(false, true)
+        .setLimits(4.0, 17.5, 14.0, 30.0)
+        .setDriverProfile(4.0, 1.5, 0.15, 4.2, 2.0, 0.05)
+        .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
+        .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
-
-    private static final double kAutoKp = 7.0;
-    private static final double kAutoKi = 0.0;
-    private static final double kAutoKd = 0.0;
-
-    private static final double kAutoAngularKp = 5.0;
-    private static final double kAutoAngularKi = 0.0;
-    private static final double kAutoAngularKd = 0.0;
-
-    private final AprilTagFieldLayout aprilTags;
-    private final PhotonCamera[] cameras;
-    private final Transform3d[] cameraLocations;
-    private final List<Pose2d> measurements = new ArrayList<>();
-    private final List<Pose3d> targets = new ArrayList<>();
 
     private final SwerveAPI api;
 
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
     private final PIDController autoPIDangular;
+
+    private final ProfiledPIDController faceReefPID;
+
+    private final AprilTagFieldLayout aprilTags;
+    private final PhotonCamera[] cameras;
+    private final Transform3d[] cameraLocations;
+    private final List<Pose2d> measurements = new ArrayList<>();
+    private final List<Pose3d> targets = new ArrayList<>();
 
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
@@ -132,10 +136,14 @@ public final class Swerve extends GRRSubsystem {
     public Swerve() {
         api = new SwerveAPI(kConfig);
 
-        autoPIDx = new PIDController(kAutoKp, kAutoKi, kAutoKd);
-        autoPIDy = new PIDController(kAutoKp, kAutoKi, kAutoKd);
-        autoPIDangular = new PIDController(kAutoAngularKp, kAutoAngularKi, kAutoAngularKd);
+        autoPIDx = new PIDController(7.0, 0.0, 0.0);
+        autoPIDy = new PIDController(7.0, 0.0, 0.0);
+        autoPIDangular = new PIDController(5.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
+
+        faceReefPID = new ProfiledPIDController(6.25, 0.5, 0.0, new Constraints(9.5, 24.0));
+        faceReefPID.enableContinuousInput(-Math.PI, Math.PI);
+        faceReefPID.setIZone(0.8);
 
         api.enableTunables("swerve/api");
         Tunable.pidController("swerve/autoPID", autoPIDx);
@@ -233,6 +241,15 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
+     * Returns true if the elevator and goose neck are safe
+     * to move, based on the robot's position on the field.
+     */
+    public boolean safeForGoose() {
+        // TODO
+        return true;
+    }
+
+    /**
      * Tares the rotation of the robot. Useful for
      * fixing an out of sync or drifting IMU.
      */
@@ -260,6 +277,29 @@ public final class Swerve extends GRRSubsystem {
                 true
             )
         );
+    }
+
+    /**
+     * Drives the robot using driver input while facing the reef.
+     * @param x The X value from the driver's joystick.
+     * @param y The Y value from the driver's joystick.
+     */
+    public Command driveReef(DoubleSupplier x, DoubleSupplier y) {
+        return commandBuilder("Swerve.driveReef()")
+            .onInitialize(() -> faceReefPID.reset(api.state.yaw.getRadians(), api.state.speeds.omegaRadiansPerSecond))
+            .onExecute(() -> {
+                Translation2d reefCenter = Alliance.isBlue()
+                    ? FieldConstants.kReefCenterBlue
+                    : FieldConstants.kReefCenterRed;
+
+                Rotation2d angle = reefCenter.minus(api.state.translation).getAngle();
+                double target =
+                    Math.floor(angle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
+                    Math2.kThirdPi;
+
+                double angularVel = faceReefPID.calculate(api.state.yaw.getRadians(), target);
+                api.applyDriverInput(x.getAsDouble(), y.getAsDouble(), angularVel, Perspective.kOperator, true, true);
+            });
     }
 
     /**

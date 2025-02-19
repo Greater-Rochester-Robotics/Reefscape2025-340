@@ -121,8 +121,10 @@ public class SwerveAPI implements AutoCloseable {
 
         Math2.copyInto(kinematics.toChassisSpeeds(state.modules.states), state.speeds);
         state.velocity = Math.hypot(state.speeds.vxMetersPerSecond, state.speeds.vyMetersPerSecond);
+        state.yaw = state.pose.getRotation();
         state.pitch = imu.getPitch();
         state.roll = imu.getRoll();
+        state.translation = state.pose.getTranslation();
 
         imuSimHook.accept(state.speeds);
     }

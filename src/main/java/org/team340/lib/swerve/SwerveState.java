@@ -2,6 +2,7 @@ package org.team340.lib.swerve;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -66,20 +67,26 @@ public final class SwerveState {
     public double velocity;
     /** The robot's multi-turn yaw as reported by the IMU, in radians. */
     public double multiturnYaw;
+    /** The robot's yaw as reported from the pose estimator. */
+    public Rotation2d yaw;
     /** The robot's pitch as reported by the IMU. */
     public Rotation2d pitch;
     /** The robot's roll as reported by the IMU. */
     public Rotation2d roll;
     /** The current blue origin relative pose of the robot. */
     public Pose2d pose;
+    /** The current blue origin relative translation of the robot. */
+    public Translation2d translation;
 
     SwerveState(SwerveModule[] modules) {
         this.modules = new Modules(modules);
         odometry = new Odometry();
         speeds = new ChassisSpeeds();
         targetSpeeds = new ChassisSpeeds();
+        yaw = Rotation2d.kZero;
         pitch = Rotation2d.kZero;
         roll = Rotation2d.kZero;
         pose = Pose2d.kZero;
+        translation = Translation2d.kZero;
     }
 }

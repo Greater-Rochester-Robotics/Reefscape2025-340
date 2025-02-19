@@ -16,19 +16,19 @@ import org.team340.robot.Constants.UpperCAN;
 
 public class Climber extends GRRSubsystem {
 
-    public static enum Position {
+    public static enum ClimberPosition {
         kStore(0.0),
         kDeploy(0.0),
         kClimb(0.0);
 
-        private final TunableDouble kAngle;
+        private final TunableDouble angle;
 
-        private Position(final double angle) {
-            kAngle = Tunable.doubleValue(getEnumName(this), angle);
+        private ClimberPosition(double angle) {
+            this.angle = Tunable.doubleValue("climber/positions/" + name(), angle);
         }
 
-        private double getRotations() {
-            return kAngle.value();
+        private double rotations() {
+            return angle.value();
         }
     }
 
@@ -93,7 +93,7 @@ public class Climber extends GRRSubsystem {
      * @param rotationsSupplier The supplier of the possition that must be surpassed.
      */
     private Command goForwardToPosition(DoubleSupplier rotationsSupplier) {
-        return commandBuilder()
+        return commandBuilder("Climber.goForwardToPosition()")
             .onExecute(() -> setTargetSpeed(1.0))
             .isFinished(() -> getRotations() > rotationsSupplier.getAsDouble() || getRotations() > kForwardLimit)
             .onEnd(this::stop);
@@ -104,7 +104,7 @@ public class Climber extends GRRSubsystem {
      * @param rotationsSupplier The supplier of the possition that must be surpassed.
      */
     private Command goBackwardToPosition(DoubleSupplier rotationsSupplier) {
-        return commandBuilder()
+        return commandBuilder("Climber.goBackwardToPosition()")
             .onExecute(() -> setTargetSpeed(-1.0))
             .isFinished(() -> getRotations() < rotationsSupplier.getAsDouble() || getRotations() < kBackwardLimit)
             .onEnd(this::stop);
@@ -114,13 +114,13 @@ public class Climber extends GRRSubsystem {
      * Deploys the climber.
      */
     public Command deploy() {
-        return goForwardToPosition(Position.kDeploy::getRotations).withName(getMethodInfo());
+        return goForwardToPosition(ClimberPosition.kDeploy::rotations).withName("Climber.deploy()");
     }
 
     /**
      * Makes the climber go to the climb position.
      */
     public Command climb() {
-        return goForwardToPosition(Position.kClimb::getRotations).withName(getMethodInfo());
+        return goForwardToPosition(ClimberPosition.kClimb::rotations).withName("Climber.climb()");
     }
 }
