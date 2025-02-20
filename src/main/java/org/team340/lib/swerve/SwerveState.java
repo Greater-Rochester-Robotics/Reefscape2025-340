@@ -77,6 +77,8 @@ public final class SwerveState {
     public Pose2d pose;
     /** The current blue origin relative translation of the robot. */
     public Translation2d translation;
+    /** The timestamp of the swerve state in seconds (FPGA time). */
+    public double timestamp;
 
     SwerveState(SwerveModule[] modules) {
         this.modules = new Modules(modules);

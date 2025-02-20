@@ -6,6 +6,7 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
@@ -65,17 +66,20 @@ public final class Routines {
         ).withName("Routines.swallow()");
     }
 
-    public Command scoreForward(
+    public Command score(
+        DoubleSupplier x,
+        DoubleSupplier y,
         Supplier<ElevatorPosition> position,
         BooleanSupplier runManual,
         boolean left,
         boolean allowMovement
     ) {
         return parallel(
+            swerve.driveReef(x, y),
             elevator.goTo(position, safeForGoose),
             gooseNeck
                 .score(runManual, () -> position.get().equals(ElevatorPosition.kL1), safeForGoose, left, allowMovement)
                 .asProxy()
-        ).withName("Routines.scoreForward()");
+        ).withName("Routines.score()");
     }
 }

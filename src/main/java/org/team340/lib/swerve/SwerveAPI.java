@@ -101,6 +101,8 @@ public class SwerveAPI implements AutoCloseable {
         odometryMutex.lock();
         try {
             odometryThread.run(true);
+            state.timestamp = Timer.getFPGATimestamp();
+
             state.odometry.timesync = odometryThread.timesync;
             state.odometry.successes = odometryThread.successes;
             state.odometry.failures = odometryThread.failures;
@@ -136,7 +138,7 @@ public class SwerveAPI implements AutoCloseable {
     public void addVisionMeasurements(VisionMeasurement... measurements) {
         odometryMutex.lock();
         try {
-            for (var measurement : measurements) {
+            for (VisionMeasurement measurement : measurements) {
                 if (measurement.stdDevs == null) {
                     poseEstimator.addVisionMeasurement(measurement.visionPose, measurement.timestamp);
                 } else {
