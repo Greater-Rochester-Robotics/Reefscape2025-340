@@ -6,6 +6,7 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import java.util.ArrayList;
 import java.util.List;
 import org.photonvision.PhotonCamera;
@@ -32,6 +33,13 @@ public class VisionEstimator {
 
     private static final PoseStrategy kStrategy = PoseStrategy.PNP_DISTANCE_TRIG_SOLVE;
 
+    static {
+        var kTurboButtonPub = NetworkTableInstance.getDefault()
+            .getBooleanTopic("photonvision/use_new_cscore_frametime")
+            .publish();
+        kTurboButtonPub.set(true);
+    }
+
     private final PhotonCamera camera;
     private final PhotonPoseEstimator estimator;
 
@@ -42,7 +50,7 @@ public class VisionEstimator {
      */
     public VisionEstimator(String cameraName, Transform3d robotToCamera) {
         camera = new PhotonCamera(cameraName);
-        estimator = new PhotonPoseEstimator(FieldConstants.kAprilTags, kStrategy, null);
+        estimator = new PhotonPoseEstimator(FieldConstants.kAprilTags, kStrategy, robotToCamera);
     }
 
     /**
@@ -68,15 +76,13 @@ public class VisionEstimator {
 
                 // TODO no magic numbers
                 double distance = target.bestCameraToTarget.getTranslation().getNorm();
-                double stdScale = Math.pow(distance * (isImportant(id) ? 0.5 : 1.0), 2.0);
-                double xyStd = 0.2 * stdScale;
-                double angStd = 0.4 * stdScale;
+                double std = 0.2 * Math.pow(distance * (isImportant(id) ? 0.5 : 1.0), 2.0);
 
                 measurements.add(
                     new VisionMeasurement(
                         estimate.get().estimatedPose.toPose2d(),
                         estimate.get().timestampSeconds,
-                        VecBuilder.fill(xyStd, xyStd, angStd)
+                        VecBuilder.fill(std, std, 100.0)
                     )
                 );
                 targets.add(tagLocation.get());

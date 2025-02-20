@@ -83,7 +83,13 @@ public final class Robot extends TimedRobot {
         // Set default commands
         elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
-        swerve.setDefaultCommand(swerve.driveReef(driver::getLeftX, driver::getLeftY));
+        swerve.setDefaultCommand(
+            swerve.drive(
+                driver::getLeftX,
+                driver::getLeftY,
+                () -> driver.getLeftTriggerAxis() - driver.getRightTriggerAxis()
+            )
+        );
 
         // Driver bindings
         driver.a().onTrue(routines.intake(driver.a()));
@@ -91,13 +97,40 @@ public final class Robot extends TimedRobot {
 
         driver
             .x()
-            .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), true, false));
+            .whileTrue(
+                routines.score(
+                    driver::getLeftX,
+                    driver::getLeftY,
+                    () -> ElevatorPosition.level(selectedLevel),
+                    driver.y(),
+                    true,
+                    false
+                )
+            );
         driver
             .leftBumper()
-            .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), true, true));
+            .whileTrue(
+                routines.score(
+                    driver::getLeftX,
+                    driver::getLeftY,
+                    () -> ElevatorPosition.level(selectedLevel),
+                    driver.y(),
+                    true,
+                    true
+                )
+            );
         driver
             .rightBumper()
-            .whileTrue(routines.scoreForward(() -> ElevatorPosition.level(selectedLevel), driver.y(), false, true));
+            .whileTrue(
+                routines.score(
+                    driver::getLeftX,
+                    driver::getLeftY,
+                    () -> ElevatorPosition.level(selectedLevel),
+                    driver.y(),
+                    false,
+                    true
+                )
+            );
 
         driver.axisLessThan(kRightY.value, -0.5).onTrue(incrementLevel());
         driver.axisGreaterThan(kRightY.value, 0.5).onTrue(decrementLevel());

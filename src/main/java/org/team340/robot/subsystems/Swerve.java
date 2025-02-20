@@ -3,6 +3,7 @@ package org.team340.robot.subsystems;
 import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.Orchestra;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
@@ -30,6 +31,7 @@ import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
+import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
 import org.team340.robot.Constants.Cameras;
@@ -46,6 +48,8 @@ public final class Swerve extends GRRSubsystem {
 
     private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
     private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
+
+    private static final Orchestra kOrchestra = new Orchestra();
 
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
@@ -87,8 +91,10 @@ public final class Swerve extends GRRSubsystem {
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
-        .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
+        .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true, kOrchestra)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
+
+    private static final TunableDouble kFaceReefTolerance = Tunable.doubleValue("swerve/kFaceReefTolerance", 1.5);
 
     private final SwerveAPI api;
 
@@ -104,6 +110,7 @@ public final class Swerve extends GRRSubsystem {
 
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
+    private boolean facingReef = true;
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
@@ -113,7 +120,7 @@ public final class Swerve extends GRRSubsystem {
         autoPIDangular = new PIDController(5.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 
-        faceReefPID = new ProfiledPIDController(6.25, 0.5, 0.0, new Constraints(9.5, 24.0));
+        faceReefPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
         faceReefPID.enableContinuousInput(-Math.PI, Math.PI);
         faceReefPID.setIZone(0.8);
 
@@ -121,12 +128,13 @@ public final class Swerve extends GRRSubsystem {
         Tunable.pidController("swerve/autoPID", autoPIDx);
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
+        Tunable.pidController("swerve/faceReefPID", faceReefPID);
 
         visionEstimators = new VisionEstimator[] {
-            new VisionEstimator("middle", Cameras.kMiddle),
+            // new VisionEstimator("middle", Cameras.kMiddle),
             new VisionEstimator("left", Cameras.kLeft),
-            new VisionEstimator("right", Cameras.kRight),
-            new VisionEstimator("back", Cameras.kBack)
+            new VisionEstimator("right", Cameras.kRight)
+            // new VisionEstimator("back", Cameras.kBack)
         };
     }
 
@@ -165,7 +173,7 @@ public final class Swerve extends GRRSubsystem {
      */
     public boolean safeForGoose() {
         // TODO
-        return true;
+        return facingReef;
     }
 
     /**
@@ -216,9 +224,12 @@ public final class Swerve extends GRRSubsystem {
                     Math.floor(angle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
                     Math2.kThirdPi;
 
+                facingReef = Math2.epsilonEquals(target, api.state.yaw.getRadians(), kFaceReefTolerance.value());
+
                 double angularVel = faceReefPID.calculate(api.state.yaw.getRadians(), target);
-                api.applyDriverInput(x.getAsDouble(), y.getAsDouble(), angularVel, Perspective.kOperator, true, true);
-            });
+                api.applyDriverXY(x.getAsDouble(), y.getAsDouble(), angularVel, Perspective.kOperator, true, true);
+            })
+            .onEnd(() -> facingReef = true);
     }
 
     /**

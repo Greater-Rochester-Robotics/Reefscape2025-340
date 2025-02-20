@@ -42,6 +42,8 @@ import org.team340.lib.util.vendors.RevUtil;
  */
 public final class SwerveMotors {
 
+    private static int orchestraNonce = 0;
+
     private SwerveMotors() {
         throw new AssertionError("This is a utility class!");
     }
@@ -376,6 +378,8 @@ public final class SwerveMotors {
 
             var talonConfig = new TalonFXConfiguration();
 
+            talonConfig.Audio.AllowMusicDurDisable = true;
+
             talonConfig.CurrentLimits.StatorCurrentLimit = statorLimit;
             talonConfig.CurrentLimits.SupplyCurrentLimit = supplyLimit;
             talonConfig.TorqueCurrent.PeakForwardTorqueCurrent = statorLimit;
@@ -404,6 +408,11 @@ public final class SwerveMotors {
             );
 
             if (isMoveMotor) PhoenixUtil.run("Zero Rotor Encoder", () -> talonFX.setPosition(0.0));
+
+            if (config.orchestra != null) {
+                config.orchestra.addInstrument(talonFX, orchestraNonce);
+                orchestraNonce++;
+            }
 
             return new SwerveMotor() {
                 @Override
