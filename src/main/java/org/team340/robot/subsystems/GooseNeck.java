@@ -1,5 +1,7 @@
 package org.team340.robot.subsystems;
 
+import static edu.wpi.first.wpilibj2.command.Commands.either;
+
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
@@ -285,20 +287,22 @@ public final class GooseNeck extends GRRSubsystem {
     ) {
         Mutable<Boolean> beamTrigger = new Mutable<>(false);
 
-        return goTo(
-            () -> !selection.l1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
-            () -> !selection.l1() && allowGoosing.getAsBoolean(),
-            selection::isLeft,
-            safe
-        )
-            .alongWith(
+        return either(
+            goTo(
+                () -> !selection.isL1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
+                () -> !selection.isL1() && allowGoosing.getAsBoolean(),
+                selection::isLeft,
+                safe
+            ).alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> beamTrigger.value = false)
                     .onExecute(() -> {
                         if (beamBroken() || beamTrigger.value || runManual.getAsBoolean()) {
                             beakMotor.setControl(
                                 beakVoltageControl.withOutput(
-                                    !selection.l1() ? GooseSpeed.kScoreForward.voltage() : GooseSpeed.kScoreL1.voltage()
+                                    !selection.isL1()
+                                        ? GooseSpeed.kScoreForward.voltage()
+                                        : GooseSpeed.kScoreL1.voltage()
                                 )
                             );
                             hasCoral.set(false);
@@ -306,9 +310,10 @@ public final class GooseNeck extends GRRSubsystem {
                         }
                     })
                     .onEnd(beakMotor::stopMotor)
-            )
-            .onlyIf(this::hasCoral)
-            .withName("GooseNeck.score()");
+            ),
+            goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe),
+            this::hasCoral
+        ).withName("GooseNeck.score()");
     }
 
     public Command barf(BooleanSupplier safe) {

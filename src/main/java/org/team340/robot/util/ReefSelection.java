@@ -19,12 +19,12 @@ public final class ReefSelection {
     private boolean scoring = false;
 
     @NotLogged
-    public int level() {
+    public int getLevel() {
         return level;
     }
 
     @NotLogged
-    public boolean l1() {
+    public boolean isL1() {
         return level == 1;
     }
 
@@ -34,7 +34,7 @@ public final class ReefSelection {
     }
 
     @NotLogged
-    public boolean scoring() {
+    public boolean isScoring() {
         return scoring;
     }
 

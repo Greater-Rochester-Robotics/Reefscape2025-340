@@ -198,7 +198,7 @@ public final class Elevator extends GRRSubsystem {
     public Command score(ReefSelection selection, BooleanSupplier safe) {
         return goTo(
             () -> {
-                switch (selection.level()) {
+                switch (selection.getLevel()) {
                     case 1:
                         return ElevatorPosition.kL1;
                     case 2:

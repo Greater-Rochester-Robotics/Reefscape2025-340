@@ -118,11 +118,19 @@ public final class Routines {
      * @param allowGoosing If the goose neck is allowed to goose around.
      */
     public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
-        return parallel(
-            elevator.score(selection, robot::safeForGoose),
-            gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose).asProxy(),
-            selection.whileScoring()
-        ).withName("Routines.score()");
+        return sequence(
+            deadline(
+                waitUntil(swerve::inGooseHappyZone),
+                elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+                gooseNeck.stow(robot::safeForGoose)
+            ),
+            parallel(
+                elevator.score(selection, robot::safeForGoose),
+                gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)
+            )
+        )
+            .alongWith(selection.whileScoring())
+            .withName("Routines.score()");
     }
 
     /**

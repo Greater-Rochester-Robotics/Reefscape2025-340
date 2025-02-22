@@ -161,11 +161,11 @@ public final class Lights {
                 .onExecute(() -> {
                     for (int i = 0; i < kStripLength; i++) {
                         for (int j = 0; j <= 1; j++) {
-                            boolean blink = selection.scoring() && (selection.isLeft() ? 0 : 1) == j;
+                            boolean blink = selection.isScoring() && (selection.isLeft() ? 0 : 1) == j;
 
                             if (
                                 (blink ? Timer.getFPGATimestamp() % 0.4 > 0.2 : true) &&
-                                i < ((28 / 4) * selection.level())
+                                i < ((28 / 4) * selection.getLevel())
                             ) {
                                 setSingle(j == 0, i, Color.kLx);
                             } else {

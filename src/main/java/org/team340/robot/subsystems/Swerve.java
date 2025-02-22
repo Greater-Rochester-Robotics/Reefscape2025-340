@@ -99,7 +99,8 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kReefAssistDeadband = Tunable.doubleValue("swerve/kReefAssistDeadband", 0.1);
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 0.95);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
-    private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 1.0);
+    private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.85);
+    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.3);
 
     private final SwerveAPI api;
     private final VisionManager vision;
@@ -193,6 +194,10 @@ public final class Swerve extends GRRSubsystem {
     public boolean safeForGoose() {
         // TODO
         return facingReef && getWallDistance() > kReefDangerDistance.value();
+    }
+
+    public boolean inGooseHappyZone() {
+        return wallDistance < kReefHappyDistance.value();
     }
 
     /**
