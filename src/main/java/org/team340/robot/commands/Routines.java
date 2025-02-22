@@ -98,8 +98,8 @@ public final class Routines {
      */
     public Command swallow() {
         return parallel(
-            gooseNeck.swallow(robot::safeForGoose),
             intake.swallow(),
+            gooseNeck.swallow(robot::safeForGoose).asProxy().beforeStarting(waitSeconds(0.25)),
             elevator.goTo(ElevatorPosition.kSwallow, robot::safeForGoose)
         ).withName("Routines.swallow()");
     }

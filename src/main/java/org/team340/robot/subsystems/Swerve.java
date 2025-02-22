@@ -98,7 +98,8 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/kReefAssistKp", 15.0);
     private static final TunableDouble kReefAssistDeadband = Tunable.doubleValue("swerve/kReefAssistDeadband", 0.1);
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 0.95);
-    private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.5);
+    private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
+    private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 1.0);
 
     private final SwerveAPI api;
     private final VisionManager vision;
@@ -118,6 +119,8 @@ public final class Swerve extends GRRSubsystem {
     private Pose2d reefReference = Pose2d.kZero;
     private Translation2d closestStation = Translation2d.kZero;
     private boolean facingReef = false;
+
+    private double wallDistance = 0.0;
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
@@ -171,6 +174,8 @@ public final class Swerve extends GRRSubsystem {
         closestStation = api.state.pose.getY() > FieldConstants.kWidth / 2.0
             ? (Alliance.isBlue() ? FieldConstants.kBlueLeftCorner : FieldConstants.kRedRightCorner)
             : (Alliance.isBlue() ? FieldConstants.kBlueRightCorner : FieldConstants.kRedLeftCorner);
+
+        wallDistance = calculateWallDistance();
     }
 
     /**
@@ -187,7 +192,29 @@ public final class Swerve extends GRRSubsystem {
      */
     public boolean safeForGoose() {
         // TODO
-        return facingReef;
+        return facingReef && getWallDistance() > kReefDangerDistance.value();
+    }
+
+    /**
+     * Gets the corrected distance from the reef.
+     * @return The corrected distance.
+     */
+    public double getWallDistance() {
+        return wallDistance;
+    }
+
+    /**
+     * Calculates the corrected distance from the reef.
+     * @return The corrected distance.
+     */
+    private double calculateWallDistance() {
+        final Translation2d difference = api.state.translation.minus(reefReference.getTranslation());
+
+        final double rawDistance = difference.getNorm();
+
+        final double correctedDistance =
+            reefReference.getRotation().rotateBy(Rotation2d.kPi).minus(difference.getAngle()).getCos() * rawDistance;
+        return Math.max(0, correctedDistance - FieldConstants.kReefCenterToWallDistance);
     }
 
     /**

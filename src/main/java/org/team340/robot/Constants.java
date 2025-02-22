@@ -34,6 +34,8 @@ public final class Constants {
 
         public static final double kPipeOffsetX = -0.781;
         public static final double kPipeOffsetY = -0.164;
+
+        public static final double kReefCenterToWallDistance = 0.781;
     }
 
     public final class Cameras {

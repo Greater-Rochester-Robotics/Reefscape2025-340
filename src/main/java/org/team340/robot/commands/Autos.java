@@ -5,6 +5,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import choreo.auto.AutoFactory;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
+import edu.wpi.first.wpilibj2.command.Command;
 import org.team340.lib.util.GRRDashboard;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Swerve;
@@ -31,5 +32,9 @@ public final class Autos {
 
         // Add autonomous modes to the dashboard
         GRRDashboard.setTrajectoryCache(factory.cache());
+    }
+
+    public Command fivePointFive() {
+        return sequence(factory.resetOdometry("BestTest"), factory.trajectoryCmd("BestTest"));
     }
 }
