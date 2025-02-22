@@ -9,15 +9,15 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableInteger;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants.RioIO;
+import org.team340.robot.util.ReefSelection;
 
 @Logged
-public class Lights {
+public final class Lights {
 
     private static enum Color {
         kLx(255, 255, 255),
@@ -94,7 +94,7 @@ public class Lights {
     }
 
     @Logged
-    public class Sides extends GRRSubsystem {
+    public final class Sides extends GRRSubsystem {
 
         private Sides() {}
 
@@ -102,9 +102,9 @@ public class Lights {
          * Modifies the entire side LED strips to be a single color.
          * @param color The color to apply.
          */
-        private void set(Color color) {
+        private void setBoth(Color color) {
             for (int i = 0; i < kStripLength; i++) {
-                buffer.setRGB(i, color.r(), color.g(), color.b());
+                setBoth(i, color);
             }
         }
 
@@ -113,8 +113,8 @@ public class Lights {
          * @param i The index of the buffer to modify.
          * @param color The color to apply.
          */
-        private void set(int i, Color color) {
-            set(i, color.r(), color.g(), color.b());
+        private void setBoth(int i, Color color) {
+            setBoth(i, color.r(), color.g(), color.b());
         }
 
         /**
@@ -124,30 +124,59 @@ public class Lights {
          * @param g Green value from {@code 0} to {@code 255}.
          * @param b Blue value from {@code 0} to {@code 255}.
          */
-        private void set(int i, int r, int g, int b) {
+        private void setBoth(int i, int r, int g, int b) {
+            setSingle(false, i, r, g, b);
+            setSingle(true, i, r, g, b);
+        }
+
+        /**
+         * Sets a single side's LED to a specified color.
+         * @param left {@code true} for the left side, {@code false} for the right side.
+         * @param i The index of the strip.
+         * @param color The color to apply.
+         */
+        private void setSingle(boolean left, int i, Color color) {
+            setSingle(left, i, color.r(), color.g(), color.b());
+        }
+
+        /**
+         * Sets a single side's LED to a specified color.
+         * @param left {@code true} for the left side, {@code false} for the right side.
+         * @param i The index of the strip.
+         * @param r Red value from {@code 0} to {@code 255}.
+         * @param g Green value from {@code 0} to {@code 255}.
+         * @param b Blue value from {@code 0} to {@code 255}.
+         */
+        private void setSingle(boolean left, int i, int r, int g, int b) {
             if (i >= kStripLength) return;
-            buffer.setRGB(i, r, g, b);
-            buffer.setRGB(buffer.getLength() - i - 1, r, g, b);
+            buffer.setRGB(!left ? i : buffer.getLength() - i - 1, r, g, b);
         }
 
         /**
          * Displays the currently selected reef level.
          * @param level The selected level (1-4). L1 is 1, not 0.
          */
-        public Command levelSelection(Supplier<Integer> level) {
+        public Command levelSelection(ReefSelection selection) {
             return commandBuilder()
                 .onExecute(() -> {
                     for (int i = 0; i < kStripLength; i++) {
-                        if (i < ((28 / 4) * level.get())) {
-                            set(i, Color.kLx);
-                        } else {
-                            set(i, Color.kOff);
+                        for (int j = 0; j <= 1; j++) {
+                            boolean blink = selection.scoring() && (selection.isLeft() ? 0 : 1) == j;
+
+                            if (
+                                (blink ? Timer.getFPGATimestamp() % 0.4 > 0.2 : true) &&
+                                i < ((28 / 4) * selection.level())
+                            ) {
+                                setSingle(j == 0, i, Color.kLx);
+                            } else {
+                                setSingle(j == 0, i, Color.kOff);
+                            }
                         }
                     }
                 })
-                .onEnd(() -> set(Color.kOff))
+                .onEnd(() -> setBoth(Color.kOff))
                 .ignoringDisable(true)
-                .withName("Lights.Sides.levelSelection(" + level + ")");
+                .withName("Lights.Sides.levelSelection()");
         }
 
         /**
@@ -178,15 +207,15 @@ public class Lights {
                         int heat = (int) ((state[i] / 255.0) * 191.0);
                         int ramp = (heat & 63) << 2;
                         if (heat > 180) {
-                            set(i, 255, 255, ramp);
+                            setBoth(i, 255, 255, ramp);
                         } else if (heat > 60) {
-                            set(i, 255, ramp, 0);
+                            setBoth(i, 255, ramp, 0);
                         } else {
-                            set(i, ramp, 0, 0);
+                            setBoth(i, ramp, 0, 0);
                         }
                     }
                 })
-                .onEnd(() -> set(Color.kOff))
+                .onEnd(() -> setBoth(Color.kOff))
                 .ignoringDisable(true)
                 .withName("Lights.Sides.flames()");
         }
@@ -196,14 +225,14 @@ public class Lights {
          */
         public Command off() {
             return commandBuilder()
-                .onInitialize(() -> set(Color.kOff))
+                .onInitialize(() -> setBoth(Color.kOff))
                 .ignoringDisable(true)
                 .withName("Lights.Sides.off()");
         }
     }
 
     @Logged
-    public class Top extends GRRSubsystem {
+    public final class Top extends GRRSubsystem {
 
         private Top() {}
 
@@ -222,19 +251,15 @@ public class Lights {
 
         /**
          * Displays the "Has Coral" animation.
-         * @return
          */
         public Command hasCoral(BooleanSupplier goosing, DoubleSupplier goosePosition) {
             final double kGooseRange = 0.15;
             final double kHalfRange = kGooseRange / 2.0;
 
-            Timer timer = new Timer();
-
             return commandBuilder()
-                .onInitialize(() -> timer.restart())
                 .onExecute(() -> {
                     if (!goosing.getAsBoolean()) {
-                        set(timer.get() % 0.4 > 0.2 ? Color.kHasCoral : Color.kOff);
+                        set(Timer.getFPGATimestamp() % 0.4 > 0.2 ? Color.kHasCoral : Color.kOff);
                     } else {
                         double position = goosePosition.getAsDouble();
                         double percent =

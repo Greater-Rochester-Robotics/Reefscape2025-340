@@ -14,7 +14,7 @@ import org.team340.lib.util.vendors.RevUtil;
 import org.team340.robot.Constants;
 import org.team340.robot.Constants.UpperCAN;
 
-public class Climber extends GRRSubsystem {
+public final class Climber extends GRRSubsystem {
 
     public static enum ClimberPosition {
         kStore(0.0),

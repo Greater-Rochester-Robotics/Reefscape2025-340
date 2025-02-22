@@ -17,11 +17,9 @@ public class SparkMaxLogger extends ClassSpecificLogger<SparkMax> {
     @Override
     public void update(EpilogueBackend backend, SparkMax sparkMax) {
         double appliedOutput = sparkMax.getAppliedOutput();
-        double busVoltage = sparkMax.getBusVoltage();
 
         backend.log("appliedOutput", appliedOutput);
-        backend.log("appliedVoltage", appliedOutput * busVoltage);
-        backend.log("busVoltage", busVoltage);
+        backend.log("appliedVoltage", appliedOutput * sparkMax.getBusVoltage());
         backend.log("motorTemperature", sparkMax.getMotorTemperature());
         backend.log("outputCurrent", sparkMax.getOutputCurrent());
         backend.log("position", sparkMax.getEncoder().getPosition());

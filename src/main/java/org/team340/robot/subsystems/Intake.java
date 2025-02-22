@@ -9,7 +9,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.filter.Debouncer;
-import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
@@ -22,15 +21,13 @@ import org.team340.robot.Constants.RioIO;
 import org.team340.robot.Constants.UpperCAN;
 
 @Logged
-public class Intake extends GRRSubsystem {
+public final class Intake extends GRRSubsystem {
 
     private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 7.0);
     private static final TunableDouble kBarfVoltage = Tunable.doubleValue("intake/kBarfVoltage", 7.0);
     private static final TunableDouble kSwallowVoltage = Tunable.doubleValue("intake/kSwallowVoltage", -6.0);
-    private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.3);
     private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 18.0);
-
-    private static final double kDebounceTime = 0.4;
+    private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.2);
 
     private final TalonFX motor;
     private final DigitalInput beamBreak;
@@ -38,8 +35,6 @@ public class Intake extends GRRSubsystem {
     private final StatusSignal<Current> current;
 
     private final VoltageOut voltageControl;
-
-    private final Debouncer debouncer;
 
     public Intake() {
         motor = new TalonFX(UpperCAN.kIntakeMotor);
@@ -63,8 +58,6 @@ public class Intake extends GRRSubsystem {
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = false;
         voltageControl.UpdateFreqHz = 0.0;
-
-        debouncer = new Debouncer(kDebounceTime, DebounceType.kRising);
     }
 
     @Override
@@ -78,7 +71,7 @@ public class Intake extends GRRSubsystem {
      * Returns whether the beam break sees the coral or not.
      * @return True if the beam break detects an object, false otherwise.
      */
-    public boolean coralDetected() {
+    public boolean beamBroken() {
         return beamBreak.get();
     }
 
@@ -88,6 +81,8 @@ public class Intake extends GRRSubsystem {
      * Runs the intake.
      */
     public Command intake() {
+        Debouncer seenDebouncer = new Debouncer(1.25);
+        Debouncer currentDebouncer = new Debouncer(0.4);
         Timer unjamTimer = new Timer();
 
         return commandBuilder("Intake.intake()")
@@ -96,7 +91,10 @@ public class Intake extends GRRSubsystem {
                 unjamTimer.reset();
             })
             .onExecute(() -> {
-                if (debouncer.calculate(current.getValueAsDouble() > kCurrentThreshold.value())) {
+                if (
+                    seenDebouncer.calculate(beamBroken()) ||
+                    currentDebouncer.calculate(current.getValueAsDouble() > kCurrentThreshold.value())
+                ) {
                     unjamTimer.start();
                 }
 
@@ -104,6 +102,7 @@ public class Intake extends GRRSubsystem {
                     motor.setControl(voltageControl.withOutput(kSwallowVoltage.value()));
                 } else {
                     motor.setControl(voltageControl.withOutput(kIntakeVoltage.value()));
+                    seenDebouncer.calculate(false);
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }

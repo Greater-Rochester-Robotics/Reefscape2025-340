@@ -33,9 +33,9 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
 
     private void logState(EpilogueBackend backend, SwerveState state) {
         backend.log("speeds", state.speeds, ChassisSpeeds.struct);
-        backend.log("targetSpeeds", state.targetSpeeds, ChassisSpeeds.struct);
         backend.log("velocity", state.velocity);
         backend.log("multiturnYaw", state.multiturnYaw);
+        backend.log("yaw", state.yaw, Rotation2d.struct);
         backend.log("pitch", state.pitch, Rotation2d.struct);
         backend.log("roll", state.roll, Rotation2d.struct);
         backend.log("pose", state.pose, Pose2d.struct);
@@ -44,7 +44,6 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
         modules.log("positions", state.modules.positions, SwerveModulePosition.struct);
         modules.log("states", state.modules.states, SwerveModuleState.struct);
         modules.log("lastTarget", state.modules.lastTarget, SwerveModuleState.struct);
-        modules.log("nextTarget", state.modules.nextTarget, SwerveModuleState.struct);
 
         var odometry = backend.getNested("odometry");
         odometry.log("timesync", state.odometry.timesync);

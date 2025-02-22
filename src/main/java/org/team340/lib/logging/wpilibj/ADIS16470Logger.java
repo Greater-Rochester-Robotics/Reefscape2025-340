@@ -15,12 +15,6 @@ public class ADIS16470Logger extends ClassSpecificLogger<ADIS16470_IMU> {
 
     @Override
     public void update(EpilogueBackend backend, ADIS16470_IMU adis16470) {
-        backend.log("accelerationX", adis16470.getAccelX());
-        backend.log("accelerationY", adis16470.getAccelY());
-        backend.log("accelerationZ", adis16470.getAccelZ());
-        backend.log("velocityX", adis16470.getRate(IMUAxis.kX));
-        backend.log("velocityY", adis16470.getRate(IMUAxis.kY));
-        backend.log("velocityZ", adis16470.getRate(IMUAxis.kZ));
         backend.log("yaw", adis16470.getAngle(IMUAxis.kYaw));
         backend.log("pitch", adis16470.getAngle(IMUAxis.kPitch));
         backend.log("roll", adis16470.getAngle(IMUAxis.kRoll));

@@ -211,30 +211,27 @@ public class SwerveAPI implements AutoCloseable {
         boolean discretize,
         boolean ratelimit
     ) {
-        angular = MathUtil.applyDeadband(angular, config.driverAngularVelDeadband);
-        double angularVel =
-            config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
-        applyDriverXY(x, y, angularVel, perspective, discretize, ratelimit);
+        applyAssistedDriverInput(x, y, angular, new ChassisSpeeds(), perspective, discretize, ratelimit);
     }
 
     /**
-     * Drives using inputs from the driver's controller, with a specified angular velocity in radians/second.
-     * Use this method as opposed to {@link SwerveAPI#applyDriverInput(double, double, double)} if the driver's
-     * input is desired only for x/y movement, and not heading. Use cases include locking the robot's heading by
-     * passing the output of a PID controller as the angular velocity. The {@code x} and {@code y} parameters
-     * expect the controller's NED (north-east-down) convention, and will automatically convert to WPILib's
-     * typical NWU (north-west-up) convention when applying chassis speeds.
+     * Drives using inputs from the driver's controller, with a specified additional chassis velocity.
+     * The {@code x} and {@code y} parameters expect the controller's NED (north-east-down) convention,
+     * and will automatically convert to WPILib's typical NWU (north-west-up) convention when applying
+     * chassis speeds.
      * @param x The X value of the driver's joystick, from {@code [-1.0, 1.0]}.
      * @param y The Y value of the driver's joystick, from {@code [-1.0, 1.0]}.
-     * @param angularVel The CCW+ angular velocity to apply, in radians/second.
+     * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
+     * @param assist Additional velocities to apply.
      * @param perspective The forward perspective for the chassis speeds.
      * @param discretize If the generated speeds should be discretized.
      * @param ratelimit If the robot's acceleration should be constrained.
      */
-    public void applyDriverXY(
+    public void applyAssistedDriverInput(
         double x,
         double y,
-        double angularVel,
+        double angular,
+        ChassisSpeeds assist,
         Perspective perspective,
         boolean discretize,
         boolean ratelimit
@@ -249,9 +246,19 @@ public class SwerveAPI implements AutoCloseable {
 
         x *= k;
         y *= k;
+        angular = MathUtil.applyDeadband(angular, config.driverAngularVelDeadband);
 
         double xyMult = config.driverVel * Math.pow(Math.hypot(x, y), config.driverVelExp - 1.0);
-        applySpeeds(new ChassisSpeeds(-y * xyMult, -x * xyMult, angularVel), perspective, discretize, ratelimit);
+        double angularVel =
+            config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
+
+        ChassisSpeeds speeds = new ChassisSpeeds(
+            (-y * xyMult) + assist.vxMetersPerSecond,
+            (-x * xyMult) + assist.vyMetersPerSecond,
+            angularVel + assist.omegaRadiansPerSecond
+        );
+
+        applySpeeds(speeds, perspective, discretize, ratelimit);
     }
 
     /**

@@ -1,7 +1,6 @@
 package org.team340.lib.swerve.config;
 
 import com.ctre.phoenix6.CANBus;
-import com.ctre.phoenix6.Orchestra;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.numbers.N3;
@@ -82,8 +81,6 @@ public class SwerveConfig {
     public boolean phoenixMoveFOC = false;
     /** If turn motors should enable FOC. */
     public boolean phoenixTurnFOC = false;
-    /** The configured Phoenix Orchestra. */
-    public Orchestra orchestra = null;
     /** Configurations for swerve modules. */
     public SwerveModuleConfig[] modules;
 
@@ -262,20 +259,12 @@ public class SwerveConfig {
      * @param pro {@code true} if Phoenix Pro is active on <i>all</i> CTRE devices used by the swerve API.
      * @param moveFOC If move motors should enable FOC. {@code pro} can still be {@code false} while enabling FOC, provided all move motors are still licensed.
      * @param turnFOC If turn motors should enable FOC. {@code pro} can still be {@code false} while enabling FOC, provided all turn motors are still licensed.
-     * @param orchestra A Phoenix Orchestra to add motors to. Can be {@code null}.
      */
-    public SwerveConfig setPhoenixFeatures(
-        CANBus canBus,
-        boolean pro,
-        boolean moveFOC,
-        boolean turnFOC,
-        Orchestra orchestra
-    ) {
+    public SwerveConfig setPhoenixFeatures(CANBus canBus, boolean pro, boolean moveFOC, boolean turnFOC) {
         phoenixCanBus = canBus;
         phoenixPro = pro;
         phoenixMoveFOC = moveFOC;
         phoenixTurnFOC = turnFOC;
-        this.orchestra = orchestra;
         return this;
     }
 

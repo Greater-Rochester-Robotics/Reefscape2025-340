@@ -3,9 +3,9 @@ package org.team340.robot.subsystems;
 import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.CANBus;
-import com.ctre.phoenix6.Orchestra;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.swerve.Perspective;
 import org.team340.lib.swerve.SwerveAPI;
@@ -30,15 +31,15 @@ import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
 import org.team340.lib.util.Math2;
+import org.team340.lib.util.Mutable;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
-import org.team340.robot.Constants.Cameras;
 import org.team340.robot.Constants.FieldConstants;
 import org.team340.robot.Constants.LowerCAN;
-import org.team340.robot.util.VisionEstimator;
-import org.team340.robot.util.VisionEstimator.VisionEstimates;
+import org.team340.robot.util.VisionManager;
+import org.team340.robot.util.VisionManager.VisionEstimates;
 
 /**
  * The robot's swerve drivetrain.
@@ -48,8 +49,6 @@ public final class Swerve extends GRRSubsystem {
 
     private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
     private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
-
-    private static final Orchestra kOrchestra = new Orchestra();
 
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
@@ -91,12 +90,18 @@ public final class Swerve extends GRRSubsystem {
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
         .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
-        .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true, kOrchestra)
+        .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
-    private static final TunableDouble kFaceReefTolerance = Tunable.doubleValue("swerve/kFaceReefTolerance", 1.5);
+    private static final TunableDouble kIntakeDistance = Tunable.doubleValue("swerve/kIntakeDistance", 2.5);
+    private static final TunableDouble kIntakeMinMult = Tunable.doubleValue("swerve/kIntakeMinMult", 0.6);
+    private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/kReefAssistKp", 15.0);
+    private static final TunableDouble kReefAssistDeadband = Tunable.doubleValue("swerve/kReefAssistDeadband", 0.1);
+    private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 0.95);
+    private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.5);
 
     private final SwerveAPI api;
+    private final VisionManager vision;
 
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
@@ -104,16 +109,19 @@ public final class Swerve extends GRRSubsystem {
 
     private final ProfiledPIDController faceReefPID;
 
-    private final VisionEstimator[] visionEstimators;
     private final List<Pose2d> estimates = new ArrayList<>();
     private final List<Pose3d> targets = new ArrayList<>();
+    private final ReefAssistData reefAssist = new ReefAssistData();
 
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
-    private boolean facingReef = true;
+    private Pose2d reefReference = Pose2d.kZero;
+    private Translation2d closestStation = Translation2d.kZero;
+    private boolean facingReef = false;
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
+        vision = VisionManager.getInstance();
 
         autoPIDx = new PIDController(7.0, 0.0, 0.0);
         autoPIDy = new PIDController(7.0, 0.0, 0.0);
@@ -129,34 +137,40 @@ public final class Swerve extends GRRSubsystem {
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
         Tunable.pidController("swerve/faceReefPID", faceReefPID);
-
-        visionEstimators = new VisionEstimator[] {
-            // new VisionEstimator("middle", Cameras.kMiddle),
-            new VisionEstimator("left", Cameras.kLeft),
-            new VisionEstimator("right", Cameras.kRight)
-            // new VisionEstimator("back", Cameras.kBack)
-        };
     }
 
     @Override
     public void periodic() {
         api.refresh();
 
-        // TODO before merge, disable all vision code using tunable boolean
-        // resetting local measurements
+        VisionEstimates visionEstimates = vision.getUnreadResults(api.state.pose, api.state.timestamp);
+        api.addVisionMeasurements(visionEstimates.measurements().stream().toArray(VisionMeasurement[]::new));
+
         estimates.clear();
+        estimates.addAll(visionEstimates.getPoses());
+
         targets.clear();
+        targets.addAll(visionEstimates.targets());
 
-        List<VisionMeasurement> measurements = new ArrayList<>();
-        for (VisionEstimator estimator : visionEstimators) {
-            VisionEstimates result = estimator.getUnreadResults(api.state.pose, api.state.timestamp);
+        Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
+        Rotation2d reefAngle = new Rotation2d(
+            Math.floor(
+                reefCenter.minus(api.state.translation).getAngle().plus(new Rotation2d(Math2.kSixthPi)).getRadians() /
+                Math2.kThirdPi
+            ) *
+            Math2.kThirdPi
+        );
 
-            measurements.addAll(result.measurements());
-            estimates.addAll(result.getPoses());
-            targets.addAll(result.targets());
-        }
+        reefReference = new Pose2d(reefCenter, reefAngle);
+        facingReef = Math2.epsilonEquals(
+            0.0,
+            reefReference.getRotation().minus(api.state.yaw).getRadians(),
+            kFacingReefTolerance.value()
+        );
 
-        api.addVisionMeasurements(measurements.stream().toArray(VisionMeasurement[]::new));
+        closestStation = api.state.pose.getY() > FieldConstants.kWidth / 2.0
+            ? (Alliance.isBlue() ? FieldConstants.kBlueLeftCorner : FieldConstants.kRedRightCorner)
+            : (Alliance.isBlue() ? FieldConstants.kBlueRightCorner : FieldConstants.kRedLeftCorner);
     }
 
     /**
@@ -207,29 +221,110 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Drives the robot using driver input while facing the reef.
+     * Drives the robot using driver input for intaking,
+     * slowing the drivetrain for ease of control.
      * @param x The X value from the driver's joystick.
      * @param y The Y value from the driver's joystick.
+     * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
      */
-    public Command driveReef(DoubleSupplier x, DoubleSupplier y) {
+    public Command driveIntake(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
+        return commandBuilder("Swerve.driveIntake()").onExecute(() -> {
+            double xInput = x.getAsDouble();
+            double yInput = y.getAsDouble();
+            double angularInput = angular.getAsDouble();
+            double norm = Math.hypot(-yInput, -xInput);
+
+            Rotation2d robotAngle = closestStation.minus(api.state.translation).getAngle();
+            Rotation2d xyAngle = new Rotation2d(-yInput, -xInput).rotateBy(
+                Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi
+            );
+
+            double multiplier = 1.0;
+            double distance = api.state.translation.getDistance(closestStation);
+            if (
+                Math2.epsilonEquals(0.0, robotAngle.minus(xyAngle).getRadians(), Math2.kHalfPi) &&
+                distance < kIntakeDistance.value() &&
+                norm >= api.config.driverVelDeadband
+            ) {
+                multiplier = kIntakeMinMult.value();
+            }
+
+            api.applyDriverInput(
+                xInput * multiplier,
+                yInput * multiplier,
+                angularInput,
+                Perspective.kOperator,
+                true,
+                true
+            );
+        });
+    }
+
+    /**
+     * Drives the robot using driver input while facing the reef,
+     * and "pushing" the robot to center on the selected pipe.
+     * @param x The X value from the driver's joystick.
+     * @param y The Y value from the driver's joystick.
+     * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
+     *
+     */
+    public Command driveReef(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular, BooleanSupplier left) {
+        Mutable<Boolean> exitLock = new Mutable<>(false);
+
         return commandBuilder("Swerve.driveReef()")
-            .onInitialize(() -> faceReefPID.reset(api.state.yaw.getRadians(), api.state.speeds.omegaRadiansPerSecond))
-            .onExecute(() -> {
-                Translation2d reefCenter = Alliance.isBlue()
-                    ? FieldConstants.kReefCenterBlue
-                    : FieldConstants.kReefCenterRed;
-
-                Rotation2d angle = reefCenter.minus(api.state.translation).getAngle();
-                double target =
-                    Math.floor(angle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
-                    Math2.kThirdPi;
-
-                facingReef = Math2.epsilonEquals(target, api.state.yaw.getRadians(), kFaceReefTolerance.value());
-
-                double angularVel = faceReefPID.calculate(api.state.yaw.getRadians(), target);
-                api.applyDriverXY(x.getAsDouble(), y.getAsDouble(), angularVel, Perspective.kOperator, true, true);
+            .onInitialize(() -> {
+                faceReefPID.reset(api.state.yaw.getRadians(), api.state.speeds.omegaRadiansPerSecond);
+                exitLock.value = false;
             })
-            .onEnd(() -> facingReef = true);
+            .onExecute(() -> {
+                double xInput = x.getAsDouble();
+                double yInput = y.getAsDouble();
+                double angularInput = angular.getAsDouble();
+                double norm = Math.hypot(-yInput, -xInput);
+
+                reefAssist.targetPipe = new Pose2d(
+                    reefReference
+                        .getTranslation()
+                        .plus(
+                            new Translation2d(
+                                FieldConstants.kPipeOffsetX,
+                                FieldConstants.kPipeOffsetY * (left.getAsBoolean() ? -1.0 : 1.0)
+                            ).rotateBy(reefReference.getRotation())
+                        ),
+                    reefReference.getRotation()
+                );
+
+                Rotation2d robotAngle = reefAssist.targetPipe.getTranslation().minus(api.state.translation).getAngle();
+                Rotation2d xyAngle = new Rotation2d(-yInput, -xInput).rotateBy(
+                    Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi
+                );
+
+                double stickDistance = Math.abs(
+                    (Math.cos(xyAngle.getRadians()) * (reefAssist.targetPipe.getY() - api.state.pose.getY()) -
+                        Math.sin(xyAngle.getRadians()) * (reefAssist.targetPipe.getX() - api.state.pose.getX()))
+                );
+
+                reefAssist.running =
+                    Math2.epsilonEquals(0.0, stickDistance, kReefAssistTolerance.value()) &&
+                    Math2.epsilonEquals(0.0, robotAngle.minus(xyAngle).getRadians(), Math2.kHalfPi) &&
+                    norm >= api.config.driverVelDeadband;
+
+                reefAssist.error = robotAngle.minus(reefReference.getRotation()).getRadians();
+                reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * kReefAssistKp.value() : 0.0;
+
+                var assist = ChassisSpeeds.fromRobotRelativeSpeeds(
+                    0.0,
+                    MathUtil.applyDeadband(reefAssist.output, kReefAssistDeadband.value()),
+                    !exitLock.value
+                        ? faceReefPID.calculate(api.state.yaw.getRadians(), reefReference.getRotation().getRadians())
+                        : 0.0,
+                    reefReference.getRotation().rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
+                );
+
+                if (!Math2.epsilonEquals(angularInput, 0.0)) exitLock.value = true;
+                api.applyAssistedDriverInput(xInput, yInput, angularInput, assist, Perspective.kOperator, true, true);
+            })
+            .onEnd(reefAssist::reset);
     }
 
     /**
@@ -282,5 +377,25 @@ public final class Swerve extends GRRSubsystem {
             true,
             false
         );
+    }
+
+    @Logged
+    public final class ReefAssistData {
+
+        private Pose2d targetPipe;
+        private boolean running;
+        private double error;
+        private double output;
+
+        private ReefAssistData() {
+            reset();
+        }
+
+        private void reset() {
+            targetPipe = Pose2d.kZero;
+            running = false;
+            error = 0.0;
+            output = 0.0;
+        }
     }
 }

@@ -20,6 +20,8 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Timer;
@@ -36,9 +38,10 @@ import org.team340.lib.util.command.CommandBuilder;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.UpperCAN;
+import org.team340.robot.util.ReefSelection;
 
 @Logged
-public class GooseNeck extends GRRSubsystem {
+public final class GooseNeck extends GRRSubsystem {
 
     /**
      * A position for the goose neck. All positions in this enum should be
@@ -95,7 +98,7 @@ public class GooseNeck extends GRRSubsystem {
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
     private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.01);
 
-    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.02);
+    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.04);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
 
@@ -234,17 +237,18 @@ public class GooseNeck extends GRRSubsystem {
     // *************** Commands ***************
 
     public Command stow(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, safe, false, false).withName("GooseNeck.stow()");
+        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withName("GooseNeck.stow()");
     }
 
     public Command intake(BooleanSupplier button, BooleanSupplier safe) {
         Mutable<Boolean> sawCoral = new Mutable<>(false);
+        Debouncer debounce = new Debouncer(0.01, DebounceType.kBoth);
         Timer delay = new Timer();
 
-        return goTo(() -> GoosePosition.kIn, safe, false, false).withDeadline(
+        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withDeadline(
             new NotifierCommand(
                 () -> {
-                    boolean beamBroken = !beamBreakVolatile.waitForUpdate(0.02).getValue();
+                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.02).getValue());
 
                     if (beamBroken) sawCoral.value = true;
                     if (sawCoral.value && !beamBroken) delay.start();
@@ -263,6 +267,7 @@ public class GooseNeck extends GRRSubsystem {
                 .until(() -> hasCoral() || (!button.getAsBoolean() && !sawCoral.value))
                 .beforeStarting(() -> {
                     sawCoral.value = false;
+                    debounce.calculate(false);
                     delay.stop();
                     delay.reset();
                 })
@@ -273,19 +278,18 @@ public class GooseNeck extends GRRSubsystem {
     }
 
     public Command score(
+        ReefSelection selection,
         BooleanSupplier runManual,
-        BooleanSupplier l1,
-        BooleanSupplier safe,
-        boolean left,
-        boolean allowMovement
+        BooleanSupplier allowGoosing,
+        BooleanSupplier safe
     ) {
         Mutable<Boolean> beamTrigger = new Mutable<>(false);
 
         return goTo(
-            () -> l1.getAsBoolean() ? GoosePosition.kScoreL1 : GoosePosition.kScoreForward,
-            safe,
-            left,
-            allowMovement
+            () -> !selection.l1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
+            () -> !selection.l1() && allowGoosing.getAsBoolean(),
+            selection::isLeft,
+            safe
         )
             .alongWith(
                 new CommandBuilder()
@@ -294,9 +298,7 @@ public class GooseNeck extends GRRSubsystem {
                         if (beamBroken() || beamTrigger.value || runManual.getAsBoolean()) {
                             beakMotor.setControl(
                                 beakVoltageControl.withOutput(
-                                    l1.getAsBoolean()
-                                        ? GooseSpeed.kScoreL1.voltage()
-                                        : GooseSpeed.kScoreForward.voltage()
+                                    !selection.l1() ? GooseSpeed.kScoreForward.voltage() : GooseSpeed.kScoreL1.voltage()
                                 )
                             );
                             hasCoral.set(false);
@@ -306,11 +308,11 @@ public class GooseNeck extends GRRSubsystem {
                     .onEnd(beakMotor::stopMotor)
             )
             .onlyIf(this::hasCoral)
-            .withName("GooseNeck.score(" + left + ")");
+            .withName("GooseNeck.score()");
     }
 
     public Command barf(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, safe, false, false)
+        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe)
             .alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> hasCoral.set(false))
@@ -321,7 +323,7 @@ public class GooseNeck extends GRRSubsystem {
     }
 
     public Command swallow(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, safe, false, false)
+        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe)
             .alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> hasCoral.set(false))
@@ -331,23 +333,24 @@ public class GooseNeck extends GRRSubsystem {
             .withName("GooseNeck.swallow()");
     }
 
-    /**
-     * Moves the pivot to predetermined positions.
-     * @param position The position to move the pivot to.
-     */
-    private Command goTo(Supplier<GoosePosition> position, BooleanSupplier safe, boolean left, boolean allowMovement) {
+    private Command goTo(
+        Supplier<GoosePosition> position,
+        BooleanSupplier allowGoosing,
+        BooleanSupplier left,
+        BooleanSupplier safe
+    ) {
         Mutable<Double> holdPosition = new Mutable<>(-1.0);
         Mutable<Double> lastTarget = new Mutable<>(0.0);
         Timer timer = new Timer();
 
-        return commandBuilder("GooseNeck.goTo(" + left + ", " + allowMovement + ")")
+        return commandBuilder("GooseNeck.goTo()")
             .onInitialize(() -> {
                 timer.stop();
                 timer.reset();
                 torquePID.reset();
             })
             .onExecute(() -> {
-                double target = position.get().rotations() * (left ? -1.0 : 1.0);
+                double target = position.get().rotations() * (left.getAsBoolean() ? -1.0 : 1.0);
                 if (lastTarget.value != target) {
                     timer.stop();
                     timer.reset();
@@ -355,7 +358,7 @@ public class GooseNeck extends GRRSubsystem {
 
                 lastTarget.value = target;
 
-                if (allowMovement && position.get().equals(GoosePosition.kScoreForward)) {
+                if (allowGoosing.getAsBoolean()) {
                     double currentPosition = getPosition();
                     boolean atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionEpsilon.value());
                     goosing = true;
@@ -380,14 +383,21 @@ public class GooseNeck extends GRRSubsystem {
                         timer.start();
                     }
                 } else {
+                    timer.stop();
+                    timer.reset();
+                    torquePID.reset();
                     goosing = false;
                 }
 
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
                         double currentPosition = getPosition();
-                        GoosePosition close = GoosePosition.closeTo(currentPosition * (left ? -1.0 : 1.0));
-                        holdPosition.value = close != null ? close.rotations() * (left ? -1.0 : 1.0) : currentPosition;
+                        GoosePosition close = GoosePosition.closeTo(
+                            currentPosition * (left.getAsBoolean() ? -1.0 : 1.0)
+                        );
+                        holdPosition.value = close != null
+                            ? close.rotations() * (left.getAsBoolean() ? -1.0 : 1.0)
+                            : currentPosition;
                     }
                     pivotMotor.setControl(positionControl.withPosition(holdPosition.value));
                 } else {

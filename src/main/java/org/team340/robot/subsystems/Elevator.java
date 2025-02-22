@@ -26,9 +26,10 @@ import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.LowerCAN;
+import org.team340.robot.util.ReefSelection;
 
 @Logged
-public class Elevator extends GRRSubsystem {
+public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
@@ -50,38 +51,23 @@ public class Elevator extends GRRSubsystem {
             return rotations.value();
         }
 
-        public static ElevatorPosition level(int level) {
-            switch (level) {
-                case 1:
-                    return kL1;
-                case 2:
-                    return kL2;
-                case 3:
-                    return kL3;
-                case 4:
-                    return kL4;
-                default:
-                    return kDown;
-            }
-        }
-
-        public static ElevatorPosition closeTo(double position) {
+        private static ElevatorPosition closeTo(double position) {
+            ElevatorPosition closest = null;
+            double min = Double.MAX_VALUE;
             for (ElevatorPosition option : values()) {
-                if (Math2.epsilonEquals(option.rotations(), position, kCloseToTolerance.value())) {
-                    return option;
+                double distance = Math.abs(option.rotations() - position);
+                if (Math2.epsilonEquals(0.0, distance, kCloseToTolerance.value()) && distance <= min) {
+                    closest = option;
+                    min = distance;
                 }
             }
 
-            return null;
+            return closest;
         }
     }
 
-    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.75);
-
+    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 1.0);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -2.0);
-    private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0);
-
-    private static final double kMaxPos = 48.7;
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -128,7 +114,7 @@ public class Elevator extends GRRSubsystem {
         motorConfig.Slot0.kS = 0.0;
         motorConfig.Slot0.kV = 0.1;
 
-        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = kMaxPos;
+        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 48.7;
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
@@ -162,7 +148,7 @@ public class Elevator extends GRRSubsystem {
         );
         PhoenixUtil.run("Set Elevator Signal Frequencies for Following", () ->
             BaseStatusSignal.setUpdateFrequencyForAll(
-                1000,
+                500,
                 leadMotor.getDutyCycle(),
                 leadMotor.getMotorVoltage(),
                 leadMotor.getTorqueCurrent()
@@ -191,6 +177,9 @@ public class Elevator extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
+    /**
+     * Gets the elevator's current position, in rotations.
+     */
     private double getPosition() {
         return (
             (BaseStatusSignal.getLatencyCompensatedValueAsDouble(leadPosition, leadVelocity) +
@@ -201,10 +190,45 @@ public class Elevator extends GRRSubsystem {
 
     // *************** Commands ***************
 
+    /**
+     * Goes to a scoring position.
+     * @param selection The reef selection helper.
+     * @param safe If the elevator is safe to move.
+     */
+    public Command score(ReefSelection selection, BooleanSupplier safe) {
+        return goTo(
+            () -> {
+                switch (selection.level()) {
+                    case 1:
+                        return ElevatorPosition.kL1;
+                    case 2:
+                        return ElevatorPosition.kL2;
+                    case 3:
+                        return ElevatorPosition.kL3;
+                    case 4:
+                        return ElevatorPosition.kL4;
+                    default:
+                        return ElevatorPosition.kDown;
+                }
+            },
+            safe
+        );
+    }
+
+    /**
+     * Goes to a position.
+     * @param position The position to go to.
+     * @param safe If the elevator is safe to move.
+     */
     public Command goTo(ElevatorPosition position, BooleanSupplier safe) {
         return goTo(() -> position, safe);
     }
 
+    /**
+     * Goes to a position.
+     * @param position The position to go to.
+     * @param safe If the elevator is safe to move.
+     */
     public Command goTo(Supplier<ElevatorPosition> position, BooleanSupplier safe) {
         Mutable<Double> holdPosition = new Mutable<>(-1.0);
 
@@ -214,6 +238,7 @@ public class Elevator extends GRRSubsystem {
                 if (!homed) {
                     leadMotor.setControl(voltageControl.withOutput(kHomingVoltage.value()));
                     homed = limitSwitch.getValue();
+                    return;
                 }
 
                 if (!safe.getAsBoolean()) {
@@ -228,12 +253,6 @@ public class Elevator extends GRRSubsystem {
                     holdPosition.value = -1.0;
                 }
             })
-            .onEnd(leadMotor::stopMotor);
-    }
-
-    public Command applyTunableVoltage() {
-        return commandBuilder("Elevator.applyTunableVoltage()")
-            .onExecute(() -> leadMotor.setControl(voltageControl.withOutput(kTunableVoltage.value())))
             .onEnd(leadMotor::stopMotor);
     }
 }

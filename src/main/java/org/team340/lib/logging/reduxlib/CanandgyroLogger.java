@@ -15,12 +15,6 @@ public class CanandgyroLogger extends ClassSpecificLogger<Canandgyro> {
 
     @Override
     public void update(EpilogueBackend backend, Canandgyro canandgyro) {
-        backend.log("accelerationX", canandgyro.getAccelerationX());
-        backend.log("accelerationY", canandgyro.getAccelerationY());
-        backend.log("accelerationZ", canandgyro.getAccelerationZ());
-        backend.log("velocityX", canandgyro.getAngularVelocityRoll());
-        backend.log("velocityY", canandgyro.getAngularVelocityPitch());
-        backend.log("velocityZ", canandgyro.getAngularVelocityYaw());
         backend.log("yaw", canandgyro.getYaw());
         backend.log("pitch", canandgyro.getPitch());
         backend.log("roll", canandgyro.getRoll());

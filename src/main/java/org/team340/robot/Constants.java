@@ -2,8 +2,6 @@ package org.team340.robot;
 
 import choreo.util.ChoreoAllianceFlipUtil;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -23,17 +21,19 @@ public final class Constants {
 
     public static final class FieldConstants {
 
-        public static final AprilTagFieldLayout kAprilTags = AprilTagFieldLayout.loadField(
-            AprilTagFields.k2025ReefscapeWelded
-        );
-
         public static final double kLength = 17.548;
         public static final double kWidth = 8.052;
+
+        public static final Translation2d kBlueLeftCorner = new Translation2d(0.0, kWidth);
+        public static final Translation2d kBlueRightCorner = new Translation2d(0.0, 0.0);
+        public static final Translation2d kRedLeftCorner = new Translation2d(kLength, 0.0);
+        public static final Translation2d kRedRightCorner = new Translation2d(kLength, kWidth);
 
         public static final Translation2d kReefCenterBlue = new Translation2d(4.489, kWidth / 2.0);
         public static final Translation2d kReefCenterRed = ChoreoAllianceFlipUtil.flip(kReefCenterBlue);
 
-        public static final double kPipeOffsetY = 0.164;
+        public static final double kPipeOffsetX = -0.781;
+        public static final double kPipeOffsetY = -0.164;
     }
 
     public final class Cameras {

@@ -17,11 +17,9 @@ public class SparkFlexLogger extends ClassSpecificLogger<SparkFlex> {
     @Override
     public void update(EpilogueBackend backend, SparkFlex sparkFlex) {
         double appliedOutput = sparkFlex.getAppliedOutput();
-        double busVoltage = sparkFlex.getBusVoltage();
 
         backend.log("appliedOutput", appliedOutput);
-        backend.log("appliedVoltage", appliedOutput * busVoltage);
-        backend.log("busVoltage", busVoltage);
+        backend.log("appliedVoltage", appliedOutput * sparkFlex.getBusVoltage());
         backend.log("motorTemperature", sparkFlex.getMotorTemperature());
         backend.log("outputCurrent", sparkFlex.getOutputCurrent());
         backend.log("position", sparkFlex.getEncoder().getPosition());
