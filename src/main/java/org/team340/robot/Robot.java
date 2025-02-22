@@ -110,7 +110,7 @@ public final class Robot extends TimedRobot {
     }
 
     public boolean safeForGoose() {
-        return !gooseNeck.beamBroken() && swerve.safeForGoose();
+        return !gooseNeck.beamBroken() && swerve.wildlifeConservationProgram();
     }
 
     public double driverX() {

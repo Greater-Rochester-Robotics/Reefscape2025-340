@@ -79,8 +79,8 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        kIntakeFast(-4.0),
-        kIntakeSlow(-2.0),
+        kIntakeFast(-7.0),
+        kIntakeSlow(-3.0),
         kScoreL1(-3.5),
         kScoreForward(10.0),
         kBarf(-8.0),
@@ -100,7 +100,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
     private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.01);
 
-    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.04);
+    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.008);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
 
@@ -242,9 +242,9 @@ public final class GooseNeck extends GRRSubsystem {
         return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withName("GooseNeck.stow()");
     }
 
-    public Command intake(BooleanSupplier button, BooleanSupplier safe) {
+    public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
         Mutable<Boolean> sawCoral = new Mutable<>(false);
-        Debouncer debounce = new Debouncer(0.01, DebounceType.kBoth);
+        Debouncer debounce = new Debouncer(0.018, DebounceType.kBoth);
         Timer delay = new Timer();
 
         return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withDeadline(
@@ -255,7 +255,13 @@ public final class GooseNeck extends GRRSubsystem {
                     if (beamBroken) sawCoral.value = true;
                     if (sawCoral.value && !beamBroken) delay.start();
 
-                    if (!sawCoral.value) {
+                    if (swallow.getAsBoolean()) {
+                        beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSwallow.voltage()));
+                        hasCoral.set(false);
+                        sawCoral.value = false;
+                        delay.stop();
+                        delay.reset();
+                    } else if (!sawCoral.value) {
                         beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntakeFast.voltage()));
                     } else if (!delay.hasElapsed(kIntakeSeatDelay.value())) {
                         beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntakeSlow.voltage()));

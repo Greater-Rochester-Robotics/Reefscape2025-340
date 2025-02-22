@@ -1,16 +1,19 @@
 package org.team340.robot.subsystems;
 
-import com.revrobotics.spark.SparkAbsoluteEncoder;
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
-import com.revrobotics.spark.config.SparkFlexConfig;
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.hardware.ParentDevice;
+import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
-import org.team340.lib.util.vendors.RevUtil;
+import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants;
 import org.team340.robot.Constants.UpperCAN;
 
@@ -32,33 +35,36 @@ public final class Climber extends GRRSubsystem {
         }
     }
 
-    private static final double kForwardLimit = 0.0;
-    private static final double kBackwardLimit = 0.0;
+    private final TalonFX motor;
 
-    private final SparkFlex motor;
-    private final SparkAbsoluteEncoder encoder;
+    private final StatusSignal<Angle> position;
+    private final StatusSignal<AngularVelocity> velocity;
 
     public Climber() {
-        motor = new SparkFlex(UpperCAN.kClimberMotor, MotorType.kBrushless);
-        encoder = motor.getAbsoluteEncoder();
+        motor = new TalonFX(UpperCAN.kClimberMotor);
 
-        final SparkFlexConfig config = new SparkFlexConfig();
+        position = motor.getPosition();
+        velocity = motor.getVelocity();
 
-        config.closedLoop
-            .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
-            .positionWrappingEnabled(true)
-            .positionWrappingInputRange(-0.5, 0.5);
+        final TalonFXConfiguration config = new TalonFXConfiguration();
 
-        config.absoluteEncoder
-            .positionConversionFactor(1.0)
-            .zeroCentered(true)
-            .averageDepth(0)
-            .inverted(false)
-            .zeroOffset(0.0);
+        config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 0.0;
 
-        config.signals.absoluteEncoderPositionAlwaysOn(true).absoluteEncoderPositionPeriodMs(10);
+        // TODO: add configuration.
 
-        RevUtil.config(motor, config);
+        PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
+
+        PhoenixUtil.run("Set Climber Motor Frequency", () ->
+            BaseStatusSignal.setUpdateFrequencyForAll(20, position, velocity)
+        );
+
+        PhoenixUtil.run("Optimize Climber CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(5, motor));
+    }
+
+    @Override
+    public void periodic() {
+        BaseStatusSignal.refreshAll(position, velocity);
     }
 
     // *************** Helper Functions ***************
@@ -72,9 +78,15 @@ public final class Climber extends GRRSubsystem {
 
     /**
      * Sets the output voltage of the motor.
-     * @param percentOutput The signed percent of the output voltage to set
+     * @param percentOutput The percent of the output voltage to set
      */
     private void setTargetSpeed(double percentOutput) {
+        if (percentOutput < 0.0) {
+            stop();
+            DriverStation.reportWarning("The climber motor cannot be set to negative speeds.", false);
+            return;
+        }
+
         motor.setVoltage(percentOutput * Constants.kVoltage);
     }
 
@@ -83,7 +95,7 @@ public final class Climber extends GRRSubsystem {
      * @return The position in rotations.
      */
     private double getRotations() {
-        return encoder.getPosition();
+        return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
     }
 
     // *************** Commands ***************
@@ -95,18 +107,7 @@ public final class Climber extends GRRSubsystem {
     private Command goForwardToPosition(DoubleSupplier rotationsSupplier) {
         return commandBuilder("Climber.goForwardToPosition()")
             .onExecute(() -> setTargetSpeed(1.0))
-            .isFinished(() -> getRotations() > rotationsSupplier.getAsDouble() || getRotations() > kForwardLimit)
-            .onEnd(this::stop);
-    }
-
-    /**
-     * Moves the climber backward until it goes passed the current value of the supplier.
-     * @param rotationsSupplier The supplier of the possition that must be surpassed.
-     */
-    private Command goBackwardToPosition(DoubleSupplier rotationsSupplier) {
-        return commandBuilder("Climber.goBackwardToPosition()")
-            .onExecute(() -> setTargetSpeed(-1.0))
-            .isFinished(() -> getRotations() < rotationsSupplier.getAsDouble() || getRotations() < kBackwardLimit)
+            .isFinished(() -> getRotations() > rotationsSupplier.getAsDouble())
             .onEnd(this::stop);
     }
 

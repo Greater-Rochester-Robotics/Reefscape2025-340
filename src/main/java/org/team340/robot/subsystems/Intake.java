@@ -10,14 +10,13 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import java.util.function.BooleanSupplier;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RioIO;
 import org.team340.robot.Constants.UpperCAN;
 
 @Logged
@@ -30,7 +29,6 @@ public final class Intake extends GRRSubsystem {
     private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.2);
 
     private final TalonFX motor;
-    private final DigitalInput beamBreak;
 
     private final StatusSignal<Current> current;
 
@@ -38,7 +36,6 @@ public final class Intake extends GRRSubsystem {
 
     public Intake() {
         motor = new TalonFX(UpperCAN.kIntakeMotor);
-        beamBreak = new DigitalInput(RioIO.kIntakeBeamBreak);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -65,44 +62,30 @@ public final class Intake extends GRRSubsystem {
         BaseStatusSignal.refreshAll(current);
     }
 
-    // *************** Helper Functions ***************
-
-    /**
-     * Returns whether the beam break sees the coral or not.
-     * @return True if the beam break detects an object, false otherwise.
-     */
-    public boolean beamBroken() {
-        return beamBreak.get();
-    }
-
     // *************** Commands ***************
 
     /**
      * Runs the intake.
      */
-    public Command intake() {
-        Debouncer seenDebouncer = new Debouncer(1.25);
-        Debouncer currentDebouncer = new Debouncer(0.4);
+    public Command intake(BooleanSupplier swallow) {
+        Debouncer debouncer = new Debouncer(0.4);
         Timer unjamTimer = new Timer();
 
         return commandBuilder("Intake.intake()")
             .onInitialize(() -> {
+                debouncer.calculate(false);
                 unjamTimer.stop();
                 unjamTimer.reset();
             })
             .onExecute(() -> {
-                if (
-                    seenDebouncer.calculate(beamBroken()) ||
-                    currentDebouncer.calculate(current.getValueAsDouble() > kCurrentThreshold.value())
-                ) {
+                if (debouncer.calculate(current.getValueAsDouble() > kCurrentThreshold.value())) {
                     unjamTimer.start();
                 }
 
-                if (unjamTimer.isRunning() && !unjamTimer.hasElapsed(kUnjamTime.value())) {
+                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(kUnjamTime.value())) || swallow.getAsBoolean()) {
                     motor.setControl(voltageControl.withOutput(kSwallowVoltage.value()));
                 } else {
                     motor.setControl(voltageControl.withOutput(kIntakeVoltage.value()));
-                    seenDebouncer.calculate(false);
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }

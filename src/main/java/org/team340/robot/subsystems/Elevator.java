@@ -33,9 +33,9 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.8),
-        kBarf(0.8),
-        kSwallow(1.2),
+        kIntake(1.0),
+        kBarf(1.0),
+        kSwallow(1.5),
         kL1(0.0),
         kL2(12.5),
         kL3(26.0),
@@ -66,8 +66,8 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 1.0);
-    private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -2.0);
+    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.5);
+    private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;

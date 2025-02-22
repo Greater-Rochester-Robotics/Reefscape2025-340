@@ -118,5 +118,7 @@ public final class Constants {
 
         public static final int kIntakeBeamBreak = 9;
         public static final int kLights = 9;
+
+        public static final int kClimberLimitSwitch = 0;
     }
 }

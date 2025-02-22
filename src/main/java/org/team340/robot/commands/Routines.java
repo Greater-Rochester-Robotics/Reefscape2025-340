@@ -4,6 +4,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
@@ -59,9 +60,12 @@ public final class Routines {
      * @param button If the intake button is still pressed.
      */
     public Command intake(BooleanSupplier button) {
+        Debouncer debounce = new Debouncer(1.25);
+        BooleanSupplier chokingGoose = () -> debounce.calculate(gooseNeck.beamBroken());
+
         return deadline(
-            gooseNeck.intake(button, robot::safeForGoose),
-            intake.intake(),
+            gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
+            intake.intake(chokingGoose),
             elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
         ).withName("Routines.intake()");
     }
@@ -88,7 +92,7 @@ public final class Routines {
         return parallel(
             gooseNeck.barf(robot::safeForGoose),
             intake.barf(),
-            elevator.goTo(ElevatorPosition.kBarf, robot::safeForGoose)
+            elevator.goTo(ElevatorPosition.kBarf, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.barf()");
     }
 
@@ -99,8 +103,10 @@ public final class Routines {
     public Command swallow() {
         return parallel(
             intake.swallow(),
-            gooseNeck.swallow(robot::safeForGoose).asProxy().beforeStarting(waitSeconds(0.25)),
-            elevator.goTo(ElevatorPosition.kSwallow, robot::safeForGoose)
+            gooseNeck
+                .swallow(robot::safeForGoose)
+                .beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.25)),
+            elevator.goTo(ElevatorPosition.kSwallow, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.swallow()");
     }
 
@@ -120,7 +126,7 @@ public final class Routines {
     public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
         return sequence(
             deadline(
-                waitUntil(swerve::inGooseHappyZone),
+                waitUntil(swerve::happyGoose),
                 elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
                 gooseNeck.stow(robot::safeForGoose)
             ),

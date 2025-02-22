@@ -8,6 +8,7 @@ import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -99,7 +100,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kReefAssistDeadband = Tunable.doubleValue("swerve/kReefAssistDeadband", 0.1);
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 0.95);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
-    private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.85);
+    private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.6);
     private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.3);
 
     private final SwerveAPI api;
@@ -111,6 +112,7 @@ public final class Swerve extends GRRSubsystem {
 
     private final ProfiledPIDController faceReefPID;
 
+    private final Debouncer dangerDebounce = new Debouncer(0.2);
     private final List<Pose2d> estimates = new ArrayList<>();
     private final List<Pose3d> targets = new ArrayList<>();
     private final ReefAssistData reefAssist = new ReefAssistData();
@@ -120,7 +122,6 @@ public final class Swerve extends GRRSubsystem {
     private Pose2d reefReference = Pose2d.kZero;
     private Translation2d closestStation = Translation2d.kZero;
     private boolean facingReef = false;
-
     private double wallDistance = 0.0;
 
     public Swerve() {
@@ -188,24 +189,20 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Returns true if the elevator and goose neck are safe
-     * to move, based on the robot's position on the field.
+     * Returns true if the goose is happy!! 😁😁😁
+     * (Robot is facing the reef and within the happy distance).
      */
-    public boolean safeForGoose() {
-        // TODO
-        return facingReef && getWallDistance() > kReefDangerDistance.value();
-    }
-
-    public boolean inGooseHappyZone() {
-        return wallDistance < kReefHappyDistance.value();
+    public boolean happyGoose() {
+        return facingReef && wallDistance < kReefHappyDistance.value();
     }
 
     /**
-     * Gets the corrected distance from the reef.
-     * @return The corrected distance.
+     * Returns true if the elevator and goose neck are safe
+     * to move, based on the robot's position on the field.
      */
-    public double getWallDistance() {
-        return wallDistance;
+    public boolean wildlifeConservationProgram() {
+        // TODO
+        return dangerDebounce.calculate(wallDistance > kReefDangerDistance.value());
     }
 
     /**
