@@ -189,7 +189,7 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Returns true if the goose is happy!! 😁😁😁
+     * Returns true if the goose is happy!!
      * (Robot is facing the reef and within the happy distance).
      */
     public boolean happyGoose() {
@@ -201,7 +201,6 @@ public final class Swerve extends GRRSubsystem {
      * to move, based on the robot's position on the field.
      */
     public boolean wildlifeConservationProgram() {
-        // TODO
         return dangerDebounce.calculate(wallDistance > kReefDangerDistance.value());
     }
 

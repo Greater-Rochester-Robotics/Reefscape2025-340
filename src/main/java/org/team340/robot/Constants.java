@@ -32,7 +32,7 @@ public final class Constants {
         public static final Translation2d kReefCenterBlue = new Translation2d(4.489, kWidth / 2.0);
         public static final Translation2d kReefCenterRed = ChoreoAllianceFlipUtil.flip(kReefCenterBlue);
 
-        public static final double kPipeOffsetX = -0.781;
+        public static final double kPipeOffsetX = -0.681;
         public static final double kPipeOffsetY = -0.164;
 
         public static final double kReefCenterToWallDistance = 0.781;

@@ -5,6 +5,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
@@ -60,8 +61,19 @@ public final class Routines {
      * @param button If the intake button is still pressed.
      */
     public Command intake(BooleanSupplier button) {
-        Debouncer debounce = new Debouncer(1.25);
-        BooleanSupplier chokingGoose = () -> debounce.calculate(gooseNeck.beamBroken());
+        Debouncer debounce = new Debouncer(1.0);
+        Timer chokeTimer = new Timer();
+        BooleanSupplier chokingGoose = () -> {
+            if (debounce.calculate(gooseNeck.beamBroken())) chokeTimer.start();
+
+            if (chokeTimer.isRunning() && !chokeTimer.hasElapsed(0.35)) {
+                return true;
+            } else {
+                chokeTimer.stop();
+                chokeTimer.reset();
+                return false;
+            }
+        };
 
         return deadline(
             gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
