@@ -28,6 +28,7 @@ public final class Routines {
 
     private final Robot robot;
 
+    // private final Climber climber;
     private final Elevator elevator;
     private final GooseNeck gooseNeck;
     private final Intake intake;
@@ -38,6 +39,7 @@ public final class Routines {
 
     public Routines(Robot robot) {
         this.robot = robot;
+        // climber = robot.climber;
         elevator = robot.elevator;
         gooseNeck = robot.gooseNeck;
         intake = robot.intake;
@@ -163,4 +165,9 @@ public final class Routines {
             swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft)
         ).withName("Routines.assistedScore()");
     }
+    // public Command climb(BooleanSupplier next) {
+    //     return sequence(climber.deploy(), waitUntil(next), climber.check(), waitUntil(next), climber.climb()).withName(
+    //         "Routines.climb()"
+    //     );
+    // }
 }

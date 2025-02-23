@@ -94,7 +94,7 @@ public final class Elevator extends GRRSubsystem {
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
         motorConfig.CurrentLimits.StatorCurrentLimit = 80.0;
-        motorConfig.CurrentLimits.SupplyCurrentLimit = 100.0;
+        motorConfig.CurrentLimits.SupplyCurrentLimit = 70.0;
 
         motorConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = LowerCAN.kElevatorCANdi;
         motorConfig.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;

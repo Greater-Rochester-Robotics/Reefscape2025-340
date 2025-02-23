@@ -29,6 +29,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged
 public final class Robot extends TimedRobot {
 
+    // public final Climber climber;
     public final Elevator elevator;
     public final GooseNeck gooseNeck;
     public final Intake intake;
@@ -53,6 +54,7 @@ public final class Robot extends TimedRobot {
         Epilogue.getConfig().root = "/Telemetry";
 
         // Initialize subsystems
+        // climber = new Climber();
         elevator = new Elevator();
         gooseNeck = new GooseNeck();
         intake = new Intake();
@@ -104,6 +106,7 @@ public final class Robot extends TimedRobot {
         driver.povUp().whileTrue(routines.barf());
         driver.povDown().whileTrue(routines.swallow());
         driver.povLeft().onTrue(swerve.tareRotation());
+        // driver.povRight().onTrue(routines.climb(driver.povRight()));
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)

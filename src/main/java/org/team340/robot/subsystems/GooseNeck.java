@@ -53,7 +53,7 @@ public final class GooseNeck extends GRRSubsystem {
      * the values specified here.
      */
     private static enum GoosePosition {
-        kIn(0.0),
+        kStow(0.0),
         kScoreL1(-0.12),
         kScoreForward(0.5);
 
@@ -239,7 +239,7 @@ public final class GooseNeck extends GRRSubsystem {
     // *************** Commands ***************
 
     public Command stow(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withName("GooseNeck.stow()");
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withName("GooseNeck.stow()");
     }
 
     public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
@@ -247,7 +247,7 @@ public final class GooseNeck extends GRRSubsystem {
         Debouncer debounce = new Debouncer(0.018, DebounceType.kBoth);
         Timer delay = new Timer();
 
-        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe).withDeadline(
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
             new NotifierCommand(
                 () -> {
                     boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.02).getValue());
@@ -317,13 +317,13 @@ public final class GooseNeck extends GRRSubsystem {
                     })
                     .onEnd(beakMotor::stopMotor)
             ),
-            goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe),
+            goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe),
             this::hasCoral
         ).withName("GooseNeck.score()");
     }
 
     public Command barf(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe)
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe)
             .alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> hasCoral.set(false))
@@ -334,7 +334,7 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     public Command swallow(BooleanSupplier safe) {
-        return goTo(() -> GoosePosition.kIn, () -> false, () -> false, safe)
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe)
             .alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> hasCoral.set(false))

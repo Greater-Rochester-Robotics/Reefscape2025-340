@@ -1,7 +1,6 @@
 package org.team340.robot;
 
 import choreo.util.ChoreoAllianceFlipUtil;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -109,9 +108,6 @@ public final class Constants {
 
         // Climber
         public static final int kClimberMotor = 50;
-        public static final int kClimberEncoder = 51;
-        public static final FeedbackSensorSourceValue kClimberEnoderSourceValue =
-            FeedbackSensorSourceValue.RemoteCANcoder;
     }
 
     public static final class RioIO {
