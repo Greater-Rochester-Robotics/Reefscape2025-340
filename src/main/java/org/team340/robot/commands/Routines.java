@@ -49,14 +49,14 @@ public final class Routines {
     }
 
     /**
-     * Runs the intake.
+     * Intakes and seats a coral.
      */
     public Command intake() {
         return intake(() -> true);
     }
 
     /**
-     * Runs the intake. A button supplier is specified for scheduling purposes,
+     * Intakes and seats a coral. A button supplier is specified for scheduling purposes,
      * allowing this command to be bound using {@link Trigger#onTrue()}. The
      * intake will continue running if a coral has been detected, but is not
      * yet in the goose neck.
@@ -128,8 +128,8 @@ public final class Routines {
      * Scores a coral. Also allows the goose neck to goose around.
      * @param forceBeak Forces the goose beak to spit the coral, even if a pipe is not detected.
      */
-    public Command score(boolean forceBeak) {
-        return score(() -> forceBeak, () -> true).withName("Routines.score()");
+    public Command score(BooleanSupplier runManual) {
+        return score(runManual, () -> true).withName("Routines.score()");
     }
 
     /**

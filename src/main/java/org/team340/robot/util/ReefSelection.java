@@ -38,6 +38,12 @@ public final class ReefSelection {
         return scoring;
     }
 
+    public Command selectLevel(int level) {
+        return Commands.runOnce(() -> this.level = level)
+            .ignoringDisable(true)
+            .withName("ReefSelection.incrementLevel()");
+    }
+
     public Command incrementLevel() {
         return Commands.runOnce(() -> level = (int) MathUtil.inputModulus(level + 1, 0.5, 4.5))
             .ignoringDisable(true)

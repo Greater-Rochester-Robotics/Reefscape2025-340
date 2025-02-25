@@ -79,10 +79,10 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        kIntake(-7.0),
+        kIntake(-6.0),
         kSeat(2.25),
         kScoreL1(-3.5),
-        kScoreForward(9.0),
+        kScoreForward(7.0),
         kBarf(-8.0),
         kSwallow(8.0);
 
@@ -100,7 +100,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
     private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.01);
 
-    private static final TunableDouble kIntakeSeatDelay = Tunable.doubleValue("gooseNeck/kIntakeSeatDelay", 0.1);
+    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.025);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
 
@@ -220,6 +220,11 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     @NotLogged
+    public boolean noCoral() {
+        return !hasCoral();
+    }
+
+    @NotLogged
     public boolean goosing() {
         return goosing;
     }
@@ -237,6 +242,12 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     // *************** Commands ***************
+
+    public Command setHasCoral(boolean hasCoral) {
+        return runOnce(() -> this.hasCoral.set(hasCoral))
+            .ignoringDisable(true)
+            .withName("Intake.setHasCoral(" + hasCoral + ")");
+    }
 
     public Command stow(BooleanSupplier safe) {
         return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withName("GooseNeck.stow()");
@@ -280,7 +291,7 @@ public final class GooseNeck extends GRRSubsystem {
                                 break;
                             case kSeating:
                                 if (!beamBroken) delay.start();
-                                if (!delay.hasElapsed(kIntakeSeatDelay.value())) {
+                                if (!delay.hasElapsed(kSeatDelay.value())) {
                                     beakMotor.setControl(beakVoltageControl.withOutput(-GooseSpeed.kSeat.voltage()));
                                     break;
                                 }
