@@ -65,6 +65,7 @@ final class SwerveTunables {
 
         // setLimits()
         Tunable.doubleValue(name + "/limits/velocity", config.velocity, v -> config.velocity = v);
+        Tunable.doubleValue(name + "/limits/velDeadband", config.velDeadband, v -> config.velDeadband = v);
         Tunable.doubleValue(name + "/limits/slipAccel", config.slipAccel, v -> config.slipAccel = v);
         Tunable.doubleValue(name + "/limits/torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
         Tunable.doubleValue(name + "/limits/angularAccel", config.angularAccel, v -> config.angularAccel = v);

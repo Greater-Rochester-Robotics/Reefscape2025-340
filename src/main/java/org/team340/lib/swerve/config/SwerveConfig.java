@@ -33,6 +33,8 @@ public class SwerveConfig {
     public boolean turnBrakeMode = false;
     /** The maximum forward velocity the robot is capable of in meters/second. */
     public double velocity = -1.0;
+    /** The minimum velocity required for a swerve module to accept a commanded output. */
+    public double velDeadband = -1.0;
     /** The maximum acceleration the robot is capable of relevant to carpet slip in meters/second/second. */
     public double slipAccel = -1.0;
     /** The maximum acceleration the robot is capable of relevant to motor torque in meters/second/second. */
@@ -150,12 +152,20 @@ public class SwerveConfig {
      * It is recommended that these values are found empirically using an actual robot. An easy way to do so is to configure infeasible limits, then analyze telemetry.
      *
      * @param velocity The maximum forward velocity the robot is capable of in meters/second. More specifically, the maximum velocity a move motor is capable of.
+     * @param velDeadband The minimum velocity required for a swerve module to accept a commanded output.
      * @param slipAccel The maximum acceleration the robot is capable of relevant to carpet slip in meters/second/second.
      * @param torqueAccel The maximum acceleration the robot is capable of relevant to motor torque in meters/second/second.
      * @param angularAccel The maximum angular acceleration the robot is capable of in radians/second/second.
      */
-    public SwerveConfig setLimits(double velocity, double slipAccel, double torqueAccel, double angularAccel) {
+    public SwerveConfig setLimits(
+        double velocity,
+        double velDeadband,
+        double slipAccel,
+        double torqueAccel,
+        double angularAccel
+    ) {
         this.velocity = velocity;
+        this.velDeadband = velDeadband;
         this.slipAccel = slipAccel;
         this.torqueAccel = torqueAccel;
         this.angularAccel = angularAccel;
@@ -291,6 +301,7 @@ public class SwerveConfig {
         if (moveFF == null) missing.add("Move FF");
         if (turnPID == null) missing.add("Turn PID");
         if (velocity == -1.0) missing.add("Velocity");
+        if (velDeadband == -1.0) missing.add("Velocity Deadband");
         if (slipAccel == -1.0) missing.add("Slip Acceleration");
         if (torqueAccel == -1.0) missing.add("Torque Acceleration");
         if (angularAccel == -1.0) missing.add("Angular Acceleration");

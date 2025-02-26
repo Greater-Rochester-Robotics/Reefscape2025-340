@@ -44,10 +44,9 @@ public final class VisionManager {
     private VisionManager() {
         aprilTags = AprilTagFieldLayout.loadField(kField);
         cameras = new Camera[] {
-            // new Camera("middle", Cameras.kMiddle),
+            new Camera("middle", Cameras.kMiddle),
             new Camera("left", Cameras.kLeft),
             new Camera("right", Cameras.kRight)
-            // new Camera("back", Cameras.kBack)
         };
 
         NetworkTableInstance.getDefault().getBooleanTopic("/photonvision/use_new_cscore_frametime").publish().set(true);
@@ -109,13 +108,13 @@ public final class VisionManager {
 
                     // TODO no magic numbers
                     double distance = target.bestCameraToTarget.getTranslation().getNorm();
-                    double std = 0.2 * Math.pow(distance * (isImportant(id) ? 0.5 : 1.0), 2.0);
+                    double std = 0.1 * Math.pow(distance, 2.0) * (isImportant(id) ? 1.0 : 15.0);
 
                     measurements.add(
                         new VisionMeasurement(
                             estimate.get().estimatedPose.toPose2d(),
                             estimate.get().timestampSeconds,
-                            VecBuilder.fill(std, std, 100.0)
+                            VecBuilder.fill(std, std, 1000.0)
                         )
                     );
                     targets.add(tagLocation.get());

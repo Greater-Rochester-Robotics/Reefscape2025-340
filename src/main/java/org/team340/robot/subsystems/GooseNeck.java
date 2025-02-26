@@ -254,6 +254,14 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
+        return receive(false, button, swallow, safe);
+    }
+
+    public Command babyBird(BooleanSupplier button, BooleanSupplier safe) {
+        return receive(true, button, () -> false, safe);
+    }
+
+    private Command receive(boolean babyBird, BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
         enum State {
             kInit,
             kSawCoral,
@@ -305,16 +313,20 @@ public final class GooseNeck extends GRRSubsystem {
                 },
                 0.0
             )
-                .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.kInit)))
+                .until(
+                    () ->
+                        hasCoral() ||
+                        (!button.getAsBoolean() && state.value.equals(!babyBird ? State.kInit : State.kFindingEdge))
+                )
                 .beforeStarting(() -> {
-                    state.value = State.kInit;
+                    state.value = !babyBird ? State.kInit : State.kFindingEdge;
                     debounce.calculate(false);
                     delay.stop();
                     delay.reset();
                 })
                 .finallyDo(beakMotor::stopMotor)
                 .onlyIf(() -> !hasCoral())
-                .withName("GooseNeck.intake()")
+                .withName("GooseNeck.receive()")
         );
     }
 

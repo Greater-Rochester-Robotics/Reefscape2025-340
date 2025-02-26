@@ -39,22 +39,17 @@ public final class Constants {
 
     public final class Cameras {
 
-        // TODO Get measurements from CAD
         public static final Transform3d kMiddle = new Transform3d(
-            new Translation3d(0.0, 0.0, 0.0),
-            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+            new Translation3d(0.354, 0.0, 0.215),
+            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(0.0))
         );
         public static final Transform3d kLeft = new Transform3d(
-            new Translation3d(0.211, 0.092, 0.316),
-            new Rotation3d(0.0, Math.toRadians(-5), Math.toRadians(45))
+            new Translation3d(0.316, 0.092, 0.211),
+            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(45.0))
         );
         public static final Transform3d kRight = new Transform3d(
-            new Translation3d(0.211, -0.092, 0.316),
-            new Rotation3d(0.0, Math.toRadians(-5), Math.toRadians(-45))
-        );
-        public static final Transform3d kBack = new Transform3d(
-            new Translation3d(0.0, 0.0, 0.0),
-            new Rotation3d(0.0, Math.toRadians(0.0), Math.toRadians(0.0))
+            new Translation3d(0.316, -0.092, 0.211),
+            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(-45.0))
         );
     }
 

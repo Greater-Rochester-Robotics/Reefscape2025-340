@@ -139,6 +139,11 @@ class SwerveModule implements AutoCloseable {
      * @param state The state to apply to the module.
      */
     public void applyState(SwerveModuleState state) {
+        if (state.speedMetersPerSecond < config.velDeadband) {
+            state.speedMetersPerSecond = 0.0;
+            state.angle = nextTarget.angle;
+        }
+
         Rotation2d angleDelta;
         double turnPosition;
         cacheMutex.lock();

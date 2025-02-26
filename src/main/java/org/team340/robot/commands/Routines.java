@@ -98,6 +98,13 @@ public final class Routines {
         ).withName("Routines.assistedIntake()");
     }
 
+    public Command babyBird(BooleanSupplier button) {
+        return deadline(
+            gooseNeck.babyBird(button, robot::safeForGoose),
+            elevator.goTo(ElevatorPosition.kBabyBird, robot::safeForGoose)
+        ).withName("Routines.babyBird()");
+    }
+
     /**
      * Barfs a coral out of the robot. Also clears
      * the goose neck's "has coral" state.

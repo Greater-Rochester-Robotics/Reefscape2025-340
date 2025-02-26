@@ -97,6 +97,8 @@ public final class Robot extends TimedRobot {
         driver.x().onTrue(none()); // Reserved (No goosing around)
         driver.y().onTrue(none()); // Reserved (Force goose spit)
 
+        driver.start().whileTrue(routines.babyBird(driver.start()));
+
         driver.leftBumper().whileTrue(selection.setLeft().andThen(routines.assistedScore(driver.y(), gooseAround)));
         driver.rightBumper().whileTrue(selection.setRight().andThen(routines.assistedScore(driver.y(), gooseAround)));
 
