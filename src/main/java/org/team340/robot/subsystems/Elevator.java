@@ -18,6 +18,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
@@ -67,6 +68,7 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -2.0);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.5);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
 
@@ -196,7 +198,9 @@ public final class Elevator extends GRRSubsystem {
      * @param selection The reef selection helper.
      * @param safe If the elevator is safe to move.
      */
-    public Command score(ReefSelection selection, BooleanSupplier safe) {
+    public Command score(ReefSelection selection, BooleanSupplier dunk, BooleanSupplier safe) {
+        Mutable<Boolean> dunkinDonuts = new Mutable<>(false);
+
         return goTo(
             () -> {
                 switch (selection.getLevel()) {
@@ -212,8 +216,13 @@ public final class Elevator extends GRRSubsystem {
                         return ElevatorPosition.kDown;
                 }
             },
+            () -> {
+                if (dunk.getAsBoolean()) dunkinDonuts.value = true;
+                if (selection.getLevel() != 4) dunkinDonuts.value = false;
+                return dunkinDonuts.value ? kDunkRotations.value() : 0.0;
+            },
             safe
-        );
+        ).beforeStarting(() -> dunkinDonuts.value = false);
     }
 
     /**
@@ -222,7 +231,7 @@ public final class Elevator extends GRRSubsystem {
      * @param safe If the elevator is safe to move.
      */
     public Command goTo(ElevatorPosition position, BooleanSupplier safe) {
-        return goTo(() -> position, safe);
+        return goTo(() -> position, () -> 0.0, safe);
     }
 
     /**
@@ -230,7 +239,7 @@ public final class Elevator extends GRRSubsystem {
      * @param position The position to go to.
      * @param safe If the elevator is safe to move.
      */
-    public Command goTo(Supplier<ElevatorPosition> position, BooleanSupplier safe) {
+    private Command goTo(Supplier<ElevatorPosition> position, DoubleSupplier fudge, BooleanSupplier safe) {
         Mutable<Double> holdPosition = new Mutable<>(-1.0);
 
         return commandBuilder("Elevator.goTo()")
@@ -251,12 +260,12 @@ public final class Elevator extends GRRSubsystem {
 
                     leadMotor.setControl(
                         positionControl
-                            .withPosition(holdPosition.value)
+                            .withPosition(holdPosition.value + fudge.getAsDouble())
                             .withVelocity(kUpVel.value())
                             .withAcceleration(kUpAccel.value())
                     );
                 } else {
-                    double target = position.get().rotations();
+                    double target = position.get().rotations() + fudge.getAsDouble();
                     if (target >= currentPosition) {
                         leadMotor.setControl(
                             positionControl
