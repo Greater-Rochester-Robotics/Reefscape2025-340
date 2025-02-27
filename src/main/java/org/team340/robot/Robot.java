@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import org.team340.lib.util.DisableWatchdog;
 import org.team340.lib.util.GRRDashboard;
 import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
@@ -28,6 +29,8 @@ import org.team340.robot.util.ReefSelection;
 
 @Logged
 public final class Robot extends TimedRobot {
+
+    private final CommandScheduler scheduler = CommandScheduler.getInstance();
 
     // public final Climber climber;
     public final Elevator elevator;
@@ -46,6 +49,8 @@ public final class Robot extends TimedRobot {
 
     public Robot() {
         DriverStation.silenceJoystickConnectionWarning(true);
+        DisableWatchdog.in(scheduler, "m_watchdog");
+        DisableWatchdog.in(this, "m_watchdog");
 
         // Configure logging
         DataLogManager.start();
@@ -133,7 +138,7 @@ public final class Robot extends TimedRobot {
     @Override
     public void robotPeriodic() {
         Profiler.start("RobotPeriodic");
-        Profiler.run("CommandScheduler", () -> CommandScheduler.getInstance().run());
+        Profiler.run("CommandScheduler", scheduler::run);
         Profiler.run("Lights", lights::update);
         Profiler.run("Epilogue", () -> Epilogue.update(this));
         Profiler.run("GRRDashboard", GRRDashboard::update);

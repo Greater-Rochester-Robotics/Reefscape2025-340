@@ -152,7 +152,11 @@ public final class Routines {
                 gooseNeck.stow(robot::safeForGoose)
             ),
             parallel(
-                elevator.score(selection, gooseNeck::beamBroken, robot::safeForGoose),
+                elevator.score(
+                    selection,
+                    () -> gooseNeck.beamBroken() && !runManual.getAsBoolean(),
+                    robot::safeForGoose
+                ),
                 gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)
             )
         )

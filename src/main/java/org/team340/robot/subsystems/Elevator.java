@@ -4,8 +4,8 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.DynamicMotionMagicVoltage;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -34,14 +34,14 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.7),
-        kBarf(0.7),
-        kSwallow(1.2),
+        kIntake(0.4),
+        kBarf(0.4),
+        kSwallow(1.0),
         kBabyBird(12.7),
         kL1(0.0),
-        kL2(12.5),
-        kL3(26.0),
-        kL4(46.1);
+        kL2(11.0),
+        kL3(23.0),
+        kL4(40.75);
 
         private final TunableDouble rotations;
 
@@ -68,14 +68,9 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -2.0);
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.5);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
-
-    private static final TunableDouble kUpVel = Tunable.doubleValue("elevator/motion/kUpVel", 200.0);
-    private static final TunableDouble kUpAccel = Tunable.doubleValue("elevator/motion/kUpAccel", 325.0);
-    private static final TunableDouble kDownVel = Tunable.doubleValue("elevator/motion/kDownVel", 250.0);
-    private static final TunableDouble kDownAccel = Tunable.doubleValue("elevator/motion/kDownAccel", 350.0);
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -87,7 +82,7 @@ public final class Elevator extends GRRSubsystem {
     private final StatusSignal<AngularVelocity> followVelocity;
     private final StatusSignal<Boolean> limitSwitch;
 
-    private final DynamicMotionMagicVoltage positionControl;
+    private final MotionMagicVoltage positionControl;
     private final VoltageOut voltageControl;
     private final Follower followControl;
 
@@ -110,16 +105,20 @@ public final class Elevator extends GRRSubsystem {
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
 
+        motorConfig.MotionMagic.MotionMagicCruiseVelocity = 100.0;
+        motorConfig.MotionMagic.MotionMagicAcceleration = 424.0;
+
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        motorConfig.Slot0.kP = 2.4;
+        motorConfig.Slot0.kP = 1.2;
         motorConfig.Slot0.kI = 0.0;
         motorConfig.Slot0.kD = 0.0;
-        motorConfig.Slot0.kG = 0.4;
+        motorConfig.Slot0.kG = 0.35;
         motorConfig.Slot0.kS = 0.0;
-        motorConfig.Slot0.kV = 0.12;
+        motorConfig.Slot0.kV = 0.136;
+        motorConfig.Slot0.kA = 0.003;
 
-        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 48.7;
+        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 42.75;
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
@@ -163,7 +162,7 @@ public final class Elevator extends GRRSubsystem {
             ParentDevice.optimizeBusUtilizationForAll(20, leadMotor, followMotor, candi)
         );
 
-        positionControl = new DynamicMotionMagicVoltage(0.0, 0.0, 0.0, 0.0);
+        positionControl = new MotionMagicVoltage(0.0);
         voltageControl = new VoltageOut(0.0);
         followControl = new Follower(leadMotor.getDeviceID(), false);
 
@@ -171,6 +170,8 @@ public final class Elevator extends GRRSubsystem {
 
         Tunable.pidController("elevator/pid", leadMotor);
         Tunable.pidController("elevator/pid", followMotor);
+        Tunable.motionProfile("elevator/motion", leadMotor);
+        Tunable.motionProfile("elevator/motion", followMotor);
     }
 
     @Override
@@ -251,6 +252,7 @@ public final class Elevator extends GRRSubsystem {
                     return;
                 }
 
+                double target = position.get().rotations();
                 double currentPosition = getPosition();
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
@@ -258,31 +260,12 @@ public final class Elevator extends GRRSubsystem {
                         holdPosition.value = close != null ? close.rotations() : currentPosition;
                     }
 
-                    leadMotor.setControl(
-                        positionControl
-                            .withPosition(holdPosition.value + fudge.getAsDouble())
-                            .withVelocity(kUpVel.value())
-                            .withAcceleration(kUpAccel.value())
-                    );
+                    target = holdPosition.value;
                 } else {
-                    double target = position.get().rotations() + fudge.getAsDouble();
-                    if (target >= currentPosition) {
-                        leadMotor.setControl(
-                            positionControl
-                                .withPosition(target)
-                                .withVelocity(kUpVel.value())
-                                .withAcceleration(kUpAccel.value())
-                        );
-                    } else {
-                        leadMotor.setControl(
-                            positionControl
-                                .withPosition(target)
-                                .withVelocity(kDownVel.value())
-                                .withAcceleration(kDownAccel.value())
-                        );
-                    }
                     holdPosition.value = -1.0;
                 }
+
+                leadMotor.setControl(positionControl.withPosition(target + fudge.getAsDouble()));
             })
             .onEnd(leadMotor::stopMotor);
     }
