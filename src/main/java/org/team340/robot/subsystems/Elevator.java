@@ -40,7 +40,7 @@ public final class Elevator extends GRRSubsystem {
         kBabyBird(12.7),
         kL1(0.0),
         kL2(11.0),
-        kL3(23.0),
+        kL3(22.0),
         kL4(40.75);
 
         private final TunableDouble rotations;
