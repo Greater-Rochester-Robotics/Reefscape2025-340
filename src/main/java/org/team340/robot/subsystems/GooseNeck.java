@@ -261,14 +261,6 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
-        return receive(false, button, swallow, safe);
-    }
-
-    public Command babyBird(BooleanSupplier button, BooleanSupplier safe) {
-        return receive(true, button, () -> false, safe);
-    }
-
-    private Command receive(boolean babyBird, BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
         enum State {
             kInit,
             kSawCoral,
@@ -351,21 +343,84 @@ public final class GooseNeck extends GRRSubsystem {
                 },
                 0.0
             )
-                .until(
-                    () ->
-                        hasCoral() ||
-                        (!button.getAsBoolean() &&
-                            state.value.equals(!babyBird ? State.kInit : State.kFindingRisingEdge))
-                )
+                .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.kInit)))
                 .beforeStarting(() -> {
-                    state.value = !babyBird ? State.kInit : State.kFindingRisingEdge;
+                    state.value = State.kInit;
                     debounce.calculate(false);
                     delay.stop();
                     delay.reset();
                 })
                 .finallyDo(beakMotor::stopMotor)
-                .onlyIf(() -> !hasCoral())
+                .onlyIf(this::noCoral)
                 .withName("GooseNeck.receive()")
+        );
+    }
+
+    public Command babyBird(BooleanSupplier button, BooleanSupplier safe) {
+        enum State {
+            kInit,
+            kFindingFallingEdge,
+            kSeating,
+            kDone
+        }
+
+        Mutable<State> state = new Mutable<>(State.kInit);
+
+        Debouncer debounce = new Debouncer(0.018, DebounceType.kBoth);
+        Timer delay = new Timer();
+
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
+            new NotifierCommand(
+                () -> {
+                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.02).getValue());
+
+                    switch (state.value) {
+                        case kInit:
+                            if (!beamBroken) {
+                                beakMotor.setControl(beakVoltageControl.withOutput(-GooseSpeed.kIntake.voltage()));
+                                break;
+                            }
+
+                            state.value = State.kFindingFallingEdge;
+                        // Fall-through
+
+                        case kFindingFallingEdge:
+                            if (beamBroken) {
+                                beakMotor.setControl(beakVoltageControl.withOutput(-GooseSpeed.kSeat.voltage()));
+                                break;
+                            }
+
+                            state.value = State.kSeating;
+                            delay.start();
+                        // Fall-through
+
+                        case kSeating:
+                            if (!delay.hasElapsed(kSeatDelay.value())) {
+                                beakMotor.setControl(beakVoltageControl.withOutput(-GooseSpeed.kSeat.voltage()));
+                                break;
+                            }
+
+                            state.value = State.kDone;
+                        // Fall-through
+
+                        case kDone:
+                            hasCoral.set(true);
+                            beakMotor.stopMotor();
+                            break;
+                    }
+                },
+                0.0
+            )
+                .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.kInit)))
+                .beforeStarting(() -> {
+                    state.value = State.kInit;
+                    debounce.calculate(false);
+                    delay.stop();
+                    delay.reset();
+                })
+                .finallyDo(beakMotor::stopMotor)
+                .onlyIf(this::noCoral)
+                .withName("GooseNeck.babyBird()")
         );
     }
 
