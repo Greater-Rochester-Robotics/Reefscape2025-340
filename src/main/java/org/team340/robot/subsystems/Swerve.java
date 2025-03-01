@@ -5,7 +5,6 @@ import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.CANBus;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
@@ -99,8 +98,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kIntakeDistance = Tunable.doubleValue("swerve/kIntakeDistance", 2.5);
     private static final TunableDouble kIntakeMinMult = Tunable.doubleValue("swerve/kIntakeMinMult", 0.6);
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/kReefAssistKp", 15.0);
-    private static final TunableDouble kReefAssistDeadband = Tunable.doubleValue("swerve/kReefAssistDeadband", 0.1);
-    private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 0.95);
+    private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 1.3);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
     private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.6);
     private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.3);
@@ -355,7 +353,7 @@ public final class Swerve extends GRRSubsystem {
 
                 var assist = ChassisSpeeds.fromRobotRelativeSpeeds(
                     0.0,
-                    MathUtil.applyDeadband(reefAssist.output, kReefAssistDeadband.value()),
+                    reefAssist.output,
                     !exitLock.value
                         ? faceReefPID.calculate(state.rotation.getRadians(), reefAngle.value.getRadians())
                         : 0.0,

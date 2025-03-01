@@ -80,7 +80,7 @@ public final class GooseNeck extends GRRSubsystem {
 
     private static enum GooseSpeed {
         kIntake(-6.0),
-        kSeat(2.25),
+        kSeat(2.3),
         kScoreL1(-3.5),
         kScoreForward(7.0),
         kBarf(-8.0),
@@ -107,7 +107,7 @@ public final class GooseNeck extends GRRSubsystem {
         0.2
     );
 
-    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.025);
+    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.012);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
 
