@@ -278,7 +278,6 @@ public final class GooseNeck extends GRRSubsystem {
         return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
             new NotifierCommand(
                 () -> {
-
                     if (swallow.getAsBoolean()) {
                         beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSwallow.voltage()));
                         hasCoral.set(false);
@@ -292,41 +291,41 @@ public final class GooseNeck extends GRRSubsystem {
 
                     switch (state.value) {
                         case kInit:
-                            if(!beamBroken) {
+                            if (!beamBroken) {
                                 beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
                                 break;
                             }
 
                             state.value = State.kSawCoral;
-                            // Fall-through
+                        // Fall-through
 
                         case kSawCoral:
-                            if(beamBroken) {
+                            if (beamBroken) {
                                 beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
                                 break;
                             }
 
                             state.value = State.kFindingRisingEdge;
-                            // Fall-through
+                        // Fall-through
 
                         case kFindingRisingEdge:
-                            if(!beamBroken) {
+                            if (!beamBroken) {
                                 beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSeat.voltage()));
                                 break;
                             }
 
                             state.value = State.kFindingFallingEdge;
-                            // Fall-through
+                        // Fall-through
 
                         case kFindingFallingEdge:
-                            if(beamBroken) {
+                            if (beamBroken) {
                                 beakMotor.setControl(beakVoltageControl.withOutput(-GooseSpeed.kSeat.voltage()));
                                 break;
                             }
 
                             state.value = State.kSeating;
                             delay.start();
-                            // Fall-through
+                        // Fall-through
 
                         case kSeating:
                             if (!delay.hasElapsed(kSeatDelay.value())) {
@@ -335,7 +334,7 @@ public final class GooseNeck extends GRRSubsystem {
                             }
 
                             state.value = State.kDone;
-                            // Fall-through
+                        // Fall-through
 
                         case kDone:
                             hasCoral.set(true);
@@ -348,7 +347,8 @@ public final class GooseNeck extends GRRSubsystem {
                 .until(
                     () ->
                         hasCoral() ||
-                        (!button.getAsBoolean() && state.value.equals(!babyBird ? State.kInit : State.kFindingRisingEdge))
+                        (!button.getAsBoolean() &&
+                            state.value.equals(!babyBird ? State.kInit : State.kFindingRisingEdge))
                 )
                 .beforeStarting(() -> {
                     state.value = !babyBird ? State.kInit : State.kFindingRisingEdge;
