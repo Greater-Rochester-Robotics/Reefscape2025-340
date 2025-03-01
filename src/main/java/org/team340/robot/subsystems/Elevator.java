@@ -40,7 +40,7 @@ public final class Elevator extends GRRSubsystem {
         kBabyBird(12.7),
         kL1(0.0),
         kL2(11.0),
-        kL3(23.0),
+        kL3(22.0),
         kL4(40.75);
 
         private final TunableDouble rotations;
@@ -71,6 +71,7 @@ public final class Elevator extends GRRSubsystem {
     private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.5);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
+    private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -193,6 +194,12 @@ public final class Elevator extends GRRSubsystem {
     }
 
     // *************** Commands ***************
+
+    public Command applyTunableVoltage() {
+        return commandBuilder("Elevator.applyTunableVoltage()")
+            .onExecute(() -> leadMotor.setControl(voltageControl.withOutput(kTunableVoltage.value())))
+            .onEnd(leadMotor::stopMotor);
+    }
 
     /**
      * Goes to a scoring position.

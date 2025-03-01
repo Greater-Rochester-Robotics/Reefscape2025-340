@@ -25,7 +25,6 @@ import org.team340.lib.logging.wpilibj.ADIS16470Logger;
 import org.team340.lib.swerve.SwerveAPI;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU.IMUSimHook;
-import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.lib.util.vendors.ReduxUtil;
@@ -70,11 +69,6 @@ public final class SwerveIMUs {
         }
 
         /**
-         * Gets the IMU's multi-turn yaw in radians.
-         */
-        public abstract double getMultiturnYaw();
-
-        /**
          * Gets the IMU's absolute yaw.
          */
         public abstract Rotation2d getYaw();
@@ -110,11 +104,6 @@ public final class SwerveIMUs {
             ADIS16470_IMU adis16470 = new ADIS16470_IMU(yawAxis, pitchAxis, rollAxis, port, calibrationTime);
 
             return new SwerveIMU() {
-                @Override
-                public double getMultiturnYaw() {
-                    return Math.toRadians(adis16470.getAngle(adis16470.getYawAxis()));
-                }
-
                 @Override
                 public Rotation2d getYaw() {
                     return Rotation2d.fromDegrees(adis16470.getAngle(adis16470.getYawAxis()));
@@ -168,17 +157,6 @@ public final class SwerveIMUs {
             ReduxUtil.applySettings(canandgyro, settings);
 
             return new SwerveIMU() {
-                @Override
-                public double getMultiturnYaw() {
-                    return (
-                        ReduxUtil.latencyCompensate(
-                            canandgyro.getMultiturnYawFrame(),
-                            canandgyro.getAngularVelocityYaw()
-                        ) *
-                        Math2.kTwoPi
-                    );
-                }
-
                 @Override
                 public Rotation2d getYaw() {
                     return Rotation2d.fromRotations(
@@ -253,11 +231,6 @@ public final class SwerveIMUs {
 
             return new SwerveIMU() {
                 @Override
-                public double getMultiturnYaw() {
-                    return Math.toRadians(BaseStatusSignal.getLatencyCompensatedValueAsDouble(yaw, yawVelocity));
-                }
-
-                @Override
                 public Rotation2d getYaw() {
                     return Rotation2d.fromDegrees(
                         BaseStatusSignal.getLatencyCompensatedValueAsDouble(yaw, yawVelocity)
@@ -314,11 +287,6 @@ public final class SwerveIMUs {
         });
 
         return new SwerveIMU() {
-            @Override
-            public double getMultiturnYaw() {
-                return yaw.value;
-            }
-
             @Override
             public Rotation2d getYaw() {
                 return Rotation2d.fromRadians(yaw.value);

@@ -24,7 +24,7 @@ public final class Lights {
         kHasCoral(255, 255, 255),
         kGoose(255, 255, 255),
         kScored(0, 255, 0),
-        kDisabled(255, 11, 0),
+        kDisabled(255, 16, 0),
         kOff(0, 0, 0);
 
         private final TunableInteger r;
@@ -193,7 +193,7 @@ public final class Lights {
                     for (int i = 0; i < kStripLength; i++) {
                         state[i] = (int) Math.max(
                             0.0,
-                            state[i] - (Math2.random((0.5 + (i / (kStripLength * 0.125))) * 5.0) + 28.0)
+                            state[i] - (Math2.random((0.5 + (i / (kStripLength * 0.11))) * 5.0) + 28.0)
                         );
                     }
                     for (int i = kStripLength - 1; i >= 2; i--) {

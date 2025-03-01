@@ -5,12 +5,13 @@ import com.ctre.phoenix6.StatusCode;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
@@ -45,7 +46,8 @@ public class SwerveAPI implements AutoCloseable {
     private final SwerveModuleState[] lockedStates;
 
     private final SwerveDriveKinematics kinematics;
-    private final SwerveDrivePoseEstimator poseEstimator;
+    private final SwerveDriveOdometry odometry;
+    private final PoseEstimator<SwerveModulePosition[]> poseEstimator;
 
     private final Lock odometryMutex = new ReentrantLock();
     private final SwerveOdometryThread odometryThread;
@@ -79,11 +81,10 @@ public class SwerveAPI implements AutoCloseable {
 
         state = new SwerveState(modules);
         kinematics = new SwerveDriveKinematics(moduleLocations);
-        poseEstimator = new SwerveDrivePoseEstimator(
+        odometry = new SwerveDriveOdometry(kinematics, Rotation2d.kZero, state.modules.positions);
+        poseEstimator = new PoseEstimator<>(
             kinematics,
-            Rotation2d.kZero,
-            state.modules.positions,
-            Pose2d.kZero,
+            odometry,
             config.odometryStdDevs,
             VecBuilder.fill(0.0, 0.0, 0.0)
         );
@@ -103,9 +104,9 @@ public class SwerveAPI implements AutoCloseable {
             odometryThread.run(true);
             state.timestamp = Timer.getFPGATimestamp();
 
-            state.odometry.timesync = odometryThread.timesync;
-            state.odometry.successes = odometryThread.successes;
-            state.odometry.failures = odometryThread.failures;
+            state.odometryThread.timesync = odometryThread.timesync;
+            state.odometryThread.successes = odometryThread.successes;
+            state.odometryThread.failures = odometryThread.failures;
 
             odometryThread.successes = 0;
             odometryThread.failures = 0;
@@ -115,18 +116,26 @@ public class SwerveAPI implements AutoCloseable {
                 Math2.copyInto(modules[i].getState(), state.modules.states[i]);
             }
 
-            state.multiturnYaw = imu.getMultiturnYaw();
             state.pose = poseEstimator.getEstimatedPosition();
+
+            state.imu.yawMeasurements.clear();
+            state.imu.yawMeasurements.addAll(odometryThread.yawMeasurements);
+            odometryThread.yawMeasurements.clear();
+
+            if (!state.imu.yawMeasurements.isEmpty()) {
+                state.imu.yaw = state.imu.yawMeasurements.get(state.imu.yawMeasurements.size() - 1).yaw();
+            }
         } finally {
             odometryMutex.unlock();
         }
 
         Math2.copyInto(kinematics.toChassisSpeeds(state.modules.states), state.speeds);
         state.velocity = Math.hypot(state.speeds.vxMetersPerSecond, state.speeds.vyMetersPerSecond);
-        state.yaw = state.pose.getRotation();
-        state.pitch = imu.getPitch();
-        state.roll = imu.getRoll();
         state.translation = state.pose.getTranslation();
+        state.rotation = state.pose.getRotation();
+
+        state.imu.pitch = imu.getPitch();
+        state.imu.roll = imu.getRoll();
 
         imuSimHook.accept(state.speeds);
     }
@@ -446,6 +455,11 @@ public class SwerveAPI implements AutoCloseable {
     }
 
     /**
+     * Contains a yaw measurement alongside the timestamp of the measurement, in seconds.
+     */
+    public final record TimestampedYaw(Rotation2d yaw, double timestamp) {}
+
+    /**
      * Manages swerve odometry. Will run asynchronously at the configured odometry update
      * period, unless the configured period is the same or more than the main robot loop
      * period. The {@link SwerveOdometryThread#run(boolean)} method is also invoked in
@@ -454,6 +468,7 @@ public class SwerveAPI implements AutoCloseable {
      */
     private final class SwerveOdometryThread implements AutoCloseable {
 
+        public final List<TimestampedYaw> yawMeasurements = new ArrayList<>();
         public Rotation2d lastYaw = Rotation2d.kZero;
         public boolean timesync = false;
         public int successes = 0;
@@ -511,6 +526,7 @@ public class SwerveAPI implements AutoCloseable {
                 if (!timesync && signals.length > 0) phoenixStatus = BaseStatusSignal.refreshAll(signals);
 
                 lastYaw = imu.getYaw();
+                double yawTimestamp = Timer.getFPGATimestamp();
 
                 boolean readError = !phoenixStatus.isOK() || imu.readError();
                 for (var module : modules) {
@@ -523,6 +539,7 @@ public class SwerveAPI implements AutoCloseable {
                 }
 
                 poseEstimator.update(lastYaw, positionCache);
+                yawMeasurements.add(new TimestampedYaw(odometry.getPoseMeters().getRotation(), yawTimestamp));
                 successes++;
             } finally {
                 odometryMutex.unlock();

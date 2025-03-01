@@ -98,7 +98,14 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
-    private static final TunableDouble kAtPositionEpsilon = Tunable.doubleValue("gooseNeck/kAtPositionEpsilon", 0.01);
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
+        "gooseNeck/kAtPositionTolerance",
+        0.01
+    );
+    private static final TunableDouble kStickyScoreTolerance = Tunable.doubleValue(
+        "gooseNeck/kStickyScoreTolerance",
+        0.2
+    );
 
     private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.025);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
@@ -342,7 +349,14 @@ public final class GooseNeck extends GRRSubsystem {
             goTo(
                 () -> !selection.isL1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
                 () -> !selection.isL1() && allowGoosing.getAsBoolean(),
-                selection::isLeft,
+                () -> {
+                    double currentPosition = getPosition();
+                    if (Math.abs(currentPosition) > kStickyScoreTolerance.value()) {
+                        return currentPosition < 0.0;
+                    } else {
+                        return selection.isLeft();
+                    }
+                },
                 safe
             ).alongWith(
                 new CommandBuilder()
@@ -416,7 +430,7 @@ public final class GooseNeck extends GRRSubsystem {
 
                 if (allowGoosing.getAsBoolean()) {
                     double currentPosition = getPosition();
-                    boolean atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionEpsilon.value());
+                    boolean atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionTolerance.value());
                     goosing = true;
 
                     if (timer.hasElapsed(kTorqueDelay.value())) {

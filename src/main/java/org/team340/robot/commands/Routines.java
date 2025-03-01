@@ -154,7 +154,7 @@ public final class Routines {
             parallel(
                 elevator.score(
                     selection,
-                    () -> gooseNeck.beamBroken() && !runManual.getAsBoolean(),
+                    () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,
                     robot::safeForGoose
                 ),
                 gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)

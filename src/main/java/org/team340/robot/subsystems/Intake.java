@@ -25,7 +25,7 @@ public final class Intake extends GRRSubsystem {
     private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 7.0);
     private static final TunableDouble kBarfVoltage = Tunable.doubleValue("intake/kBarfVoltage", 7.0);
     private static final TunableDouble kSwallowVoltage = Tunable.doubleValue("intake/kSwallowVoltage", -6.0);
-    private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 18.0);
+    private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 24.0);
     private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.2);
 
     private final TalonFX motor;
@@ -68,7 +68,7 @@ public final class Intake extends GRRSubsystem {
      * Runs the intake.
      */
     public Command intake(BooleanSupplier swallow) {
-        Debouncer debouncer = new Debouncer(0.4);
+        Debouncer debouncer = new Debouncer(0.15);
         Timer unjamTimer = new Timer();
 
         return commandBuilder("Intake.intake()")

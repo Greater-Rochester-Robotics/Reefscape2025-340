@@ -15,6 +15,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
+import org.team340.lib.swerve.SwerveAPI.TimestampedYaw;
 import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.util.Alliance;
 import org.team340.robot.Constants.Cameras;
@@ -53,18 +54,26 @@ public final class VisionManager {
     }
 
     /**
-     * Gets unread results from all cameras.
-     * @param robotPose The current estimated pose of the robot.
-     * @param poseTimestamp The timestamp the pose was captured at.
+     * Adds yaw measurements to be used for pose estimation.
+     * @param yawMeasurements Robot yaw measurements since the last robot cycle.
      */
-    public VisionEstimates getUnreadResults(Pose2d robotPose, double poseTimestamp) {
+    public void addYawMeasurements(List<TimestampedYaw> yawMeasurements) {
+        for (var camera : cameras) {
+            camera.addYawMeasurements(yawMeasurements);
+        }
+    }
+
+    /**
+     * Gets unread results from all cameras.
+     */
+    public VisionEstimates getUnreadResults() {
         List<VisionMeasurement> measurements = new ArrayList<>();
         List<Pose3d> targets = new ArrayList<>();
 
-        for (Camera camera : cameras) {
-            var result = camera.getUnreadResults(robotPose, poseTimestamp);
-            measurements.addAll(result.measurements);
-            targets.addAll(result.targets);
+        for (var camera : cameras) {
+            var result = camera.getUnreadResults();
+            measurements.addAll(result.measurements());
+            targets.addAll(result.targets());
         }
 
         return new VisionEstimates(measurements, targets);
@@ -86,49 +95,55 @@ public final class VisionManager {
         }
 
         /**
-         * Gets unread results from the camera.
-         * @param robotPose The current estimated pose of the robot.
-         * @param poseTimestamp The timestamp the pose was captured at.
+         * Adds yaw measurements to be used for pose estimation.
+         * @param yawMeasurements Robot yaw measurements since the last robot cycle.
          */
-        private VisionEstimates getUnreadResults(Pose2d robotPose, double poseTimestamp) {
+        private void addYawMeasurements(List<TimestampedYaw> yawMeasurements) {
+            for (var measurement : yawMeasurements) {
+                estimator.addHeadingData(measurement.timestamp(), measurement.yaw());
+            }
+        }
+
+        /**
+         * Gets unread results from the camera.
+         */
+        private VisionEstimates getUnreadResults() {
             List<VisionMeasurement> measurements = new ArrayList<>();
             List<Pose3d> targets = new ArrayList<>();
 
-            estimator.addHeadingData(poseTimestamp, robotPose.getRotation());
-
             for (PhotonPipelineResult result : camera.getAllUnreadResults()) {
                 var estimate = estimator.update(result);
-                if (estimate.isPresent()) {
-                    var target = estimate.get().targetsUsed.get(0);
-                    if (target == null) continue;
+                if (estimate.isEmpty() || estimate.get().targetsUsed.isEmpty()) continue;
 
-                    int id = target.fiducialId;
-                    var tagLocation = aprilTags.getTagPose(id);
-                    if (tagLocation.isEmpty()) continue;
+                var target = estimate.get().targetsUsed.get(0);
+                int id = target.fiducialId;
+                if (!useTag(id)) continue;
 
-                    // TODO no magic numbers
-                    double distance = target.bestCameraToTarget.getTranslation().getNorm();
-                    double std = 0.1 * Math.pow(distance, 2.0) * (isImportant(id) ? 1.0 : 15.0);
+                var tagLocation = aprilTags.getTagPose(id);
+                if (tagLocation.isEmpty()) continue;
 
-                    measurements.add(
-                        new VisionMeasurement(
-                            estimate.get().estimatedPose.toPose2d(),
-                            estimate.get().timestampSeconds,
-                            VecBuilder.fill(std, std, 1000.0)
-                        )
-                    );
-                    targets.add(tagLocation.get());
-                }
+                double distance = target.bestCameraToTarget.getTranslation().getNorm();
+                double std = 0.1 * Math.pow(distance, 2.0);
+
+                measurements.add(
+                    new VisionMeasurement(
+                        estimate.get().estimatedPose.toPose2d(),
+                        estimate.get().timestampSeconds,
+                        VecBuilder.fill(std, std, 1000.0)
+                    )
+                );
+
+                targets.add(tagLocation.get());
             }
 
             return new VisionEstimates(measurements, targets);
         }
 
         /**
-         * Returns {@code true} if an AprilTag should be weighted higher (trusted more).
+         * Returns {@code true} if an AprilTag should be utilized.
          * @param id The ID of the AprilTag.
          */
-        private boolean isImportant(int id) {
+        private boolean useTag(int id) {
             return Alliance.isBlue() ? (id >= 17 && id <= 22) : (id >= 6 && id <= 11);
         }
     }
