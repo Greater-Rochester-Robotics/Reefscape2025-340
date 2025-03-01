@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
 import org.team340.robot.Robot;
+import org.team340.robot.subsystems.Climber;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
@@ -28,7 +29,7 @@ public final class Routines {
 
     private final Robot robot;
 
-    // private final Climber climber;
+    private final Climber climber;
     private final Elevator elevator;
     private final GooseNeck gooseNeck;
     private final Intake intake;
@@ -39,7 +40,7 @@ public final class Routines {
 
     public Routines(Robot robot) {
         this.robot = robot;
-        // climber = robot.climber;
+        climber = robot.climber;
         elevator = robot.elevator;
         gooseNeck = robot.gooseNeck;
         intake = robot.intake;
@@ -185,9 +186,10 @@ public final class Routines {
             swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft)
         ).withName("Routines.assistedScore()");
     }
-    // public Command climb(BooleanSupplier next) {
-    //     return sequence(climber.deploy(), waitUntil(next), climber.check(), waitUntil(next), climber.climb()).withName(
-    //         "Routines.climb()"
-    //     );
-    // }
+
+    public Command climb(BooleanSupplier next) {
+        return sequence(climber.deploy(), waitUntil(next), climber.check(), waitUntil(next), climber.climb()).withName(
+            "Routines.climb()"
+        );
+    }
 }

@@ -141,7 +141,7 @@ public final class Swerve extends GRRSubsystem {
         autoPIDangular = new PIDController(5.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 
-        autoGoToProfile = new TrapezoidProfile(new Constraints(0.5, 2.0));
+        autoGoToProfile = new TrapezoidProfile(new Constraints(0.35, 2.0));
 
         angularPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);

@@ -8,6 +8,7 @@ import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -19,6 +20,7 @@ import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
+import org.team340.robot.subsystems.Climber;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
@@ -32,7 +34,7 @@ public final class Robot extends TimedRobot {
 
     private final CommandScheduler scheduler = CommandScheduler.getInstance();
 
-    // public final Climber climber;
+    public final Climber climber;
     public final Elevator elevator;
     public final GooseNeck gooseNeck;
     public final Intake intake;
@@ -59,7 +61,7 @@ public final class Robot extends TimedRobot {
         Epilogue.getConfig().root = "/Telemetry";
 
         // Initialize subsystems
-        // climber = new Climber();
+        climber = new Climber();
         elevator = new Elevator();
         gooseNeck = new GooseNeck();
         intake = new Intake();
@@ -114,10 +116,30 @@ public final class Robot extends TimedRobot {
         driver.povUp().whileTrue(routines.barf());
         driver.povDown().whileTrue(routines.swallow());
         driver.povLeft().onTrue(swerve.tareRotation());
-        // driver.povRight().onTrue(routines.climb(driver.povRight()));
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
+        coDriver.y().onTrue(routines.climb(coDriver.y()));
+
+        coDriver
+            .back()
+            .whileTrue(
+                startEnd(
+                    () -> coDriver.setRumble(RumbleType.kLeftRumble, 1.0),
+                    () -> coDriver.setRumble(RumbleType.kLeftRumble, 0.0)
+                )
+            );
+        coDriver
+            .start()
+            .whileTrue(
+                startEnd(
+                    () -> coDriver.setRumble(RumbleType.kRightRumble, 1.0),
+                    () -> coDriver.setRumble(RumbleType.kRightRumble, 0.0)
+                )
+            );
+
+        coDriver.povUp().onTrue(selection.incrementLevel());
+        coDriver.povDown().onTrue(selection.decrementLevel());
     }
 
     public boolean safeForGoose() {
