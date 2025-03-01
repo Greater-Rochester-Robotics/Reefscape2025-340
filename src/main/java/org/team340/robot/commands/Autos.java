@@ -58,6 +58,7 @@ public final class Autos {
         // Add autonomous modes to the dashboard
         GRRDashboard.setTrajectoryCache(factory.cache());
         GRRDashboard.addAuto("Three Score", threeScore());
+        GRRDashboard.addAuto("Three Score Bird", threeScoreBird());
     }
 
     public Command threeScore() {
@@ -90,10 +91,44 @@ public final class Autos {
         final double kIntakeDelaySeconds = 0.5;
 
         startToJ.doneDelayed(kScoreDelaySeconds).onTrue(jToPickup.cmd());
-        jToPickup.doneDelayed(kIntakeDelaySeconds).onTrue(pickupToK.cmd());
+        jToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToK.spawnCmd()));
         pickupToK.doneDelayed(kScoreDelaySeconds).onTrue(kToPickup.cmd());
-        kToPickup.doneDelayed(kIntakeDelaySeconds).onTrue(pickupToL.cmd());
+        kToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToL.spawnCmd()));
         pickupToL.doneDelayed(kScoreDelaySeconds).onTrue(lToPickup.cmd());
+
+        return auto.cmd();
+    }
+
+    public Command threeScoreBird() {
+        AutoRoutine auto = factory.newRoutine("threeScoreBird");
+
+        AutoTrajectory startToJ = auto.trajectory("Start-J");
+        AutoTrajectory jToPickup = auto.trajectory("J-Bird");
+        AutoTrajectory pickupToK = auto.trajectory("Bird-K");
+        AutoTrajectory kToPickup = auto.trajectory("K-Bird");
+        AutoTrajectory pickupToL = auto.trajectory("Bird-L");
+        AutoTrajectory lToEnd = auto.trajectory("L-End");
+
+        auto
+            .active()
+            .onTrue(
+                sequence(
+                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true), startToJ.resetOdometry()),
+                    startToJ.spawnCmd()
+                )
+            );
+
+        Trigger toBird = auto.anyActive(jToPickup, kToPickup);
+        Trigger startBird = jToPickup.atTime(0.75).or(kToPickup.atTime(0.75));
+
+        startBird.onTrue(routines.babyBird(() -> true));
+        auto.observe(gooseNeck::hasCoral).onTrue(routines.score(toBird));
+
+        startToJ.chain(jToPickup);
+        jToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToK.spawnCmd()));
+        pickupToK.chain(kToPickup);
+        kToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToL.spawnCmd()));
+        pickupToL.chain(lToEnd);
 
         return auto.cmd();
     }
