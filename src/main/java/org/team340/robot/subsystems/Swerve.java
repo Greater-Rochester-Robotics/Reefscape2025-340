@@ -51,31 +51,32 @@ public final class Swerve extends GRRSubsystem {
 
     private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
     private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
+    private static final double kModuleOffset = Units.inchesToMeters(12.5);
 
     private static final SwerveModuleConfig kFrontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
-        .setLocation(0.28, 0.28)
+        .setLocation(kModuleOffset, kModuleOffset)
         .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kFlMove, true))
         .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kFlTurn, true))
         .setEncoder(SwerveEncoders.canCoder(LowerCAN.kFlEncoder, 0.296, false));
 
     private static final SwerveModuleConfig kFrontRight = new SwerveModuleConfig()
         .setName("frontRight")
-        .setLocation(0.28, -0.28)
+        .setLocation(kModuleOffset, -kModuleOffset)
         .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kFrMove, true))
         .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kFrTurn, true))
         .setEncoder(SwerveEncoders.canCoder(LowerCAN.kFrEncoder, -0.395, false));
 
     private static final SwerveModuleConfig kBackLeft = new SwerveModuleConfig()
         .setName("backLeft")
-        .setLocation(-0.28, 0.28)
+        .setLocation(-kModuleOffset, kModuleOffset)
         .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kBlMove, true))
         .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kBlTurn, true))
         .setEncoder(SwerveEncoders.canCoder(LowerCAN.kBlEncoder, 0.190, false));
 
     private static final SwerveModuleConfig kBackRight = new SwerveModuleConfig()
         .setName("backRight")
-        .setLocation(-0.28, -0.28)
+        .setLocation(-kModuleOffset, -kModuleOffset)
         .setMoveMotor(SwerveMotors.talonFX(LowerCAN.kBrMove, true))
         .setTurnMotor(SwerveMotors.talonFX(LowerCAN.kBrTurn, true))
         .setEncoder(SwerveEncoders.canCoder(LowerCAN.kBrEncoder, -0.079, false));
