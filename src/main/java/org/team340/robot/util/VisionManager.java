@@ -148,7 +148,7 @@ public final class VisionManager {
         }
     }
 
-    public final record VisionEstimates(List<VisionMeasurement> measurements, List<Pose3d> targets) {
+    public static final record VisionEstimates(List<VisionMeasurement> measurements, List<Pose3d> targets) {
         /**
          * Returns all robot pose estimates in the calculated measurements.
          */

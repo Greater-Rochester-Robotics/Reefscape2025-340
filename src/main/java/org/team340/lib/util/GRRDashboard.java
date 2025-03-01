@@ -1,9 +1,10 @@
 package org.team340.lib.util;
 
-import choreo.Choreo.TrajectoryCache;
+import choreo.auto.AutoRoutine;
+import choreo.auto.AutoTrajectory;
 import choreo.trajectory.SwerveSample;
 import choreo.trajectory.Trajectory;
-import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.RawPublisher;
@@ -16,12 +17,19 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 
 /**
  * Utility class for interfacing with GRRDashboard.
  */
 public final class GRRDashboard {
+
+    public static final record AutoOption(
+        String label,
+        Command command,
+        Optional<Pose2d> startingPose,
+        RawPublisher pub
+    ) {}
 
     private GRRDashboard() {
         throw new AssertionError("This is a utility class!");
@@ -30,66 +38,71 @@ public final class GRRDashboard {
     private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("GRRDashboard");
 
     private static final String defaultAuto = "Do Nothing";
-    private static final Map<String, Pair<Command, RawPublisher>> autoOptions = new LinkedHashMap<>();
+    private static final Map<String, AutoOption> autoOptions = new LinkedHashMap<>();
     private static final NetworkTable autoOptionsTable = nt.getSubTable("autos/options");
     private static final StringPublisher activeAutoPub = nt.getStringTopic("autos/active").publish();
     private static final StringSubscriber selectedAutoSub = nt.getStringTopic("autos/selected").subscribe(defaultAuto);
 
-    private static TrajectoryCache trajectoryCache = new TrajectoryCache();
-    private static Command selectedAuto = Commands.none();
+    private static AutoOption selectedAuto;
 
     static {
-        addAuto(defaultAuto, selectedAuto);
+        selectedAuto = addAuto(defaultAuto, Commands.none(), List.of());
         activeAutoPub.setDefault(defaultAuto);
     }
 
     /**
-     * Sets the Choreo {@link TrajectoryCache} in use. Utilized for loading trajectories.
-     * @param cache The trajectory cache in use by the robot.
+     * Adds an auto to the dashboard.
+     * @param routine The auto's {@link AutoRoutine}.
      */
-    public static void setTrajectoryCache(TrajectoryCache cache) {
-        trajectoryCache = cache;
+    public static AutoOption addAuto(AutoRoutine routine) {
+        return addAuto(routine, List.of());
     }
 
     /**
      * Adds an auto to the dashboard.
-     * @param label The label for the auto.
-     * @param command The auto's command.
+     * @param routine The auto's {@link AutoRoutine}.
+     * @param trajectory The trajectory utilized by the auto.
      * @return The auto's label.
      */
-    public static String addAuto(String label, Command command) {
-        return addAuto(label, List.of(), command);
+    public static AutoOption addAuto(AutoRoutine routine, AutoTrajectory trajectory) {
+        return addAuto(routine, List.of(trajectory));
     }
 
     /**
      * Adds an auto to the dashboard.
-     * @param label The label for the auto.
-     * @param trajectory The name of the trajectory utilized by the auto.
-     * @param command The auto's command.
+     * @param routine The auto's {@link AutoRoutine}.
+     * @param trajectories A list of trajectories utilized by the auto.
      * @return The auto's label.
      */
-    public static String addAuto(String label, String trajectory, Command command) {
-        return addAuto(label, List.of(trajectory), command);
-    }
-
-    /**
-     * Adds an auto to the dashboard.
-     * @param label The label for the auto.
-     * @param trajectories A list of the names of trajectories utilized by the auto.
-     * @param command The auto's command.
-     * @return The auto's label.
-     */
-    @SuppressWarnings("unchecked")
-    public static String addAuto(String label, List<String> trajectories, Command command) {
-        List<Trajectory<SwerveSample>> loaded = new ArrayList<>();
-        for (String name : trajectories) {
-            var trajectory = trajectoryCache.loadTrajectory(name);
-            loaded.add(
-                trajectory.isPresent()
-                    ? (Trajectory<SwerveSample>) trajectory.get()
-                    : new Trajectory<SwerveSample>("", List.of(), List.of(), List.of())
-            );
+    public static AutoOption addAuto(AutoRoutine routine, List<AutoTrajectory> trajectories) {
+        String name = null;
+        try {
+            var nameField = routine.getClass().getDeclaredField("name");
+            nameField.setAccessible(true);
+            name = (String) nameField.get(routine);
+        } catch (Exception e) {
+            name = "Unable to fetch name";
         }
+
+        return addAuto(name, routine.cmd(), trajectories);
+    }
+
+    /**
+     * Adds an auto to the dashboard.
+     * @param label The label for the auto.
+     * @param command The auto's command.
+     * @param trajectories A list of trajectories utilized by the auto.
+     * @return The auto's label.
+     */
+    public static AutoOption addAuto(String label, Command command, List<AutoTrajectory> trajectories) {
+        List<Trajectory<SwerveSample>> loaded = new ArrayList<>();
+        for (var trajectory : trajectories) {
+            loaded.add(trajectory.getRawTrajectory());
+        }
+
+        Optional<Pose2d> startingPose = trajectories.isEmpty()
+            ? Optional.empty()
+            : trajectories.get(0).getInitialPose();
 
         int size = loaded.stream().mapToInt(t -> t.samples().size() * 16).sum();
         ByteBuffer serialized = ByteBuffer.allocate(size + 4);
@@ -111,19 +124,18 @@ public final class GRRDashboard {
 
         serialized.putFloat((float) t);
         var pub = autoOptionsTable.getRawTopic(label).publish("raw");
-        autoOptions.put(label, Pair.of(command, pub));
+
+        AutoOption option = new AutoOption(label, command, startingPose, pub);
+        autoOptions.put(label, option);
         pub.set(serialized);
 
-        return label;
+        return option;
     }
 
     /**
-     * Gets the command of the currently selected auto. Note that this method
-     * is not intended for use with triggers or command compositions, as the
-     * returned command will not update when the selection changes. Use
-     * {@link GRRDashboard#runSelectedAuto()} instead.
+     * Returns information about the selected auto.
      */
-    public static Command getSelectedAuto() {
+    public static AutoOption getSelectedAuto() {
         return selectedAuto;
     }
 
@@ -131,7 +143,7 @@ public final class GRRDashboard {
      * Returns a command that when scheduled will run the currently selected auto.
      */
     public static Command runSelectedAuto() {
-        return Commands.defer(() -> selectedAuto.asProxy(), Set.of()).withName("GRRDashboard.runSelectedAuto()");
+        return Commands.deferredProxy(() -> selectedAuto.command()).withName("GRRDashboard.runSelectedAuto()");
     }
 
     /**
@@ -145,7 +157,7 @@ public final class GRRDashboard {
             var option = autoOptions.get(selection);
             if (option != null) {
                 activeAutoPub.set(selection);
-                selectedAuto = option.getFirst();
+                selectedAuto = option;
             }
         }
     }

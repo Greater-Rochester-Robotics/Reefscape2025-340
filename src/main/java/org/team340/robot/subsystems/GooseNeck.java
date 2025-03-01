@@ -82,7 +82,7 @@ public final class GooseNeck extends GRRSubsystem {
         kIntake(-6.0),
         kSeat(2.3),
         kScoreL1(-3.5),
-        kScoreForward(7.0),
+        kScoreForward(5.0),
         kBarf(-8.0),
         kSwallow(8.0);
 

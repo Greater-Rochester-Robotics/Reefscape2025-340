@@ -48,6 +48,13 @@ public final class Routines {
         selection = robot.selection;
     }
 
+    public Command stow() {
+        return parallel(
+            elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+            gooseNeck.stow(robot::safeForGoose)
+        ).withName("Routines.stow()");
+    }
+
     /**
      * Intakes and seats a coral.
      */
@@ -134,21 +141,23 @@ public final class Routines {
     /**
      * Scores a coral. Also allows the goose neck to goose around.
      * @param forceBeak Forces the goose beak to spit the coral, even if a pipe is not detected.
+     * @param allowGoosing If the goose neck is allowed to goose around.
      */
-    public Command score(BooleanSupplier runManual) {
-        return score(runManual, () -> true).withName("Routines.score()");
+    public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
+        return score(runManual, () -> true, ElevatorPosition.kDown).withName("Routines.score()");
     }
 
     /**
      * Scores a coral.
      * @param runManual A boolean supplier that when {@code true} will force the goose beak to spit, even if a pipe is not detected.
      * @param allowGoosing If the goose neck is allowed to goose around.
+     * @param waitPosition The position for the elevator while waiting for a happy goose.
      */
-    public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
+    public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing, ElevatorPosition waitPosition) {
         return sequence(
             deadline(
                 waitUntil(swerve::happyGoose),
-                elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+                elevator.goTo(waitPosition, robot::safeForGoose),
                 gooseNeck.stow(robot::safeForGoose)
             ),
             parallel(

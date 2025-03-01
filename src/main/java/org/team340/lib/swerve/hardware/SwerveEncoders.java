@@ -57,7 +57,7 @@ public final class SwerveEncoders {
         public static interface Ctor extends BiFunction<SwerveConfig, SwerveMotor, SwerveEncoder> {}
 
         /** {@link SwerveEncoder#hookStatus()} */
-        public static record HookStatus(boolean readMotor, boolean applyAbsolute) {}
+        public static final record HookStatus(boolean readMotor, boolean applyAbsolute) {}
 
         /**
          * Constructs a swerve encoder. Wraps to support simulation if applicable.

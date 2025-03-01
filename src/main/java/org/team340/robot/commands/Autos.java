@@ -7,12 +7,13 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.ScheduleCommand;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import java.util.List;
 import org.team340.lib.util.GRRDashboard;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
+import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
 import org.team340.robot.subsystems.Lights;
@@ -56,35 +57,43 @@ public final class Autos {
         factory = new AutoFactory(swerve::getPose, swerve::resetPose, swerve::followTrajectory, true, swerve);
 
         // Add autonomous modes to the dashboard
-        GRRDashboard.setTrajectoryCache(factory.cache());
-        GRRDashboard.addAuto("Three Score", threeScore());
-        GRRDashboard.addAuto("Three Score Bird", threeScoreBird());
+        threeScore();
+        l4x3BabyBird();
     }
 
-    public Command threeScore() {
-        AutoRoutine auto = factory.newRoutine("threeScore");
+    public void threeScore() {
+        AutoRoutine routine = factory.newRoutine("threeScore");
 
-        AutoTrajectory startToJ = auto.trajectory("threeScore", 0);
-        AutoTrajectory jToPickup = auto.trajectory("threeScore", 1);
-        AutoTrajectory pickupToK = auto.trajectory("threeScore", 2);
-        AutoTrajectory kToPickup = auto.trajectory("threeScore", 3);
-        AutoTrajectory pickupToL = auto.trajectory("threeScore", 4);
-        AutoTrajectory lToPickup = auto.trajectory("threeScore", 5);
+        AutoTrajectory startToJ = routine.trajectory("threeScore", 0);
+        AutoTrajectory jToPickup = routine.trajectory("threeScore", 1);
+        AutoTrajectory pickupToK = routine.trajectory("threeScore", 2);
+        AutoTrajectory kToPickup = routine.trajectory("threeScore", 3);
+        AutoTrajectory pickupToL = routine.trajectory("threeScore", 4);
+        AutoTrajectory lToPickup = routine.trajectory("threeScore", 5);
 
-        auto
+        routine
             .active()
             .onTrue(
                 sequence(
-                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true), startToJ.resetOdometry()),
+                    parallel(
+                        selection.selectLevel(4),
+                        gooseNeck.setHasCoral(true),
+                        startToJ.resetOdometry(),
+                        swerve.resetAutoPID()
+                    ),
                     startToJ.spawnCmd()
                 )
             );
 
-        Trigger toScore = auto.anyActive(startToJ, pickupToK, pickupToL);
-        Trigger toIntake = auto.anyActive(jToPickup, kToPickup);
+        Trigger toScore = routine.anyActive(startToJ, pickupToK, pickupToL);
+        Trigger toIntake = routine.anyActive(jToPickup, kToPickup);
         Trigger startIntake = jToPickup.atTime(0.75).or(kToPickup.atTime(0.75));
 
-        toScore.onTrue(routines.intake().andThen(new ScheduleCommand(routines.score(toIntake))));
+        toScore.onTrue(
+            routines
+                .intake()
+                .andThen(new ScheduleCommand(routines.score(toIntake, () -> true, ElevatorPosition.kBabyBird)))
+        );
         startIntake.onTrue(routines.intake());
 
         final double kScoreDelaySeconds = 0.5;
@@ -96,40 +105,47 @@ public final class Autos {
         kToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToL.spawnCmd()));
         pickupToL.doneDelayed(kScoreDelaySeconds).onTrue(lToPickup.cmd());
 
-        return auto.cmd();
+        GRRDashboard.addAuto(routine, routine.trajectory("threeScore"));
     }
 
-    public Command threeScoreBird() {
-        AutoRoutine auto = factory.newRoutine("threeScoreBird");
+    public void l4x3BabyBird() {
+        AutoRoutine routine = factory.newRoutine("L4 x3 (Baby Bird)");
 
-        AutoTrajectory startToJ = auto.trajectory("Start-J");
-        AutoTrajectory jToPickup = auto.trajectory("J-Bird");
-        AutoTrajectory pickupToK = auto.trajectory("Bird-K");
-        AutoTrajectory kToPickup = auto.trajectory("K-Bird");
-        AutoTrajectory pickupToL = auto.trajectory("Bird-L");
-        AutoTrajectory lToEnd = auto.trajectory("L-End");
+        AutoTrajectory startToJ = routine.trajectory("Start-J");
+        AutoTrajectory jToBird = routine.trajectory("J-Bird");
+        AutoTrajectory birdToK = routine.trajectory("Bird-K");
+        AutoTrajectory kToBird = routine.trajectory("K-Bird");
+        AutoTrajectory birdToL = routine.trajectory("Bird-L");
+        AutoTrajectory lToEnd = routine.trajectory("L-End");
 
-        auto
+        routine
             .active()
             .onTrue(
                 sequence(
-                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true), startToJ.resetOdometry()),
+                    parallel(
+                        selection.selectLevel(4),
+                        gooseNeck.setHasCoral(false),
+                        startToJ.resetOdometry(),
+                        swerve.resetAutoPID()
+                    ),
                     startToJ.spawnCmd()
                 )
             );
 
-        Trigger toBird = auto.anyActive(jToPickup, kToPickup);
-        Trigger startBird = jToPickup.atTime(0.75).or(kToPickup.atTime(0.75));
+        Trigger toBird = routine.anyActive(jToBird, kToBird);
+        Trigger startBird = jToBird.atTime(0.75).or(kToBird.atTime(0.75));
 
         startBird.onTrue(routines.babyBird(() -> true));
-        auto.observe(gooseNeck::hasCoral).onTrue(routines.score(toBird));
+        routine.observe(gooseNeck::hasCoral).onTrue(routines.score(toBird, () -> true, ElevatorPosition.kBabyBird));
 
-        startToJ.chain(jToPickup);
-        jToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToK.spawnCmd()));
-        pickupToK.chain(kToPickup);
-        kToPickup.done().onTrue(waitUntil(gooseNeck::beamBroken).andThen(pickupToL.spawnCmd()));
-        pickupToL.chain(lToEnd);
+        startToJ.active().onTrue(gooseNeck.setHasCoral(true));
+        startToJ.chain(jToBird);
+        jToBird.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(birdToK.spawnCmd()));
+        birdToK.chain(kToBird);
+        kToBird.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(birdToL.spawnCmd()));
+        birdToL.chain(lToEnd);
+        lToEnd.done().onTrue(routines.stow());
 
-        return auto.cmd();
+        GRRDashboard.addAuto(routine, List.of(startToJ, jToBird, birdToK, kToBird, birdToL, lToEnd));
     }
 }

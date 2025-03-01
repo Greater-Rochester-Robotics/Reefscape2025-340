@@ -13,12 +13,16 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.swerve.Perspective;
@@ -31,6 +35,7 @@ import org.team340.lib.swerve.hardware.SwerveEncoders;
 import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
+import org.team340.lib.util.GRRDashboard;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
 import org.team340.lib.util.Tunable;
@@ -101,7 +106,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 1.3);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
     private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.6);
-    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.3);
+    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.5);
 
     private final SwerveAPI api;
     private final SwerveState state;
@@ -110,8 +115,9 @@ public final class Swerve extends GRRSubsystem {
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
     private final PIDController autoPIDangular;
+    private final TrapezoidProfile autoGoToProfile;
 
-    private final ProfiledPIDController faceReefPID;
+    private final ProfiledPIDController angularPID;
 
     private final Debouncer dangerDebounce = new Debouncer(0.2);
     private final List<Pose2d> estimates = new ArrayList<>();
@@ -135,15 +141,17 @@ public final class Swerve extends GRRSubsystem {
         autoPIDangular = new PIDController(5.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 
-        faceReefPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
-        faceReefPID.enableContinuousInput(-Math.PI, Math.PI);
-        faceReefPID.setIZone(0.8);
+        autoGoToProfile = new TrapezoidProfile(new Constraints(0.5, 2.0));
+
+        angularPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
+        angularPID.enableContinuousInput(-Math.PI, Math.PI);
+        angularPID.setIZone(0.8);
 
         api.enableTunables("swerve/api");
         Tunable.pidController("swerve/autoPID", autoPIDx);
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
-        Tunable.pidController("swerve/faceReefPID", faceReefPID);
+        Tunable.pidController("swerve/angularPID", angularPID);
     }
 
     @Override
@@ -311,7 +319,7 @@ public final class Swerve extends GRRSubsystem {
 
         return commandBuilder("Swerve.driveReef()")
             .onInitialize(() -> {
-                faceReefPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond);
+                angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond);
                 reefAngle.value = reefReference.getRotation();
                 exitLock.value = false;
             })
@@ -355,7 +363,7 @@ public final class Swerve extends GRRSubsystem {
                     0.0,
                     reefAssist.output,
                     !exitLock.value
-                        ? faceReefPID.calculate(state.rotation.getRadians(), reefAngle.value.getRadians())
+                        ? angularPID.calculate(state.rotation.getRadians(), reefAngle.value.getRadians())
                         : 0.0,
                     reefAngle.value.rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
                 );
@@ -375,16 +383,74 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Stops the robot from moving, and cleans up auto-related telemetry.
-     * This command should be ran at the end of an autonomous routine.
+     * Drives to the starting position of the selected
+     * autonomous routine. Useful for testing.
      */
-    public Command finishAuto() {
-        return commandBuilder("Swerve.finishAuto()")
-            .onInitialize(() -> {
-                autoLast = null;
-                autoNext = autoLast;
-            })
-            .onExecute(() -> api.applyStop(false));
+    public Command goToAutoStart() {
+        return resetAutoPID()
+            .andThen(
+                commandBuilder()
+                    .onInitialize(() ->
+                        angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond)
+                    )
+                    .onExecute(() -> {
+                        Optional<Pose2d> endPoint = GRRDashboard.getSelectedAuto().startingPose();
+                        if (endPoint.isEmpty()) {
+                            api.applyStop(false);
+                            return;
+                        }
+
+                        Translation2d difference = state.translation.minus(endPoint.get().getTranslation());
+                        Rotation2d angle = difference.getAngle();
+                        double distance = difference.getNorm();
+
+                        if (distance < 1e-3) {
+                            api.applyStop(false);
+                            return;
+                        }
+
+                        State setpoint = autoGoToProfile.calculate(
+                            TimedRobot.kDefaultPeriod,
+                            new State(distance, state.velocity),
+                            new State(0.0, 0.0)
+                        );
+
+                        Pose2d pose = state.pose;
+                        Pose2d target = pose.interpolate(endPoint.get(), setpoint.position / distance);
+
+                        autoLast = autoNext;
+                        autoNext = target;
+
+                        api.applySpeeds(
+                            new ChassisSpeeds(
+                                angle.getCos() * setpoint.velocity + autoPIDx.calculate(pose.getX(), target.getX()),
+                                angle.getSin() * setpoint.velocity + autoPIDy.calculate(pose.getY(), target.getY()),
+                                angularPID.calculate(pose.getRotation().getRadians(), target.getRotation().getRadians())
+                            ),
+                            Perspective.kBlue,
+                            true,
+                            false
+                        );
+                    })
+                    .onEnd(() -> {
+                        autoLast = null;
+                        autoNext = autoLast;
+                    })
+            )
+            .withName("Swerve.goToAutoStart()");
+    }
+
+    /**
+     * Resets the autonomous trajectory following PID controllers.
+     */
+    public Command resetAutoPID() {
+        return Commands.runOnce(() -> {
+            autoPIDx.reset();
+            autoPIDy.reset();
+            autoPIDangular.reset();
+        })
+            .ignoringDisable(true)
+            .withName("Swerve.resetAutoPID");
     }
 
     /**

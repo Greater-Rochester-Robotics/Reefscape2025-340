@@ -444,7 +444,7 @@ public class SwerveAPI implements AutoCloseable {
      * Represents a measurement from vision to apply to the pose estimator.
      * @see {@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
      */
-    public final record VisionMeasurement(Pose2d visionPose, double timestamp, Matrix<N3, N1> stdDevs) {
+    public static final record VisionMeasurement(Pose2d visionPose, double timestamp, Matrix<N3, N1> stdDevs) {
         /**
          * Represents a measurement from vision to apply to the pose estimator.
          * @see {@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d, double)}.
@@ -457,7 +457,7 @@ public class SwerveAPI implements AutoCloseable {
     /**
      * Contains a yaw measurement alongside the timestamp of the measurement, in seconds.
      */
-    public final record TimestampedYaw(Rotation2d yaw, double timestamp) {}
+    public static final record TimestampedYaw(Rotation2d yaw, double timestamp) {}
 
     /**
      * Manages swerve odometry. Will run asynchronously at the configured odometry update
