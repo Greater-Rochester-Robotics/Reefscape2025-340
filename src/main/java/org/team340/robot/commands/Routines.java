@@ -92,20 +92,6 @@ public final class Routines {
         ).withName("Routines.intake()");
     }
 
-    /**
-     * Runs the intake. A button supplier is specified for scheduling purposes,
-     * allowing this command to be bound using {@link Trigger#onTrue()}. The
-     * intake will continue running if a coral has been detected, but is not
-     * yet in the goose neck. Will also slow down the drivetrain.
-     * @param button If the intake button is still pressed.
-     */
-    public Command assistedIntake(BooleanSupplier button) {
-        return deadline(
-            intake(button),
-            swerve.driveIntake(robot::driverX, robot::driverY, robot::driverAngular)
-        ).withName("Routines.assistedIntake()");
-    }
-
     public Command babyBird(BooleanSupplier button) {
         return deadline(
             gooseNeck.babyBird(button, robot::safeForGoose),
@@ -132,9 +118,7 @@ public final class Routines {
     public Command swallow() {
         return parallel(
             intake.swallow(),
-            gooseNeck
-                .swallow(robot::safeForGoose)
-                .beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.25)),
+            gooseNeck.swallow(robot::safeForGoose).beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.1)),
             elevator.goTo(ElevatorPosition.kSwallow, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.swallow()");
     }
@@ -145,7 +129,7 @@ public final class Routines {
      * @param allowGoosing If the goose neck is allowed to goose around.
      */
     public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
-        return score(runManual, () -> true, ElevatorPosition.kDown).withName("Routines.score()");
+        return score(runManual, allowGoosing, ElevatorPosition.kDown).withName("Routines.score()");
     }
 
     /**

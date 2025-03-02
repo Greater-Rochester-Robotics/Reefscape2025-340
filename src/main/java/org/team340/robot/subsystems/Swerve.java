@@ -92,7 +92,7 @@ public final class Swerve extends GRRSubsystem {
         .setTurnPID(100.0, 0.0, 0.2)
         .setBrakeMode(false, true)
         .setLimits(4.0, 0.05, 17.5, 14.0, 30.0)
-        .setDriverProfile(4.0, 1.5, 0.15, 4.2, 2.0, 0.05)
+        .setDriverProfile(4.0, 1.5, 0.15, 4.7, 2.0, 0.05)
         .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.1)
@@ -100,8 +100,7 @@ public final class Swerve extends GRRSubsystem {
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
-    private static final TunableDouble kIntakeDistance = Tunable.doubleValue("swerve/kIntakeDistance", 2.5);
-    private static final TunableDouble kIntakeMinMult = Tunable.doubleValue("swerve/kIntakeMinMult", 0.6);
+    private static final TunableDouble kTurboSpin = Tunable.doubleValue("swerve/kTurboSpin", 8.0);
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/kReefAssistKp", 15.0);
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 1.3);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
@@ -127,7 +126,6 @@ public final class Swerve extends GRRSubsystem {
     private Pose2d autoLast = null;
     private Pose2d autoNext = null;
     private Pose2d reefReference = Pose2d.kZero;
-    private Translation2d closestStation = Translation2d.kZero;
     private boolean facingReef = false;
     private double wallDistance = 0.0;
 
@@ -184,10 +182,6 @@ public final class Swerve extends GRRSubsystem {
             reefReference.getRotation().minus(state.rotation).getRadians(),
             kFacingReefTolerance.value()
         );
-
-        closestStation = state.pose.getY() > FieldConstants.kWidth / 2.0
-            ? (Alliance.isBlue() ? FieldConstants.kBlueLeftCorner : FieldConstants.kRedRightCorner)
-            : (Alliance.isBlue() ? FieldConstants.kBlueRightCorner : FieldConstants.kRedLeftCorner);
 
         wallDistance = calculateWallDistance();
     }
@@ -266,43 +260,19 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Drives the robot using driver input for intaking,
-     * slowing the drivetrain for ease of control.
+     * SPIN FAST RAHHHHHHH
      * @param x The X value from the driver's joystick.
      * @param y The Y value from the driver's joystick.
      * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
      */
-    public Command driveIntake(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
-        return commandBuilder("Swerve.driveIntake()").onExecute(() -> {
-            double xInput = x.getAsDouble();
-            double yInput = y.getAsDouble();
-            double angularInput = angular.getAsDouble();
-            double norm = Math.hypot(-yInput, -xInput);
-
-            Rotation2d robotAngle = closestStation.minus(state.translation).getAngle();
-            Rotation2d xyAngle = new Rotation2d(-yInput, -xInput).rotateBy(
-                Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi
-            );
-
-            double multiplier = 1.0;
-            double distance = state.translation.getDistance(closestStation);
-            if (
-                Math2.epsilonEquals(0.0, robotAngle.minus(xyAngle).getRadians(), Math2.kHalfPi) &&
-                distance < kIntakeDistance.value() &&
-                norm >= api.config.driverVelDeadband
-            ) {
-                multiplier = kIntakeMinMult.value();
-            }
-
-            api.applyDriverInput(
-                xInput * multiplier,
-                yInput * multiplier,
-                angularInput,
-                Perspective.kOperator,
-                true,
-                true
-            );
-        });
+    public Command turboSpin(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
+        Mutable<Double> configured = new Mutable<>(0.0);
+        return drive(x, y, angular)
+            .beforeStarting(() -> {
+                configured.value = api.config.driverAngularVel;
+                api.config.driverAngularVel = kTurboSpin.value();
+            })
+            .finallyDo(() -> api.config.driverAngularVel = configured.value);
     }
 
     /**

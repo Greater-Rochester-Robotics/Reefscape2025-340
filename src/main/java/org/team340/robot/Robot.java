@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -99,13 +100,14 @@ public final class Robot extends TimedRobot {
         swerve.setDefaultCommand(swerve.drive(this::driverX, this::driverY, this::driverAngular));
 
         // Driver bindings
-        driver.a().onTrue(routines.assistedIntake(driver.a()));
+        driver.a().onTrue(routines.intake(driver.a()));
         driver.b().whileTrue(routines.swallow());
         driver.x().onTrue(none()); // Reserved (No goosing around)
         driver.y().onTrue(none()); // Reserved (Force goose spit)
 
-        driver.start().whileTrue(routines.babyBird(driver.start()));
+        driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
         driver.back().whileTrue(swerve.goToAutoStart());
+        driver.start().whileTrue(routines.babyBird(driver.start()));
 
         driver.leftBumper().whileTrue(selection.setLeft().andThen(routines.assistedScore(driver.y(), gooseAround)));
         driver.rightBumper().whileTrue(selection.setRight().andThen(routines.assistedScore(driver.y(), gooseAround)));
@@ -119,24 +121,10 @@ public final class Robot extends TimedRobot {
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
-        coDriver.y().onTrue(routines.climb(coDriver.y()));
+        // coDriver.y().onTrue(routines.climb(coDriver.y()));
 
-        coDriver
-            .back()
-            .whileTrue(
-                startEnd(
-                    () -> coDriver.setRumble(RumbleType.kLeftRumble, 1.0),
-                    () -> coDriver.setRumble(RumbleType.kLeftRumble, 0.0)
-                )
-            );
-        coDriver
-            .start()
-            .whileTrue(
-                startEnd(
-                    () -> coDriver.setRumble(RumbleType.kRightRumble, 1.0),
-                    () -> coDriver.setRumble(RumbleType.kRightRumble, 0.0)
-                )
-            );
+        coDriver.back().whileTrue(coDriverRumble(true));
+        coDriver.start().whileTrue(coDriverRumble(false));
 
         coDriver.povUp().onTrue(selection.incrementLevel());
         coDriver.povDown().onTrue(selection.decrementLevel());
@@ -156,6 +144,13 @@ public final class Robot extends TimedRobot {
 
     public double driverAngular() {
         return driver.getLeftTriggerAxis() - driver.getRightTriggerAxis();
+    }
+
+    private Command coDriverRumble(boolean left) {
+        RumbleType rumbleType = left ? RumbleType.kLeftRumble : RumbleType.kRightRumble;
+        return startEnd(() -> coDriver.setRumble(rumbleType, 1.0), () -> coDriver.setRumble(rumbleType, 0.0))
+            .ignoringDisable(true)
+            .withName("Robot.coDriverRumble(" + left + ")");
     }
 
     @Override

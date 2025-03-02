@@ -1,7 +1,5 @@
 package org.team340.robot.subsystems;
 
-import static edu.wpi.first.wpilibj2.command.Commands.either;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
@@ -54,7 +52,7 @@ public final class GooseNeck extends GRRSubsystem {
      */
     private static enum GoosePosition {
         kStow(0.0),
-        kScoreL1(-0.12),
+        kScoreL1(-0.1),
         kScoreForward(0.5);
 
         private TunableDouble rotations;
@@ -82,7 +80,7 @@ public final class GooseNeck extends GRRSubsystem {
         kIntake(-6.0),
         kSeat(2.3),
         kScoreL1(-3.5),
-        kScoreForward(5.0),
+        kScoreForward(9.0),
         kBarf(-8.0),
         kSwallow(8.0);
 
@@ -191,7 +189,7 @@ public final class GooseNeck extends GRRSubsystem {
             )
         );
         PhoenixUtil.run("Set Goose Neck Fast Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(325, beamBreak, beamBreakVolatile)
+            BaseStatusSignal.setUpdateFrequencyForAll(500, beamBreak, beamBreakVolatile)
         );
         PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
             ParentDevice.optimizeBusUtilizationForAll(5, pivotMotor, beakMotor, candi)
@@ -432,20 +430,20 @@ public final class GooseNeck extends GRRSubsystem {
     ) {
         Mutable<Boolean> beamTrigger = new Mutable<>(false);
 
-        return either(
-            goTo(
-                () -> !selection.isL1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
-                () -> !selection.isL1() && allowGoosing.getAsBoolean(),
-                () -> {
-                    double currentPosition = getPosition();
-                    if (Math.abs(currentPosition) > kStickyScoreTolerance.value()) {
-                        return currentPosition < 0.0;
-                    } else {
-                        return selection.isLeft();
-                    }
-                },
-                safe
-            ).alongWith(
+        return goTo(
+            () -> !selection.isL1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
+            () -> !selection.isL1() && allowGoosing.getAsBoolean(),
+            () -> {
+                double currentPosition = getPosition();
+                if (Math.abs(currentPosition) > kStickyScoreTolerance.value()) {
+                    return currentPosition < 0.0;
+                } else {
+                    return selection.isLeft();
+                }
+            },
+            () -> selection.isL1() || safe.getAsBoolean()
+        )
+            .alongWith(
                 new CommandBuilder()
                     .onInitialize(() -> beamTrigger.value = false)
                     .onExecute(() -> {
@@ -462,10 +460,8 @@ public final class GooseNeck extends GRRSubsystem {
                         }
                     })
                     .onEnd(beakMotor::stopMotor)
-            ),
-            goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe),
-            this::hasCoral
-        ).withName("GooseNeck.score()");
+            )
+            .withName("GooseNeck.score()");
     }
 
     public Command barf(BooleanSupplier safe) {
