@@ -22,7 +22,7 @@ import org.team340.robot.Constants.UpperCAN;
 @Logged
 public final class Intake extends GRRSubsystem {
 
-    private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 3.5);
+    private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 9.0);
     private static final TunableDouble kBarfVoltage = Tunable.doubleValue("intake/kBarfVoltage", 7.0);
     private static final TunableDouble kSwallowVoltage = Tunable.doubleValue("intake/kSwallowVoltage", -6.0);
     private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 24.0);
@@ -68,7 +68,7 @@ public final class Intake extends GRRSubsystem {
      * Runs the intake.
      */
     public Command intake(BooleanSupplier swallow) {
-        Debouncer debouncer = new Debouncer(0.15);
+        Debouncer debouncer = new Debouncer(0.2);
         Timer unjamTimer = new Timer();
 
         return commandBuilder("Intake.intake()")

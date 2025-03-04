@@ -284,13 +284,11 @@ public final class Swerve extends GRRSubsystem {
      *
      */
     public Command driveReef(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular, BooleanSupplier left) {
-        Mutable<Rotation2d> reefAngle = new Mutable<>(Rotation2d.kZero);
         Mutable<Boolean> exitLock = new Mutable<>(false);
 
         return commandBuilder("Swerve.driveReef()")
             .onInitialize(() -> {
                 angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond);
-                reefAngle.value = reefReference.getRotation();
                 exitLock.value = false;
             })
             .onExecute(() -> {
@@ -298,6 +296,7 @@ public final class Swerve extends GRRSubsystem {
                 double yInput = y.getAsDouble();
                 double angularInput = angular.getAsDouble();
                 double norm = Math.hypot(-yInput, -xInput);
+                boolean inDeadband = norm >= api.config.driverVelDeadband;
 
                 reefAssist.targetPipe = new Pose2d(
                     reefReference
@@ -306,15 +305,15 @@ public final class Swerve extends GRRSubsystem {
                             new Translation2d(
                                 FieldConstants.kPipeOffsetX,
                                 FieldConstants.kPipeOffsetY * (left.getAsBoolean() ? -1.0 : 1.0)
-                            ).rotateBy(reefAngle.value)
+                            ).rotateBy(reefReference.getRotation())
                         ),
-                    reefAngle.value
+                    reefReference.getRotation()
                 );
 
                 Rotation2d robotAngle = reefAssist.targetPipe.getTranslation().minus(state.translation).getAngle();
-                Rotation2d xyAngle = new Rotation2d(-yInput, -xInput).rotateBy(
-                    Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi
-                );
+                Rotation2d xyAngle = !inDeadband
+                    ? new Rotation2d(-yInput, -xInput).rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
+                    : robotAngle;
 
                 double stickDistance = Math.abs(
                     (Math.cos(xyAngle.getRadians()) * (reefAssist.targetPipe.getY() - state.pose.getY()) -
@@ -324,18 +323,18 @@ public final class Swerve extends GRRSubsystem {
                 reefAssist.running =
                     Math2.epsilonEquals(0.0, stickDistance, kReefAssistTolerance.value()) &&
                     Math2.epsilonEquals(0.0, robotAngle.minus(xyAngle).getRadians(), Math2.kHalfPi) &&
-                    norm >= api.config.driverVelDeadband;
+                    inDeadband;
 
-                reefAssist.error = robotAngle.minus(reefAngle.value).getRadians();
+                reefAssist.error = robotAngle.minus(reefReference.getRotation()).getRadians();
                 reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * kReefAssistKp.value() : 0.0;
 
                 var assist = ChassisSpeeds.fromRobotRelativeSpeeds(
                     0.0,
                     reefAssist.output,
                     !exitLock.value
-                        ? angularPID.calculate(state.rotation.getRadians(), reefAngle.value.getRadians())
+                        ? angularPID.calculate(state.rotation.getRadians(), reefReference.getRotation().getRadians())
                         : 0.0,
-                    reefAngle.value.rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
+                    reefReference.getRotation().rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
                 );
 
                 if (!Math2.epsilonEquals(angularInput, 0.0)) exitLock.value = true;

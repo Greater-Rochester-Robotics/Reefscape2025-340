@@ -49,11 +49,11 @@ public final class Routines {
         selection = robot.selection;
     }
 
-    public Command stow() {
+    public Command stow(ElevatorPosition elevatorPosition) {
         return parallel(
-            elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+            elevator.goTo(elevatorPosition, robot::safeForGoose),
             gooseNeck.stow(robot::safeForGoose)
-        ).withName("Routines.stow()");
+        ).withName("Routines.stow(" + elevatorPosition.name() + ")");
     }
 
     /**
@@ -145,14 +145,16 @@ public final class Routines {
                 elevator.goTo(waitPosition, robot::safeForGoose),
                 gooseNeck.stow(robot::safeForGoose)
             ),
-            parallel(
+            deadline(
+                either(waitUntil(() -> gooseNeck.noCoral() && robot.safeForGoose()), idle(), gooseNeck::hasCoral),
                 elevator.score(
                     selection,
                     () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,
                     robot::safeForGoose
                 ),
                 gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)
-            )
+            ),
+            parallel(elevator.goTo(waitPosition, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
         )
             .alongWith(selection.whileScoring())
             .withName("Routines.score()");

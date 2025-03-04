@@ -95,7 +95,7 @@ public final class Autos {
         birdToK.chain(kToBird);
         kToBird.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(birdToL.spawnCmd()));
         birdToL.chain(lToEnd);
-        lToEnd.done().onTrue(routines.stow());
+        lToEnd.done().onTrue(routines.stow(ElevatorPosition.kDown));
 
         GRRDashboard.addAuto(routine, List.of(startToJ, jToBird, birdToK, kToBird, birdToL, lToEnd));
     }
