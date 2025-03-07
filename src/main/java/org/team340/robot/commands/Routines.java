@@ -146,7 +146,11 @@ public final class Routines {
                 gooseNeck.stow(robot::safeForGoose)
             ),
             deadline(
-                either(waitUntil(() -> gooseNeck.noCoral() && robot.safeForGoose()), idle(), gooseNeck::hasCoral),
+                either(
+                    waitUntil(() -> gooseNeck.noCoral() && robot.safeForGoose() && allowGoosing.getAsBoolean()),
+                    idle(),
+                    gooseNeck::hasCoral
+                ),
                 elevator.score(
                     selection,
                     () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,

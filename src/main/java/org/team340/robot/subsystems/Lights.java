@@ -4,6 +4,7 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -24,7 +25,7 @@ public final class Lights {
         kHasCoral(255, 255, 255),
         kGoose(255, 255, 255),
         kScored(0, 255, 0),
-        kDisabled(255, 16, 0),
+        kDisabled(255, 18, 0),
         kOff(0, 0, 0);
 
         private final TunableInteger r;
@@ -154,7 +155,7 @@ public final class Lights {
 
         /**
          * Displays the currently selected reef level.
-         * @param level The selected level (1-4). L1 is 1, not 0.
+         * @param selection The reef selection.
          */
         public Command levelSelection(ReefSelection selection) {
             return commandBuilder()
@@ -164,8 +165,7 @@ public final class Lights {
                             boolean blink = selection.isScoring() && (selection.isLeft() ? 0 : 1) == j;
 
                             if (
-                                (blink ? Timer.getFPGATimestamp() % 0.4 > 0.2 : true) &&
-                                i < ((28 / 4) * selection.getLevel())
+                                (blink ? RobotController.getRSLState() : true) && i < ((28 / 4) * selection.getLevel())
                             ) {
                                 setSingle(j == 0, i, Color.kLx);
                             } else {
@@ -252,14 +252,14 @@ public final class Lights {
         /**
          * Displays the "Has Coral" animation.
          */
-        public Command hasCoral(BooleanSupplier goosing, DoubleSupplier goosePosition) {
+        public Command hasCoral(BooleanSupplier goosing, DoubleSupplier goosePosition, ReefSelection selection) {
             final double kGooseRange = 0.15;
             final double kHalfRange = kGooseRange / 2.0;
 
             return commandBuilder()
                 .onExecute(() -> {
                     if (!goosing.getAsBoolean()) {
-                        set(Timer.getFPGATimestamp() % 0.4 > 0.2 ? Color.kHasCoral : Color.kOff);
+                        set(RobotController.getRSLState() ? Color.kHasCoral : Color.kOff);
                     } else {
                         double position = goosePosition.getAsDouble();
                         double percent =
@@ -269,7 +269,9 @@ public final class Lights {
                         if (position < 0.0) percent = 1.0 - percent;
                         int closestLED = (int) Math.round(percent * (kStripLength - 1));
                         for (int i = 0; i < kStripLength; i++) {
-                            if (Math.abs(closestLED - i) <= 1) {
+                            if ((selection.isLeft() ? i > kStripLength - 4 : i < 4)) {
+                                set(i, RobotController.getRSLState() ? Color.kGoose : Color.kOff);
+                            } else if (Math.abs(closestLED - i) <= 1) {
                                 set(i, Color.kGoose);
                             } else {
                                 set(i, Color.kOff);

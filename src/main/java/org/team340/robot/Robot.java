@@ -92,7 +92,7 @@ public final class Robot extends TimedRobot {
         RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
         RobotModeTriggers.teleop()
             .and(gooseNeck::hasCoral)
-            .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition))
+            .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
             .onFalse(lights.top.scored().onlyIf(this::isTeleop));
 
         // Set default commands

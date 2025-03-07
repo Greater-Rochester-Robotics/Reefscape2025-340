@@ -296,7 +296,7 @@ public final class Swerve extends GRRSubsystem {
                 double yInput = y.getAsDouble();
                 double angularInput = angular.getAsDouble();
                 double norm = Math.hypot(-yInput, -xInput);
-                boolean inDeadband = norm >= api.config.driverVelDeadband;
+                boolean inDeadband = norm < api.config.driverVelDeadband;
 
                 reefAssist.targetPipe = new Pose2d(
                     reefReference
@@ -323,7 +323,7 @@ public final class Swerve extends GRRSubsystem {
                 reefAssist.running =
                     Math2.epsilonEquals(0.0, stickDistance, kReefAssistTolerance.value()) &&
                     Math2.epsilonEquals(0.0, robotAngle.minus(xyAngle).getRadians(), Math2.kHalfPi) &&
-                    inDeadband;
+                    !inDeadband;
 
                 reefAssist.error = robotAngle.minus(reefReference.getRotation()).getRadians();
                 reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * kReefAssistKp.value() : 0.0;
