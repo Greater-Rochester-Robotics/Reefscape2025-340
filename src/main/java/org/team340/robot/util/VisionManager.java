@@ -50,6 +50,8 @@ public final class VisionManager {
             new Camera("right", Cameras.kRight)
         };
 
+        // Hit the undocumented Photon Turbo Button™
+        // https://github.com/PhotonVision/photonvision/pull/1662
         NetworkTableInstance.getDefault().getBooleanTopic("/photonvision/use_new_cscore_frametime").publish().set(true);
     }
 

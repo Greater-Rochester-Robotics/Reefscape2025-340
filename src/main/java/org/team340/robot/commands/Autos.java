@@ -57,6 +57,7 @@ public final class Autos {
 
         // Add autonomous modes to the dashboard
         l4x3BabyBird();
+        l4x3Hopper();
     }
 
     private void l4x3BabyBird() {
@@ -98,5 +99,46 @@ public final class Autos {
         lToEnd.done().onTrue(routines.stow(ElevatorPosition.kDown));
 
         GRRDashboard.addAuto(routine, List.of(startToJ, jToBird, birdToK, kToBird, birdToL, lToEnd));
+    }
+
+    private void l4x3Hopper() {
+        AutoRoutine routine = factory.newRoutine("L4 x3 (Hopper)");
+
+        AutoTrajectory startToJ = routine.trajectory("Start-J");
+        AutoTrajectory jToHopper = routine.trajectory("J-Hopper");
+        AutoTrajectory HopperToK = routine.trajectory("Hopper-K");
+        AutoTrajectory kToHopper = routine.trajectory("K-Hopper");
+        AutoTrajectory HopperToL = routine.trajectory("Hopper-L");
+        AutoTrajectory lToEnd = routine.trajectory("L-End");
+
+        routine
+            .active()
+            .onTrue(
+                sequence(
+                    parallel(
+                        selection.selectLevel(4),
+                        gooseNeck.setHasCoral(false),
+                        startToJ.resetOdometry(),
+                        swerve.resetAutoPID()
+                    ),
+                    startToJ.spawnCmd()
+                )
+            );
+
+        Trigger toHopper = routine.anyActive(jToHopper, kToHopper);
+        Trigger startHopper = jToHopper.atTime(0.5).or(kToHopper.atTime(0.5));
+
+        startHopper.onTrue(routines.intake(() -> true));
+        routine.observe(gooseNeck::hasCoral).onTrue(routines.score(toHopper, () -> true));
+
+        startToJ.active().onTrue(gooseNeck.setHasCoral(true));
+        startToJ.chain(jToHopper);
+        jToHopper.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(HopperToK.spawnCmd()));
+        HopperToK.chain(kToHopper);
+        kToHopper.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(HopperToL.spawnCmd()));
+        HopperToL.chain(lToEnd);
+        lToEnd.done().onTrue(routines.stow(ElevatorPosition.kDown));
+
+        GRRDashboard.addAuto(routine, List.of(startToJ, jToHopper, HopperToK, kToHopper, HopperToL, lToEnd));
     }
 }

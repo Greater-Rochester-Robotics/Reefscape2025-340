@@ -106,8 +106,8 @@ public final class GooseNeck extends GRRSubsystem {
         0.2
     );
 
-    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.125);
-    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.012);
+    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.062);
+    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.03);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 12.0);
 
@@ -270,7 +270,7 @@ public final class GooseNeck extends GRRSubsystem {
         }
 
         Mutable<State> state = new Mutable<>(State.kInit);
-        Debouncer debounce = new Debouncer(0.018, DebounceType.kBoth);
+        Debouncer debounce = new Debouncer(0.065, DebounceType.kRising);
         Timer delay = new Timer();
 
         return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
