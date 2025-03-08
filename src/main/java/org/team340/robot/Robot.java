@@ -122,13 +122,15 @@ public final class Robot extends TimedRobot {
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
-        // coDriver.y().onTrue(routines.climb(coDriver.y()));
+        coDriver.y().whileTrue(routines.climb());
 
         coDriver.back().whileTrue(coDriverRumble(true));
         coDriver.start().whileTrue(coDriverRumble(false));
 
         coDriver.povUp().onTrue(selection.incrementLevel());
         coDriver.povDown().onTrue(selection.decrementLevel());
+
+        coDriver.leftStick().and(coDriver.rightStick()).toggleOnTrue(climber.coastMode());
     }
 
     public boolean safeForGoose() {

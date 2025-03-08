@@ -109,7 +109,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.125);
     private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.012);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
-    private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 10.0);
+    private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 12.0);
 
     private final TalonFX pivotMotor;
     private final TalonFXS beakMotor;
@@ -124,7 +124,7 @@ public final class GooseNeck extends GRRSubsystem {
     private final TorqueCurrentFOC torqueControl;
     private final VoltageOut beakVoltageControl;
 
-    private final PIDController torquePID = new PIDController(165.0, 0.0, 12.0);
+    private final PIDController torquePID = new PIDController(185.0, 0.0, 18.0);
     private final AtomicBoolean hasCoral = new AtomicBoolean(false);
     private boolean goosing = false;
 
@@ -144,11 +144,11 @@ public final class GooseNeck extends GRRSubsystem {
         pivotConfig.MotionMagic.MotionMagicCruiseVelocity = 20.0;
         pivotConfig.MotionMagic.MotionMagicAcceleration = 20.0;
 
-        pivotConfig.Slot0.kP = 60.0;
+        pivotConfig.Slot0.kP = 200.0;
         pivotConfig.Slot0.kI = 0.0;
-        pivotConfig.Slot0.kD = 0.0;
+        pivotConfig.Slot0.kD = 2.0;
         pivotConfig.Slot0.kS = 0.0;
-        pivotConfig.Slot0.kV = 2.5;
+        pivotConfig.Slot0.kV = 2.35;
 
         pivotConfig.TorqueCurrent.PeakForwardTorqueCurrent = pivotConfig.CurrentLimits.StatorCurrentLimit;
         pivotConfig.TorqueCurrent.PeakReverseTorqueCurrent = -pivotConfig.CurrentLimits.StatorCurrentLimit;
@@ -164,7 +164,7 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
-        candiConfig.PWM2.AbsoluteSensorOffset = 0.925;
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.92;
         candiConfig.PWM2.SensorDirection = true;
 
         PhoenixUtil.run("Clear Goose Neck Pivot Sticky Faults", () -> pivotMotor.clearStickyFaults());

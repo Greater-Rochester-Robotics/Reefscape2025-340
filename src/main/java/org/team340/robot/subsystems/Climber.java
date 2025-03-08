@@ -2,6 +2,7 @@ package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -22,9 +23,8 @@ import org.team340.robot.Constants.UpperCAN;
 public final class Climber extends GRRSubsystem {
 
     private static enum ClimberPosition {
-        kDeploy(0.0),
-        kCheck(0.0),
-        kClimb(0.0);
+        kDeploy(94),
+        kClimb(380);
 
         private final TunableDouble rotations;
 
@@ -54,11 +54,11 @@ public final class Climber extends GRRSubsystem {
         config.CurrentLimits.StatorCurrentLimit = 100.0;
         config.CurrentLimits.SupplyCurrentLimit = 70.0;
 
-        config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 0.0; // TODO
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 387.5;
 
         PhoenixUtil.run("Clear Climber Sticky Faults", () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
@@ -93,6 +93,14 @@ public final class Climber extends GRRSubsystem {
         return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
     }
 
+    /**
+     * Checks if the climber is deployed.
+     * @return True if the climber is deployed, false otherwise.
+     */
+    public boolean isDeployed() {
+        return getPosition() > ClimberPosition.kDeploy.rotations();
+    }
+
     // *************** Commands ***************
 
     /**
@@ -100,13 +108,6 @@ public final class Climber extends GRRSubsystem {
      */
     public Command deploy() {
         return goTo(ClimberPosition.kDeploy).withName("Climber.deploy()");
-    }
-
-    /**
-     * Goes to the check position.
-     */
-    public Command check() {
-        return goTo(ClimberPosition.kCheck).withName("Climber.check()");
     }
 
     /**
@@ -125,5 +126,22 @@ public final class Climber extends GRRSubsystem {
             .onExecute(() -> motor.setControl(voltageControl.withOutput(kVoltageOut.value())))
             .isFinished(() -> getPosition() >= position.rotations())
             .onEnd(motor::stopMotor);
+    }
+
+    public Command coastMode() {
+        MotorOutputConfigs config = new MotorOutputConfigs();
+
+        return commandBuilder("Climber.coastMode()")
+            .onInitialize(() -> {
+                motor.getConfigurator().refresh(config);
+                config.NeutralMode = NeutralModeValue.Coast;
+                motor.getConfigurator().apply(config);
+            })
+            .onEnd(() -> {
+                motor.getConfigurator().refresh(config);
+                config.NeutralMode = NeutralModeValue.Brake;
+                motor.getConfigurator().apply(config);
+                PhoenixUtil.run("Set Climber Zero", () -> motor.setPosition(0.0));
+            });
     }
 }

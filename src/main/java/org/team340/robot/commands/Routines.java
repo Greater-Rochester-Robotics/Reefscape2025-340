@@ -177,9 +177,7 @@ public final class Routines {
         ).withName("Routines.assistedScore()");
     }
 
-    public Command climb(BooleanSupplier next) {
-        return sequence(climber.deploy(), waitUntil(next), climber.check(), waitUntil(next), climber.climb()).withName(
-            "Routines.climb()"
-        );
+    public Command climb() {
+        return either(climber.climb(), climber.deploy(), climber::isDeployed).withName("Routines.climb()");
     }
 }
