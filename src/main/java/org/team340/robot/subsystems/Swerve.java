@@ -173,15 +173,19 @@ public final class Swerve extends GRRSubsystem {
         targets.addAll(visionEstimates.targets());
 
         Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
-        Translation2d reefToRobot = reefCenter.minus(state.translation);
-        Rotation2d reefToRobotAngle = reefToRobot.getAngle();
+        Translation2d robotToReef = reefCenter.minus(state.translation);
+        Rotation2d reefToRobotAngle = robotToReef.getAngle();
         Rotation2d reefAngle = new Rotation2d(
             Math.floor(reefToRobotAngle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
             Math2.kThirdPi
         );
 
         onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
-        betweenPoles = Math.abs(reefToRobot.rotateBy(reefAngle).getY()) < -FieldConstants.kPipeOffsetY;
+        betweenPoles =
+            Math.abs(
+                robotToReef.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
+            ) <
+            FieldConstants.kL1CenterOrOutside;
 
         reefReference = new Pose2d(reefCenter, reefAngle);
         facingReef = Math2.epsilonEquals(
