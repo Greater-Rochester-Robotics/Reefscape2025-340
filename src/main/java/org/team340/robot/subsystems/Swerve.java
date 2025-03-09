@@ -105,7 +105,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 1.3);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
     private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.6);
-    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 2.5);
+    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 3.0);
 
     private final SwerveAPI api;
     private final SwerveState state;
@@ -138,12 +138,12 @@ public final class Swerve extends GRRSubsystem {
         state = api.state;
         vision = VisionManager.getInstance();
 
-        autoPIDx = new PIDController(7.0, 0.0, 0.0);
-        autoPIDy = new PIDController(7.0, 0.0, 0.0);
-        autoPIDangular = new PIDController(5.0, 0.0, 0.0);
+        autoPIDx = new PIDController(15.0, 0.0, 0.0);
+        autoPIDy = new PIDController(15.0, 0.0, 0.0);
+        autoPIDangular = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 
-        autoGoToProfile = new TrapezoidProfile(new Constraints(0.35, 2.0));
+        autoGoToProfile = new TrapezoidProfile(new Constraints(0.35, 0.6));
 
         angularPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);
