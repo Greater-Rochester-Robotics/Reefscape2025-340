@@ -1,0 +1,13 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+      "strict": true,
+      "target": "ESNext",
+      "useDefineForClassFields": true,
+      "module": "ESNext",
+      "checkJs": true,
+      "isolatedModules": true,
+  },
+  "include": ["../old-dashboard/src/**/*.d.ts", "../old-dashboard/src/**/*.ts", "../old-dashboard/src/**/*.js", "../old-dashboard/src/**/*.svelte"],
+  "references": [{ "path": "./tsconfig.node.json" }],
+}

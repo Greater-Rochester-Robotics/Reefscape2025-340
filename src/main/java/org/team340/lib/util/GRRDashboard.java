@@ -5,11 +5,15 @@ import choreo.auto.AutoTrajectory;
 import choreo.trajectory.SwerveSample;
 import choreo.trajectory.Trajectory;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.RawPublisher;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StringSubscriber;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.nio.ByteBuffer;
@@ -36,6 +40,11 @@ public final class GRRDashboard {
     }
 
     private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("GRRDashboard");
+
+    private static final BooleanPublisher enabledPub = nt.getBooleanTopic("robot/enabled").publish();
+    private static final BooleanPublisher blueAlliancePub = nt.getBooleanTopic("robot/blueAlliance").publish();
+    private static final DoublePublisher matchTimePub = nt.getDoubleTopic("robot/matchTime").publish();
+    private static final DoublePublisher voltagePub = nt.getDoubleTopic("robot/voltage").publish();
 
     private static final String defaultAuto = "Do Nothing";
     private static final Map<String, AutoOption> autoOptions = new LinkedHashMap<>();
@@ -151,5 +160,10 @@ public final class GRRDashboard {
                 selectedAuto = option;
             }
         }
+
+        enabledPub.set(DriverStation.isEnabled());
+        blueAlliancePub.set(Alliance.isBlue());
+        matchTimePub.set(DriverStation.getMatchTime());
+        voltagePub.set(RobotController.getBatteryVoltage());
     }
 }

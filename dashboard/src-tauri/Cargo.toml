@@ -1,23 +1,23 @@
 [package]
 name = "grrdashboard"
 version = "2025.0.0"
-edition = "2021"
-description = "A custom built dashboard by Team 340 for the FIRST Robotics Competition"
-repository = "https://github.com/Greater-Rochester-Robotics/GRRBase.git"
-homepage = "https://team340.org"
-authors = ["Team 340"]
+description = "A custom built dashboard by Team 340 G.R.R. for the FIRST Robotics Competition"
+authors = ["Team 340 G.R.R."]
 license = "MIT"
+edition = "2021"
 
 [lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "grrdashboard_lib"
-crate-type = ["lib", "cdylib", "staticlib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-rc", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc", features = [] }
-tauri-plugin-shell = "2.0.0-rc"
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
