@@ -248,7 +248,7 @@ public final class Swerve extends GRRSubsystem {
         //TODO: remove targetSpot and Goose Position  intermediate values after testing
         Translation2d targetOffset = new Translation2d();
         if (betweenPoles) {
-            targetOffset = new Translation2d(FieldConstants.kPipeOffsetX, 0.0);
+            targetOffset = new Translation2d(FieldConstants.kPipeFromCenterX, 0.0);
         } else {
             targetOffset = new Translation2d(
                 FieldConstants.kL1OffsetX,
