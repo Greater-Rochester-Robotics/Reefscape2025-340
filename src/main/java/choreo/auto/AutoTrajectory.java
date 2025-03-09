@@ -2,8 +2,6 @@
 
 package choreo.auto;
 
-import static edu.wpi.first.wpilibj.Alert.AlertType.kError;
-
 import choreo.Choreo.TrajectoryLogger;
 import choreo.auto.AutoFactory.AllianceContext;
 import choreo.auto.AutoFactory.AutoBindings;
@@ -11,13 +9,10 @@ import choreo.trajectory.DifferentialSample;
 import choreo.trajectory.SwerveSample;
 import choreo.trajectory.Trajectory;
 import choreo.trajectory.TrajectorySample;
-import choreo.util.ChoreoAlert;
-import choreo.util.ChoreoAlert.MultiAlert;
 import choreo.util.ChoreoAllianceFlipUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -43,28 +38,6 @@ public class AutoTrajectory {
     // so you don't have to retype the sample type everywhere in your auto
     // code. This also makes the places with generics exposed to users few
     // and far between. This helps with more novice users
-
-    private static final MultiAlert triggerTimeNegative = ChoreoAlert.multiAlert(
-        causes -> "Trigger time cannot be negative for " + causes,
-        kError
-    );
-    private static final MultiAlert triggerTimeAboveMax = ChoreoAlert.multiAlert(
-        causes -> "Trigger time cannot be greater than total trajectory time for " + causes + ".",
-        kError
-    );
-    private static final MultiAlert eventNotFound = ChoreoAlert.multiAlert(
-        causes -> "Event Markers " + causes + " not found.",
-        kError
-    );
-    private static final MultiAlert noSamples = ChoreoAlert.multiAlert(
-        causes -> "Trajectories " + causes + " have no samples.",
-        kError
-    );
-    private static final MultiAlert noInitialPose = ChoreoAlert.multiAlert(
-        causes -> "Unable to get initial pose for trajectories " + causes + ".",
-        kError
-    );
-    private static final Alert allianceNotReady = ChoreoAlert.alert("Alliance used but not ready", kError);
 
     private final String name;
     private final Trajectory<? extends TrajectorySample<?>> trajectory;
@@ -162,7 +135,6 @@ public class AutoTrajectory {
     @SuppressWarnings("unchecked")
     private void cmdExecute() {
         if (!allianceCtx.allianceKnownOrIgnored()) {
-            allianceNotReady.set(true);
             return;
         }
         var sampleOpt = trajectory.sampleAt(activeTimer.get(), allianceCtx.doFlip());
@@ -222,7 +194,7 @@ public class AutoTrajectory {
     public Command cmd() {
         // if the trajectory is empty, return a command that will print an error
         if (trajectory.samples().isEmpty()) {
-            return driveSubsystem.runOnce(() -> noSamples.addCause(name)).withName("Trajectory_" + name);
+            return Commands.none();
         }
         return new FunctionalCommand(
             this::cmdInitialize,
@@ -254,7 +226,6 @@ public class AutoTrajectory {
         return Commands.either(
             Commands.runOnce(() -> resetOdometry.accept(getInitialPose().get()), driveSubsystem),
             Commands.runOnce(() -> {
-                noInitialPose.addCause(name);
                 routine.kill();
             }).andThen(driveSubsystem.run(() -> {})),
             () -> getInitialPose().isPresent()
@@ -289,7 +260,6 @@ public class AutoTrajectory {
      */
     public Optional<Pose2d> getInitialPose() {
         if (!allianceCtx.allianceKnownOrIgnored()) {
-            allianceNotReady.set(true);
             return Optional.empty();
         }
         return trajectory.getInitialPose(allianceCtx.doFlip());
@@ -309,7 +279,6 @@ public class AutoTrajectory {
      */
     public Optional<Pose2d> getFinalPose() {
         if (!allianceCtx.allianceKnownOrIgnored()) {
-            allianceNotReady.set(true);
             return Optional.empty();
         }
         return trajectory.getFinalPose(allianceCtx.doFlip());
@@ -522,13 +491,11 @@ public class AutoTrajectory {
     public Trigger atTime(double timeSinceStart) {
         // The timer should never be negative so report this as a warning
         if (timeSinceStart < 0) {
-            triggerTimeNegative.addCause(name);
             return offTrigger;
         }
 
         // The timer should never exceed the total trajectory time so report this as a warning
         if (timeSinceStart > trajectory.getTotalTime()) {
-            triggerTimeAboveMax.addCause(name);
             return offTrigger;
         }
 
@@ -560,7 +527,6 @@ public class AutoTrajectory {
      *     GUI</a>
      */
     public Trigger atTime(String eventName) {
-        boolean foundEvent = false;
         Trigger trig = offTrigger;
 
         for (var event : trajectory.getEvents(eventName)) {
@@ -569,13 +535,6 @@ public class AutoTrajectory {
             // cycle
             // or something like that. If choreo starts proposing memory issues we can look into this.
             trig = trig.or(atTime(event.timestamp));
-            foundEvent = true;
-        }
-
-        // The user probably expects an event to exist if they're trying to do something at that event,
-        // report the missing event.
-        if (!foundEvent) {
-            eventNotFound.addCause(name);
         }
 
         return trig;
@@ -625,7 +584,6 @@ public class AutoTrajectory {
                     return transValid && rotValid;
                 }
             } else {
-                allianceNotReady.set(true);
                 return false;
             }
         }).and(active());
@@ -647,7 +605,6 @@ public class AutoTrajectory {
      *     GUI</a>
      */
     public Trigger atPose(String eventName, double toleranceMeters, double toleranceRadians) {
-        boolean foundEvent = false;
         Trigger trig = offTrigger;
 
         for (var event : trajectory.getEvents(eventName)) {
@@ -662,14 +619,7 @@ public class AutoTrajectory {
                 .map(TrajectorySample::getPose);
             if (poseOpt.isPresent()) {
                 trig = trig.or(atPose(poseOpt.get(), toleranceMeters, toleranceRadians));
-                foundEvent = true;
             }
-        }
-
-        // The user probably expects an event to exist if they're trying to do something at that event,
-        // report the missing event.
-        if (!foundEvent) {
-            eventNotFound.addCause(name);
         }
 
         return trig;
@@ -701,7 +651,6 @@ public class AutoTrajectory {
                     return currentTrans.getDistance(translation) < toleranceMeters;
                 }
             } else {
-                allianceNotReady.set(true);
                 return false;
             }
         }).and(active());
@@ -722,7 +671,6 @@ public class AutoTrajectory {
      *     GUI</a>
      */
     public Trigger atTranslation(String eventName, double toleranceMeters) {
-        boolean foundEvent = false;
         Trigger trig = offTrigger;
 
         for (var event : trajectory.getEvents(eventName)) {
@@ -738,14 +686,7 @@ public class AutoTrajectory {
                 .map(Pose2d::getTranslation);
             if (translationOpt.isPresent()) {
                 trig = trig.or(atTranslation(translationOpt.get(), toleranceMeters));
-                foundEvent = true;
             }
-        }
-
-        // The user probably expects an event to exist if they're trying to do something at that event,
-        // report the missing event.
-        if (!foundEvent) {
-            eventNotFound.addCause(name);
         }
 
         return trig;
@@ -766,10 +707,6 @@ public class AutoTrajectory {
             .filter(e -> e.timestamp >= 0 && e.timestamp <= trajectory.getTotalTime())
             .mapToDouble(e -> e.timestamp)
             .toArray();
-
-        if (times.length == 0) {
-            eventNotFound.addCause("collectEvents(" + eventName + ")");
-        }
 
         return times;
     }
