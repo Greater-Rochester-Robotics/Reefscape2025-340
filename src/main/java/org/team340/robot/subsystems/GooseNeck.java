@@ -504,7 +504,7 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     /**
-     * turn gooseneck to angle position 
+     * turn gooseneck to angle position
      * @param position
      * @param allowGoosing
      * @param left
