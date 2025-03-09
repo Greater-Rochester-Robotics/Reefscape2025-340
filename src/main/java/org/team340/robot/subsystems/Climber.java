@@ -23,8 +23,8 @@ import org.team340.robot.Constants.UpperCAN;
 public final class Climber extends GRRSubsystem {
 
     private static enum ClimberPosition {
-        kDeploy(94),
-        kClimb(380);
+        kDeploy(94.0),
+        kClimb(420.0);
 
         private final TunableDouble rotations;
 
@@ -58,7 +58,7 @@ public final class Climber extends GRRSubsystem {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 387.5;
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 425.0;
 
         PhoenixUtil.run("Clear Climber Sticky Faults", () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
@@ -142,6 +142,7 @@ public final class Climber extends GRRSubsystem {
                 config.NeutralMode = NeutralModeValue.Brake;
                 motor.getConfigurator().apply(config);
                 PhoenixUtil.run("Set Climber Zero", () -> motor.setPosition(0.0));
-            });
+            })
+            .ignoringDisable(true);
     }
 }
