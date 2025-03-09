@@ -75,16 +75,7 @@ public final class GRRDashboard {
      * @return The auto's label.
      */
     public static AutoOption addAuto(AutoRoutine routine, List<AutoTrajectory> trajectories) {
-        String name = null;
-        try {
-            var nameField = routine.getClass().getDeclaredField("name");
-            nameField.setAccessible(true);
-            name = (String) nameField.get(routine);
-        } catch (Exception e) {
-            name = "Unable to fetch name";
-        }
-
-        return addAuto(name, routine.cmd(), trajectories);
+        return addAuto(routine.getName(), routine.cmd(), trajectories);
     }
 
     /**

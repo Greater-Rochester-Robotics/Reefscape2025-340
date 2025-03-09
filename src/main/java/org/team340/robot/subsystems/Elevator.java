@@ -69,7 +69,8 @@ public final class Elevator extends GRRSubsystem {
     }
 
     private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
-    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.5);
+    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
+    private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
     private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
 
@@ -272,8 +273,16 @@ public final class Elevator extends GRRSubsystem {
                     holdPosition.value = -1.0;
                 }
 
-                leadMotor.setControl(positionControl.withPosition(target + fudge.getAsDouble()));
+                if (currentPosition - kZeroTolerance.value() <= 0.0 && target - kZeroTolerance.value() <= 0.0) {
+                    leadMotor.stopMotor();
+                } else {
+                    leadMotor.setControl(positionControl.withPosition(target + fudge.getAsDouble()));
+                }
             })
             .onEnd(leadMotor::stopMotor);
+    }
+
+    public Command thing() {
+        return commandBuilder().onInitialize(() -> {}).onExecute(() -> {}).isFinished(false).onEnd(() -> {});
     }
 }

@@ -150,6 +150,11 @@ public final class GooseNeck extends GRRSubsystem {
         pivotConfig.Slot0.kS = 0.0;
         pivotConfig.Slot0.kV = 2.35;
 
+        pivotConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+        pivotConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 1.0;
+        pivotConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+        pivotConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = -1.0;
+
         pivotConfig.TorqueCurrent.PeakForwardTorqueCurrent = pivotConfig.CurrentLimits.StatorCurrentLimit;
         pivotConfig.TorqueCurrent.PeakReverseTorqueCurrent = -pivotConfig.CurrentLimits.StatorCurrentLimit;
 
