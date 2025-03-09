@@ -133,6 +133,9 @@ public final class Swerve extends GRRSubsystem {
 
     private Translation2d targetSpot = new Translation2d();
     private Translation2d goosePosition = new Translation2d();
+    private Translation2d gooseToTarget = new Translation2d();
+    private double gooseToTargetAngleTrue;
+    private double gooseToTargetAngle;
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
@@ -181,11 +184,11 @@ public final class Swerve extends GRRSubsystem {
         );
 
         onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
-        betweenPoles =
-            Math.abs(
-                robotToReef.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
-            ) <
-            FieldConstants.kL1CenterOrOutside;
+        // betweenPoles =
+        //     Math.abs(
+        //         robotToReef.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
+        //     ) <
+        //     FieldConstants.kL1CenterOrOutside;
 
         reefReference = new Pose2d(reefCenter, reefAngle);
         facingReef = Math2.epsilonEquals(
@@ -246,22 +249,28 @@ public final class Swerve extends GRRSubsystem {
      */
     public DoubleSupplier l1Angle() {
         //TODO: remove targetSpot and Goose Position  intermediate values after testing
-        Translation2d targetOffset = new Translation2d();
-        if (betweenPoles) {
-            targetOffset = new Translation2d(FieldConstants.kPipeOffsetX, 0.0);
-        } else {
-            targetOffset = new Translation2d(
-                FieldConstants.kL1OffsetX,
-                FieldConstants.kL1OffsetY * (this.onLeft ? -1.0 : 1.0)
-            );
-        }
 
-        targetSpot = new Pose2d(
-            reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation())),
-            reefReference.getRotation()
-        ).getTranslation();
+        //find which point to target on the reef
+        targetSpot = getTargetSpot(
+            new Translation2d(FieldConstants.kL1OffsetX, FieldConstants.kL1OffsetY * (this.onLeft ? -1.0 : 1.0))
+        );
+        //find the location of the gooseneck on the field
         goosePosition = state.translation.plus(Constants.kGooseAxis.rotateBy(state.rotation));
-        return () -> targetSpot.minus(goosePosition).rotateBy(state.rotation.unaryMinus()).getAngle().getRotations();
+        //find the vector from the gooseneck to the target
+        gooseToTarget = targetSpot.minus(goosePosition);
+        gooseToTargetAngleTrue = gooseToTarget.getAngle().getDegrees();
+        gooseToTargetAngle = gooseToTarget.rotateBy(reefReference.getRotation().unaryMinus()).getAngle().getDegrees();
+        betweenPoles =
+            Math.abs(gooseToTarget.rotateBy(reefReference.getRotation().unaryMinus()).getAngle().getDegrees()) > 60;
+        if (betweenPoles) {
+            targetSpot = getTargetSpot(new Translation2d(FieldConstants.kPipeFromCenterX, 0.0));
+            gooseToTarget = targetSpot.minus(goosePosition);
+        }
+        return () -> gooseToTarget.rotateBy(state.rotation.unaryMinus()).getAngle().getRotations();
+    }
+
+    public Translation2d getTargetSpot(Translation2d targetOffset) {
+        return reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation()));
     }
 
     /**
