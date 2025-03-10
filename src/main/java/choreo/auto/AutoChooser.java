@@ -2,12 +2,8 @@
 
 package choreo.auto;
 
-import static edu.wpi.first.wpilibj.Alert.AlertType.kError;
-
-import choreo.util.ChoreoAlert;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
-import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.RobotBase;
@@ -41,10 +37,6 @@ import java.util.function.Supplier;
 public class AutoChooser implements Sendable {
 
     static final String NONE_NAME = "Nothing";
-    private static final Alert selectedNonexistentAuto = ChoreoAlert.alert(
-        "Selected an auto that isn't an option",
-        kError
-    );
 
     private final HashMap<String, Supplier<Command>> autoRoutines = new HashMap<>(Map.of(NONE_NAME, Commands::none));
 
@@ -80,9 +72,6 @@ public class AutoChooser implements Sendable {
         if (dsValid || force) {
             if (!autoRoutines.containsKey(selected) && !selected.equals(NONE_NAME)) {
                 selected = NONE_NAME;
-                selectedNonexistentAuto.set(true);
-            } else {
-                selectedNonexistentAuto.set(false);
             }
             allianceAtGeneration = DriverStation.getAlliance();
             nameAtGeneration = selected;

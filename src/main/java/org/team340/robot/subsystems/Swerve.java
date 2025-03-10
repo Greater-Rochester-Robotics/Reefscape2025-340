@@ -101,6 +101,10 @@ public final class Swerve extends GRRSubsystem {
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
     private static final TunableDouble kTurboSpin = Tunable.doubleValue("swerve/kTurboSpin", 8.0);
+
+    private static final TunableDouble kBeachSpeed = Tunable.doubleValue("swerve/kBeachSpeed", 3.0);
+    private static final TunableDouble kBeachTolerance = Tunable.doubleValue("swerve/kBeachTolerance", 0.15);
+
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/kReefAssistKp", 15.0);
     private static final TunableDouble kReefAssistTolerance = Tunable.doubleValue("swerve/kReefAssistTolerance", 1.3);
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
@@ -276,16 +280,29 @@ public final class Swerve extends GRRSubsystem {
      * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
      */
     public Command drive(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
-        return commandBuilder("Swerve.drive()").onExecute(() ->
-            api.applyDriverInput(
+        return commandBuilder("Swerve.drive()").onExecute(() -> {
+            double pitch = state.imu.pitch.getRadians();
+            double roll = state.imu.roll.getRadians();
+
+            var antiBeach = Perspective.kOperator.toPerspectiveSpeeds(
+                new ChassisSpeeds(
+                    Math.abs(pitch) > kBeachTolerance.value() ? Math.copySign(kBeachSpeed.value(), pitch) : 0.0,
+                    Math.abs(roll) > kBeachTolerance.value() ? Math.copySign(kBeachSpeed.value(), -roll) : 0.0,
+                    0.0
+                ),
+                state.rotation
+            );
+
+            api.applyAssistedDriverInput(
                 x.getAsDouble(),
                 y.getAsDouble(),
                 angular.getAsDouble(),
+                antiBeach,
                 Perspective.kOperator,
                 true,
                 true
-            )
-        );
+            );
+        });
     }
 
     /**
@@ -357,13 +374,18 @@ public final class Swerve extends GRRSubsystem {
                 reefAssist.error = robotAngle.minus(reefReference.getRotation()).getRadians();
                 reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * kReefAssistKp.value() : 0.0;
 
-                var assist = ChassisSpeeds.fromRobotRelativeSpeeds(
-                    0.0,
-                    reefAssist.output,
-                    !exitLock.value
-                        ? angularPID.calculate(state.rotation.getRadians(), reefReference.getRotation().getRadians())
-                        : 0.0,
-                    reefReference.getRotation().rotateBy(Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.kPi)
+                var assist = Perspective.kOperator.toPerspectiveSpeeds(
+                    new ChassisSpeeds(
+                        0.0,
+                        reefAssist.output,
+                        !exitLock.value
+                            ? angularPID.calculate(
+                                state.rotation.getRadians(),
+                                reefReference.getRotation().getRadians()
+                            )
+                            : 0.0
+                    ),
+                    reefReference.getRotation()
                 );
 
                 if (!Math2.epsilonEquals(angularInput, 0.0)) exitLock.value = true;

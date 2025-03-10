@@ -465,6 +465,7 @@ export class NTSvelteClient {
     private _usage: number = 0;
 
     private _topicsOnlySubuid: number | null = null;
+    private _autoOptionsSubuid: number | null = null;
     private _publishers: Map<string, NTPublisher> = new Map();
     private _subscribers: Map<string, NTSubscriber> = new Map();
     private _serverTopics: Writable<Map<string, NTTopic>> = writable(new Map());
@@ -592,6 +593,25 @@ export class NTSvelteClient {
                 },
             });
             if (!sent) this._topicsOnlySubuid = -1;
+        }
+    }
+
+    public subAutoOptions(): void {
+        if (this._autoOptionsSubuid === null || this._autoOptionsSubuid < 0) {
+            this._autoOptionsSubuid = this._genUID();
+            const sent = this._sendJSON({
+                method: `subscribe`,
+                params: {
+                    subuid: this._autoOptionsSubuid,
+                    topics: [`/GRRDashboard/autos/options`],
+                    options: {
+                        periodic: this._settings.subscribers.periodic / 1000,
+                        topicsonly: true,
+                        prefix: true,
+                    },
+                },
+            });
+            if (!sent) this._autoOptionsSubuid = -1;
         }
     }
 

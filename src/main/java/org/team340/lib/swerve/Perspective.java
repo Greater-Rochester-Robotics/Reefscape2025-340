@@ -15,17 +15,17 @@ public enum Perspective {
      */
     kOperator {
         @Override
-        ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return (Alliance.isBlue() ? kBlue : kRed).toRobotSpeeds(speeds, robotAngle);
         }
 
         @Override
-        ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return (Alliance.isBlue() ? kBlue : kRed).toPerspectiveSpeeds(speeds, robotAngle);
         }
 
         @Override
-        Rotation2d getTareRotation() {
+        public Rotation2d getTareRotation() {
             return (Alliance.isBlue() ? kBlue : kRed).getTareRotation();
         }
     },
@@ -36,17 +36,17 @@ public enum Perspective {
      */
     kBlue {
         @Override
-        ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle);
         }
 
         @Override
-        ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromRobotRelativeSpeeds(speeds, robotAngle);
         }
 
         @Override
-        Rotation2d getTareRotation() {
+        public Rotation2d getTareRotation() {
             return Rotation2d.kZero;
         }
     },
@@ -57,17 +57,17 @@ public enum Perspective {
      */
     kRed {
         @Override
-        ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle.rotateBy(Rotation2d.kPi));
         }
 
         @Override
-        ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromRobotRelativeSpeeds(speeds, robotAngle.rotateBy(Rotation2d.kPi));
         }
 
         @Override
-        Rotation2d getTareRotation() {
+        public Rotation2d getTareRotation() {
             return Rotation2d.kPi;
         }
     },
@@ -78,17 +78,17 @@ public enum Perspective {
      */
     kRobot {
         @Override
-        ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return speeds;
         }
 
         @Override
-        ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
+        public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return speeds;
         }
 
         @Override
-        Rotation2d getTareRotation() {
+        public Rotation2d getTareRotation() {
             // Will no-op downstream.
             return null;
         }
@@ -99,18 +99,18 @@ public enum Perspective {
      * @param speeds The perspective relative speeds to convert.
      * @param robotAngle The blue origin relative angle of the robot.
      */
-    abstract ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle);
+    public abstract ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle);
 
     /**
      * Converts robot relative speeds to the perspective relative speeds.
      * @param speeds The robot relative speeds to convert.
      * @param robotAngle The blue origin relative angle of the robot.
      */
-    abstract ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle);
+    public abstract ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle);
 
     /**
      * Gets the rotation to apply as the new zero when
      * taring the robot's rotation to the perspective.
      */
-    abstract Rotation2d getTareRotation();
+    public abstract Rotation2d getTareRotation();
 }
