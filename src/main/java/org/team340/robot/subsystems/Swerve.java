@@ -246,20 +246,14 @@ public final class Swerve extends GRRSubsystem {
      */
     public DoubleSupplier l1Angle() {
         //TODO: remove targetSpot and Goose Position  intermediate values after testing
-        Translation2d targetOffset = new Translation2d();
-        if (betweenPoles) {
-            targetOffset = new Translation2d(FieldConstants.kPipeFromCenterX, 0.0);
-        } else {
-            targetOffset = new Translation2d(
+        Translation2d targetOffset = betweenPoles?
+            new Translation2d(FieldConstants.kPipeFromCenterX, 0.0):
+            new Translation2d(
                 FieldConstants.kL1OffsetX,
                 FieldConstants.kL1OffsetY * (this.onLeft ? -1.0 : 1.0)
             );
-        }
 
-        targetSpot = new Pose2d(
-            reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation())),
-            reefReference.getRotation()
-        ).getTranslation();
+        targetSpot = reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation()));
         goosePosition = state.translation.plus(Constants.kGooseAxis.rotateBy(state.rotation));
         return () -> targetSpot.minus(goosePosition).rotateBy(state.rotation.unaryMinus()).getAngle().getRotations();
     }
