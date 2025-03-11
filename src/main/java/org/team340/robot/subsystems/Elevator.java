@@ -183,6 +183,10 @@ public final class Elevator extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
+    public boolean safeForIntake() {
+        return getPosition() <= ElevatorPosition.kIntake.rotations() + kCloseToTolerance.value();
+    }
+
     /**
      * Gets the elevator's current position, in rotations.
      */

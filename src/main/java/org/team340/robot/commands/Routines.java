@@ -85,10 +85,17 @@ public final class Routines {
             }
         };
 
-        return deadline(
-            gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
-            intake.intake(chokingGoose),
-            elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
+        return sequence(
+            deadline(
+                waitUntil(elevator::safeForIntake),
+                gooseNeck.stow(robot::safeForGoose),
+                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
+            ),
+            deadline(
+                gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
+                intake.intake(chokingGoose),
+                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
+            )
         ).withName("Routines.intake()");
     }
 
