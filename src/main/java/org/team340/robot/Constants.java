@@ -35,7 +35,7 @@ public final class Constants {
         public static final double kPipeOffsetX = -0.681;
         public static final double kPipeOffsetY = -0.164;
         public static final double kPipeFromCenterX = -0.533;
-        public static final double kL1CenterOrOutside = 0.188;//was .291
+        public static final double kL1CenterOrOutside = 0.188; //was .291
 
         public static final double kL1OffsetX = -0.584; //was -.533
         public static final double kL1OffsetY = -0.419;
