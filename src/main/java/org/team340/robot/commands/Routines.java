@@ -89,12 +89,13 @@ public final class Routines {
             deadline(
                 waitUntil(elevator::safeForIntake),
                 gooseNeck.stow(robot::safeForGoose),
-                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
+                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
+                intake.swallow()
             ),
             deadline(
                 gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
-                intake.intake(chokingGoose),
-                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose)
+                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
+                intake.intake(chokingGoose)
             )
         ).withName("Routines.intake()");
     }

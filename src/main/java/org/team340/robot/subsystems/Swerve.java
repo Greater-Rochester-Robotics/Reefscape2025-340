@@ -138,8 +138,8 @@ public final class Swerve extends GRRSubsystem {
         state = api.state;
         vision = VisionManager.getInstance();
 
-        autoPIDx = new PIDController(15.0, 0.0, 0.0);
-        autoPIDy = new PIDController(15.0, 0.0, 0.0);
+        autoPIDx = new PIDController(10.0, 0.0, 0.0);
+        autoPIDy = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 

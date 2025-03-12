@@ -67,9 +67,9 @@ public final class Climber extends GRRSubsystem {
         velocity = motor.getVelocity();
 
         PhoenixUtil.run("Set Climber Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(10, position, velocity)
+            BaseStatusSignal.setUpdateFrequencyForAll(100, position, velocity)
         );
-        PhoenixUtil.run("Optimize Climber CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(5, motor));
+        PhoenixUtil.run("Optimize Climber CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(10, motor));
 
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = true;

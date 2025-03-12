@@ -88,12 +88,12 @@ public final class Robot extends TimedRobot {
         // Setup lights
         lights.disabled().until(this::isEnabled).schedule();
         RobotModeTriggers.disabled().whileTrue(lights.disabled());
-        RobotModeTriggers.autonomous().whileTrue(parallel(lights.sides.flames(), lights.top.off()));
+        RobotModeTriggers.autonomous().whileTrue(lights.sides.flames());
         RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
-        RobotModeTriggers.teleop()
+        new Trigger(this::isEnabled)
             .and(gooseNeck::hasCoral)
             .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
-            .onFalse(lights.top.scored().onlyIf(this::isTeleop));
+            .onFalse(lights.top.scored().onlyIf(this::isEnabled));
 
         // Set default commands
         elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, this::safeForGoose));
