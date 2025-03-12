@@ -9,15 +9,13 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import org.team340.lib.util.DisableWatchdog;
-import org.team340.lib.util.GRRDashboard;
 import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
@@ -82,7 +80,7 @@ public final class Robot extends TimedRobot {
         coDriver = new CommandXboxController(Constants.kCoDriver);
 
         // Create triggers
-        RobotModeTriggers.autonomous().whileTrue(GRRDashboard.runSelectedAuto());
+        RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
         Trigger gooseAround = driver.x().negate().and(coDriver.a().negate());
 
         // Setup lights
@@ -106,13 +104,9 @@ public final class Robot extends TimedRobot {
         driver.x().onTrue(none()); // Reserved (No goosing around)
         driver.y().onTrue(none()); // Reserved (Force goose spit)
 
-        driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
-        driver.back().whileTrue(swerve.goToAutoStart());
         driver.start().whileTrue(routines.babyBird(driver.start()));
 
-        driver.leftBumper().whileTrue(selection.setLeft().andThen(routines.assistedScore(driver.y(), gooseAround)));
-        driver.rightBumper().whileTrue(selection.setRight().andThen(routines.assistedScore(driver.y(), gooseAround)));
-
+        driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
         driver.axisLessThan(kRightY.value, -0.5).onTrue(selection.incrementLevel());
         driver.axisGreaterThan(kRightY.value, 0.5).onTrue(selection.decrementLevel());
 
@@ -120,19 +114,32 @@ public final class Robot extends TimedRobot {
         driver.povDown().whileTrue(routines.swallow());
         driver.povLeft().onTrue(swerve.tareRotation());
 
+        driver.leftBumper().onTrue(selection.setLeft()).whileTrue(routines.assistedScore(driver.y(), gooseAround));
+        driver.rightBumper().onTrue(selection.setRight()).whileTrue(routines.assistedScore(driver.y(), gooseAround));
+
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
         coDriver.y().whileTrue(routines.climb());
 
-        coDriver.back().whileTrue(coDriverRumble(true));
-        coDriver.start().whileTrue(coDriverRumble(false));
+        coDriver.leftStick().and(coDriver.rightStick()).toggleOnTrue(climber.coastMode());
 
         coDriver.povUp().onTrue(selection.incrementLevel());
         coDriver.povDown().onTrue(selection.decrementLevel());
 
-        coDriver.leftStick().and(coDriver.rightStick()).toggleOnTrue(climber.coastMode());
+        // Set thread priority
+        Threads.setCurrentThreadPriority(true, 10);
     }
 
+    /**
+     * Returns the current match time in seconds.
+     */
+    public double matchTime() {
+        return Math.max(DriverStation.getMatchTime(), 0.0);
+    }
+
+    /**
+     * Returns {@code true} if it is safe for the goose neck and elevator to move.
+     */
     public boolean safeForGoose() {
         return !gooseNeck.beamBroken() && swerve.wildlifeConservationProgram();
     }
@@ -152,21 +159,13 @@ public final class Robot extends TimedRobot {
         return driver.getLeftTriggerAxis() - driver.getRightTriggerAxis();
     }
 
-    private Command coDriverRumble(boolean left) {
-        RumbleType rumbleType = left ? RumbleType.kLeftRumble : RumbleType.kRightRumble;
-        return startEnd(() -> coDriver.setRumble(rumbleType, 1.0), () -> coDriver.setRumble(rumbleType, 0.0))
-            .ignoringDisable(true)
-            .withName("Robot.coDriverRumble(" + left + ")");
-    }
-
     @Override
     public void robotPeriodic() {
-        Profiler.start("RobotPeriodic");
-        Profiler.run("CommandScheduler", scheduler::run);
-        Profiler.run("Lights", lights::update);
-        Profiler.run("Epilogue", () -> Epilogue.update(this));
-        Profiler.run("GRRDashboard", GRRDashboard::update);
-        Profiler.run("Tunables", Tunable::update);
+        Profiler.start("robotPeriodic");
+        Profiler.run("scheduler", scheduler::run);
+        Profiler.run("lights", lights::update);
+        Profiler.run("epilogue", () -> Epilogue.update(this));
+        Profiler.run("tunables", Tunable::update);
         Profiler.end();
     }
 

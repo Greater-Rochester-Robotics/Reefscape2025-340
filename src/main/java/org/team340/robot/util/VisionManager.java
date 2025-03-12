@@ -3,7 +3,7 @@ package org.team340.robot.util;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
+import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -23,7 +23,7 @@ import org.team340.robot.Constants.Cameras;
 /**
  * Manages all of the robot's cameras.
  */
-@Logged(strategy = Strategy.OPT_IN)
+@Logged
 public final class VisionManager {
 
     private static final AprilTagFields kField = AprilTagFields.k2025ReefscapeWelded;
@@ -32,15 +32,17 @@ public final class VisionManager {
     private static VisionManager instance = null;
 
     public static VisionManager getInstance() {
-        if (instance == null) {
-            instance = new VisionManager();
-        }
-
+        if (instance == null) instance = new VisionManager();
         return instance;
     }
 
-    private final AprilTagFieldLayout aprilTags;
+    @NotLogged
     private final Camera[] cameras;
+
+    private final AprilTagFieldLayout aprilTags;
+
+    private final List<Pose2d> estimates = new ArrayList<>();
+    private final List<Pose3d> targets = new ArrayList<>();
 
     private VisionManager() {
         aprilTags = AprilTagFieldLayout.loadField(kField);
@@ -56,29 +58,24 @@ public final class VisionManager {
     }
 
     /**
-     * Adds yaw measurements to be used for pose estimation.
+     * Gets unread results from all cameras.
      * @param yawMeasurements Robot yaw measurements since the last robot cycle.
      */
-    public void addYawMeasurements(List<TimestampedYaw> yawMeasurements) {
+    public VisionMeasurement[] getUnreadResults(List<TimestampedYaw> yawMeasurements) {
+        List<VisionMeasurement> measurements = new ArrayList<>();
+
+        estimates.clear();
+        targets.clear();
+
         for (var camera : cameras) {
             camera.addYawMeasurements(yawMeasurements);
-        }
-    }
-
-    /**
-     * Gets unread results from all cameras.
-     */
-    public VisionEstimates getUnreadResults() {
-        List<VisionMeasurement> measurements = new ArrayList<>();
-        List<Pose3d> targets = new ArrayList<>();
-
-        for (var camera : cameras) {
-            var result = camera.getUnreadResults();
-            measurements.addAll(result.measurements());
-            targets.addAll(result.targets());
+            camera.refresh(measurements, targets);
         }
 
-        return new VisionEstimates(measurements, targets);
+        estimates.addAll(measurements.stream().map(m -> m.visionPose()).toList());
+        targets.addAll(targets);
+
+        return measurements.stream().toArray(VisionMeasurement[]::new);
     }
 
     private class Camera {
@@ -107,12 +104,12 @@ public final class VisionManager {
         }
 
         /**
-         * Gets unread results from the camera.
+         * Refreshes the provided lists with new unread results from the camera. Note
+         * that this method does not remove any elements from the supplied lists.
+         * @param measurements A list of vision measurements to add to.
+         * @param targets A list of targets to add to.
          */
-        private VisionEstimates getUnreadResults() {
-            List<VisionMeasurement> measurements = new ArrayList<>();
-            List<Pose3d> targets = new ArrayList<>();
-
+        private void refresh(List<VisionMeasurement> measurements, List<Pose3d> targets) {
             for (PhotonPipelineResult result : camera.getAllUnreadResults()) {
                 var estimate = estimator.update(result);
                 if (estimate.isEmpty() || estimate.get().targetsUsed.isEmpty()) continue;
@@ -137,8 +134,6 @@ public final class VisionManager {
 
                 targets.add(tagLocation.get());
             }
-
-            return new VisionEstimates(measurements, targets);
         }
 
         /**
@@ -147,15 +142,6 @@ public final class VisionManager {
          */
         private boolean useTag(int id) {
             return Alliance.isBlue() ? (id >= 17 && id <= 22) : (id >= 6 && id <= 11);
-        }
-    }
-
-    public static final record VisionEstimates(List<VisionMeasurement> measurements, List<Pose3d> targets) {
-        /**
-         * Returns all robot pose estimates in the calculated measurements.
-         */
-        public List<Pose2d> getPoses() {
-            return measurements.stream().map(m -> m.visionPose()).toList();
         }
     }
 }

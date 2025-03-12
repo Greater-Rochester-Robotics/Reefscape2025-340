@@ -217,6 +217,10 @@ public final class GooseNeck extends GRRSubsystem {
                 MathUtil.inputModulus(candi.getPWM2Position(false).waitForUpdate(1.0).getValueAsDouble(), -0.5, 0.5)
             )
         );
+
+        // Warm-up enums
+        GoosePosition.kStow.rotations();
+        GooseSpeed.kIntake.voltage();
     }
 
     @Override
