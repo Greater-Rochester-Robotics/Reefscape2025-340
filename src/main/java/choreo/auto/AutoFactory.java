@@ -204,8 +204,8 @@ public class AutoFactory {
      *
      * @see AutoRoutine#trajectory(String)
      */
-    AutoTrajectory trajectory(String trajectoryName, AutoRoutine routine, boolean useBindings) {
-        Optional<? extends Trajectory<?>> optTrajectory = trajectoryCache.loadTrajectory(trajectoryName);
+    AutoTrajectory trajectory(String trajectoryName, AutoRoutine routine, boolean mirror, boolean useBindings) {
+        Optional<? extends Trajectory<?>> optTrajectory = trajectoryCache.loadTrajectory(trajectoryName, mirror);
         Trajectory<?> trajectory;
         if (optTrajectory.isPresent()) {
             trajectory = optTrajectory.get();
@@ -221,8 +221,18 @@ public class AutoFactory {
      *
      * @see AutoRoutine#trajectory(String, int)
      */
-    AutoTrajectory trajectory(String trajectoryName, final int splitIndex, AutoRoutine routine, boolean useBindings) {
-        Optional<? extends Trajectory<?>> optTrajectory = trajectoryCache.loadTrajectory(trajectoryName, splitIndex);
+    AutoTrajectory trajectory(
+        String trajectoryName,
+        final int splitIndex,
+        AutoRoutine routine,
+        boolean mirror,
+        boolean useBindings
+    ) {
+        Optional<? extends Trajectory<?>> optTrajectory = trajectoryCache.loadTrajectory(
+            trajectoryName,
+            splitIndex,
+            mirror
+        );
         Trajectory<?> trajectory;
         if (optTrajectory.isPresent()) {
             trajectory = optTrajectory.get();
@@ -275,8 +285,8 @@ public class AutoFactory {
      * @param trajectoryName The name of the trajectory to use.
      * @return A new {@link AutoTrajectory}.
      */
-    public Command trajectoryCmd(String trajectoryName) {
-        return trajectory(trajectoryName, voidRoutine, false).cmd();
+    public Command trajectoryCmd(String trajectoryName, boolean mirror) {
+        return trajectory(trajectoryName, voidRoutine, mirror, false).cmd();
     }
 
     /**
@@ -294,8 +304,8 @@ public class AutoFactory {
      * @param splitIndex The index of the split trajectory to use.
      * @return A new {@link AutoTrajectory}.
      */
-    public Command trajectoryCmd(String trajectoryName, final int splitIndex) {
-        return trajectory(trajectoryName, splitIndex, voidRoutine, false).cmd();
+    public Command trajectoryCmd(String trajectoryName, final int splitIndex, boolean mirror) {
+        return trajectory(trajectoryName, splitIndex, voidRoutine, mirror, false).cmd();
     }
 
     /**
@@ -324,8 +334,8 @@ public class AutoFactory {
      * @param trajectoryName The name of the trajectory to use.
      * @return A command that resets the robot's odometry.
      */
-    public Command resetOdometry(String trajectoryName) {
-        return trajectory(trajectoryName, voidRoutine, false).resetOdometry();
+    public Command resetOdometry(String trajectoryName, boolean mirror) {
+        return trajectory(trajectoryName, voidRoutine, mirror, false).resetOdometry();
     }
 
     /**
@@ -335,8 +345,8 @@ public class AutoFactory {
      * @param splitIndex The index of the split trajectory to use.
      * @return A command that resets the robot's odometry.
      */
-    public Command resetOdometry(String trajectoryName, final int splitIndex) {
-        return trajectory(trajectoryName, splitIndex, voidRoutine, false).resetOdometry();
+    public Command resetOdometry(String trajectoryName, final int splitIndex, boolean mirror) {
+        return trajectory(trajectoryName, splitIndex, voidRoutine, mirror, false).resetOdometry();
     }
 
     /**

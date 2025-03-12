@@ -59,8 +59,10 @@ public final class Autos {
         chooser = new AutoChooser();
 
         // Add autonomous modes to the dashboard
-        chooser.addRoutine("Left L4 x3 (Hopper)", this::l4x3Hopper);
-        chooser.addRoutine("Left L4 x3 (Baby Bird)", this::l4x3BabyBird);
+        chooser.addRoutine("Left L4 x3 (Hopper)", () -> l4x3Hopper(false));
+        chooser.addRoutine("Right L4 x3 (Hopper)", () -> l4x3Hopper(true));
+        chooser.addRoutine("Left L4 x3 (Baby Bird)", () -> l4x3BabyBird(false));
+        chooser.addRoutine("Right L4 x3 (Baby Bird)", () -> l4x3BabyBird(true));
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -71,15 +73,15 @@ public final class Autos {
         return chooser.selectedCommandScheduler();
     }
 
-    private AutoRoutine l4x3Hopper() {
+    private AutoRoutine l4x3Hopper(boolean mirror) {
         AutoRoutine routine = factory.newRoutine("L4 x3 (Hopper)");
 
-        AutoTrajectory startToJ = routine.trajectory("Start-J");
-        AutoTrajectory jToHopper = routine.trajectory("J-Hopper");
-        AutoTrajectory hopperToK = routine.trajectory("Hopper-K");
-        AutoTrajectory kToHopper = routine.trajectory("K-Hopper");
-        AutoTrajectory hopperToL = routine.trajectory("Hopper-L");
-        AutoTrajectory lToHopper = routine.trajectory("L-Hopper");
+        AutoTrajectory startToJ = routine.trajectory("Start-J", mirror);
+        AutoTrajectory jToHopper = routine.trajectory("J-Hopper", mirror);
+        AutoTrajectory hopperToK = routine.trajectory("Hopper-K", mirror);
+        AutoTrajectory kToHopper = routine.trajectory("K-Hopper", mirror);
+        AutoTrajectory hopperToL = routine.trajectory("Hopper-L", mirror);
+        AutoTrajectory lToHopper = routine.trajectory("L-Hopper", mirror);
 
         routine
             .active()
@@ -111,15 +113,15 @@ public final class Autos {
         return routine;
     }
 
-    private AutoRoutine l4x3BabyBird() {
+    private AutoRoutine l4x3BabyBird(boolean mirror) {
         AutoRoutine routine = factory.newRoutine("L4 x3 (Baby Bird)");
 
-        AutoTrajectory startToJ = routine.trajectory("Start-J");
-        AutoTrajectory jToBird = routine.trajectory("J-Bird");
-        AutoTrajectory birdToK = routine.trajectory("Bird-K");
-        AutoTrajectory kToBird = routine.trajectory("K-Bird");
-        AutoTrajectory birdToL = routine.trajectory("Bird-L");
-        AutoTrajectory lToHopper = routine.trajectory("L-Hopper");
+        AutoTrajectory startToJ = routine.trajectory("Start-J", mirror);
+        AutoTrajectory jToBird = routine.trajectory("J-Bird", mirror);
+        AutoTrajectory birdToK = routine.trajectory("Bird-K", mirror);
+        AutoTrajectory kToBird = routine.trajectory("K-Bird", mirror);
+        AutoTrajectory birdToL = routine.trajectory("Bird-L", mirror);
+        AutoTrajectory lToHopper = routine.trajectory("L-Hopper", mirror);
 
         routine
             .active()
