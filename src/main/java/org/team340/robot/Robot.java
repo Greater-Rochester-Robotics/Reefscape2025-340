@@ -126,6 +126,8 @@ public final class Robot extends TimedRobot {
         coDriver.povUp().onTrue(selection.incrementLevel());
         coDriver.povDown().onTrue(selection.decrementLevel());
 
+        coDriver.leftBumper().and(coDriver.rightBumper()).toggleOnTrue(routines.killTheGoose());
+
         // Set thread priority
         Threads.setCurrentThreadPriority(true, 10);
     }
