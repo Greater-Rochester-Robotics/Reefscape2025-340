@@ -204,13 +204,21 @@ public final class Choreo {
          * @return the loaded trajectory, or `Optional.empty()` if the trajectory could not be loaded.
          * @see Choreo#loadTrajectory(String)
          */
-        public Optional<? extends Trajectory<?>> loadTrajectory(String trajectoryName) {
+        public Optional<? extends Trajectory<?>> loadTrajectory(String trajectoryName, boolean mirror) {
+            String mirrorKey = (mirror ? "Mirrored.:." : "") + trajectoryName;
             requireNonNullParam(trajectoryName, "trajectoryName", "TrajectoryCache.loadTrajectory");
-            if (cache.containsKey(trajectoryName)) {
-                return Optional.of(cache.get(trajectoryName));
+            if (cache.containsKey(mirrorKey)) {
+                return Optional.of(cache.get(mirrorKey));
+            } else if (cache.containsKey(trajectoryName)) {
+                return Optional.of(cache.get(trajectoryName)).map(trajectory -> {
+                    trajectory = trajectory.mirrored();
+                    cache.put(mirrorKey, trajectory);
+                    return trajectory;
+                });
             } else {
                 return Choreo.loadTrajectory(trajectoryName).map(trajectory -> {
-                    cache.put(trajectoryName, trajectory);
+                    if (mirror) trajectory = trajectory.mirrored();
+                    cache.put(mirrorKey, trajectory);
                     return trajectory;
                 });
             }
@@ -229,10 +237,11 @@ public final class Choreo {
          * @return the loaded trajectory, or `Optional.empty()` if the trajectory could not be loaded.
          * @see Choreo#loadTrajectory(String)
          */
-        public Optional<? extends Trajectory<?>> loadTrajectory(String trajectoryName, int splitIndex) {
+        public Optional<? extends Trajectory<?>> loadTrajectory(String trajectoryName, int splitIndex, boolean mirror) {
             requireNonNullParam(trajectoryName, "trajectoryName", "TrajectoryCache.loadTrajectory");
             // make the key something that could never possibly be a valid trajectory name
-            String key = trajectoryName + ".:." + splitIndex;
+            String key = (mirror ? "Mirrored.:." : "") + trajectoryName + ".:." + splitIndex;
+            // This isn't optimal, mirrored trajectories could be cached better
             if (cache.containsKey(key)) {
                 return Optional.of(cache.get(key));
             } else if (cache.containsKey(trajectoryName)) {
@@ -240,11 +249,13 @@ public final class Choreo {
                     .get(trajectoryName)
                     .getSplit(splitIndex)
                     .map(trajectory -> {
+                        if (mirror) trajectory.mirrored();
                         cache.put(key, trajectory);
                         return trajectory;
                     });
             } else {
                 return Choreo.loadTrajectory(trajectoryName).flatMap(trajectory -> {
+                    if (mirror) trajectory = trajectory.mirrored();
                     cache.put(trajectoryName, trajectory);
                     return trajectory
                         .getSplit(splitIndex)

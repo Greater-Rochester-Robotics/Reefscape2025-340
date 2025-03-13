@@ -76,23 +76,27 @@ public final class Tunable {
     public static final class TunableBoolean implements AutoCloseable {
 
         private final BooleanEntry entry;
+        private boolean value;
 
         private TunableBoolean(String name, boolean defaultValue, BooleanConsumer onChange) {
             entry = nt.getBooleanTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
-            if (onChange != null) {
-                pollChanges.bind(() -> {
+            value = defaultValue;
+
+            pollChanges.bind(() -> {
+                value = entry.get();
+                if (onChange != null) {
                     boolean[] changes = entry.readQueueValues();
                     if (changes.length > 0) onChange.accept(changes[changes.length - 1]);
-                });
-            }
+                }
+            });
         }
 
         /**
          * Returns the value of the tunable.
          */
         public boolean value() {
-            return entry.get();
+            return value;
         }
 
         @Override
@@ -127,23 +131,27 @@ public final class Tunable {
     public static final class TunableInteger implements AutoCloseable {
 
         private final IntegerEntry entry;
+        private int value;
 
         private TunableInteger(String name, int defaultValue, IntConsumer onChange) {
             entry = nt.getIntegerTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
-            if (onChange != null) {
-                pollChanges.bind(() -> {
+            value = defaultValue;
+
+            pollChanges.bind(() -> {
+                value = (int) entry.get();
+                if (onChange != null) {
                     long[] changes = entry.readQueueValues();
                     if (changes.length > 0) onChange.accept((int) changes[changes.length - 1]);
-                });
-            }
+                }
+            });
         }
 
         /**
          * Returns the value of the tunable.
          */
         public int value() {
-            return (int) entry.get();
+            return value;
         }
 
         @Override
@@ -178,23 +186,27 @@ public final class Tunable {
     public static final class TunableFloat implements AutoCloseable {
 
         private final FloatEntry entry;
+        private float value;
 
         private TunableFloat(String name, float defaultValue, FloatConsumer onChange) {
             entry = nt.getFloatTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
-            if (onChange != null) {
-                pollChanges.bind(() -> {
+            value = defaultValue;
+
+            pollChanges.bind(() -> {
+                value = entry.get();
+                if (onChange != null) {
                     float[] changes = entry.readQueueValues();
                     if (changes.length > 0) onChange.accept(changes[changes.length - 1]);
-                });
-            }
+                }
+            });
         }
 
         /**
          * Returns the value of the tunable.
          */
         public float value() {
-            return entry.get();
+            return value;
         }
 
         @Override
@@ -229,23 +241,27 @@ public final class Tunable {
     public static final class TunableDouble implements AutoCloseable {
 
         private final DoubleEntry entry;
+        private double value;
 
         private TunableDouble(String name, double defaultValue, DoubleConsumer onChange) {
             entry = nt.getDoubleTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
-            if (onChange != null) {
-                pollChanges.bind(() -> {
+            value = defaultValue;
+
+            pollChanges.bind(() -> {
+                value = entry.get();
+                if (onChange != null) {
                     double[] changes = entry.readQueueValues();
                     if (changes.length > 0) onChange.accept(changes[changes.length - 1]);
-                });
-            }
+                }
+            });
         }
 
         /**
          * Returns the value of the tunable.
          */
         public double value() {
-            return entry.get();
+            return value;
         }
 
         @Override
@@ -280,23 +296,27 @@ public final class Tunable {
     public static final class TunableString implements AutoCloseable {
 
         private final StringEntry entry;
+        private String value;
 
         private TunableString(String name, String defaultValue, Consumer<String> onChange) {
             entry = nt.getStringTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
-            if (onChange != null) {
-                pollChanges.bind(() -> {
+            value = defaultValue;
+
+            pollChanges.bind(() -> {
+                value = entry.get();
+                if (onChange != null) {
                     String[] changes = entry.readQueueValues();
                     if (changes.length > 0) onChange.accept(changes[changes.length - 1]);
-                });
-            }
+                }
+            });
         }
 
         /**
          * Returns the value of the tunable.
          */
         public String value() {
-            return entry.get();
+            return value;
         }
 
         @Override

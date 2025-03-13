@@ -34,8 +34,8 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.6),
-        kBarf(0.6),
+        kIntake(0.5),
+        kBarf(0.5),
         kSwallow(0.9),
         kBabyBird(10.9),
         kL1(0.0),
@@ -182,6 +182,10 @@ public final class Elevator extends GRRSubsystem {
     }
 
     // *************** Helper Functions ***************
+
+    public boolean safeForIntake() {
+        return getPosition() <= ElevatorPosition.kIntake.rotations() + kCloseToTolerance.value();
+    }
 
     /**
      * Gets the elevator's current position, in rotations.

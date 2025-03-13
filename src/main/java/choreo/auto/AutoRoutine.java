@@ -178,8 +178,8 @@ public class AutoRoutine {
      * @param trajectoryName The name of the trajectory to use.
      * @return A new {@link AutoTrajectory}.
      */
-    public AutoTrajectory trajectory(String trajectoryName) {
-        return factory.trajectory(trajectoryName, this, true);
+    public AutoTrajectory trajectory(String trajectoryName, boolean mirror) {
+        return factory.trajectory(trajectoryName, this, mirror, true);
     }
 
     /**
@@ -189,8 +189,8 @@ public class AutoRoutine {
      * @param splitIndex The index of the split trajectory to use.
      * @return A new {@link AutoTrajectory}.
      */
-    public AutoTrajectory trajectory(String trajectoryName, final int splitIndex) {
-        return factory.trajectory(trajectoryName, splitIndex, this, true);
+    public AutoTrajectory trajectory(String trajectoryName, final int splitIndex, boolean mirror) {
+        return factory.trajectory(trajectoryName, splitIndex, this, mirror, true);
     }
 
     /**

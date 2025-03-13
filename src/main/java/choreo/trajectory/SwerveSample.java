@@ -4,6 +4,7 @@ package choreo.trajectory;
 
 import choreo.util.ChoreoAllianceFlipUtil;
 import choreo.util.ChoreoArrayUtil;
+import choreo.util.FieldDimensions;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -238,6 +239,46 @@ public class SwerveSample implements TrajectorySample<SwerveSample> {
                 Arrays.stream(this.moduleForcesY()).map(y -> -y).toArray()
             );
         };
+    }
+
+    @Override
+    public SwerveSample mirrored() {
+        return new SwerveSample(
+            this.t,
+            this.x,
+            FieldDimensions.FIELD_WIDTH - this.y,
+            -this.heading,
+            this.vx,
+            -this.vy,
+            -this.omega,
+            this.ax,
+            -this.ay,
+            -this.alpha,
+            /**
+             * CAUTION
+             * Needed to implement mirroring fast. Didn't feel like thinking
+             * about flipping module forces, since we don't use them, so
+             * the values below are (probably) wrong.
+             */
+            // FL, FR, BL, BR
+            // Mirrored
+            // -FR, -FL, -BR, -BL
+            new double[] {
+                -this.moduleForcesX()[1],
+                -this.moduleForcesX()[0],
+                -this.moduleForcesX()[3],
+                -this.moduleForcesX()[2]
+            },
+            // FL, FR, BL, BR
+            // Mirrored
+            // FR, FL, BR, BL
+            new double[] {
+                this.moduleForcesY()[1],
+                this.moduleForcesY()[0],
+                this.moduleForcesY()[3],
+                this.moduleForcesY()[2]
+            }
+        );
     }
 
     /** The struct for the SwerveSample class. */

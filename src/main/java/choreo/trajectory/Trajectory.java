@@ -222,6 +222,19 @@ public class Trajectory<SampleType extends TrajectorySample<SampleType>> {
     }
 
     /**
+     * Returns this trajectory, mirrored across the field midline.
+     *
+     * @return this trajectory, mirrored across the field midline.
+     */
+    public Trajectory<SampleType> mirrored() {
+        var mirroredStates = new ArrayList<SampleType>();
+        for (var state : samples) {
+            mirroredStates.add(state.mirrored());
+        }
+        return new Trajectory<SampleType>(this.name, mirroredStates, this.splits, this.events);
+    }
+
+    /**
      * Returns a list of all events with the given name in the trajectory.
      *
      * @param eventName The name of the event.

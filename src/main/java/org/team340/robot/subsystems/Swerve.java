@@ -9,25 +9,18 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.swerve.Perspective;
 import org.team340.lib.swerve.SwerveAPI;
-import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.swerve.SwerveState;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.config.SwerveModuleConfig;
@@ -35,7 +28,6 @@ import org.team340.lib.swerve.hardware.SwerveEncoders;
 import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
-import org.team340.lib.util.GRRDashboard;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
 import org.team340.lib.util.Tunable;
@@ -45,7 +37,6 @@ import org.team340.robot.Constants;
 import org.team340.robot.Constants.FieldConstants;
 import org.team340.robot.Constants.LowerCAN;
 import org.team340.robot.util.VisionManager;
-import org.team340.robot.util.VisionManager.VisionEstimates;
 
 /**
  * The robot's swerve drivetrain.
@@ -118,13 +109,10 @@ public final class Swerve extends GRRSubsystem {
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
     private final PIDController autoPIDangular;
-    private final TrapezoidProfile autoGoToProfile;
 
     private final ProfiledPIDController angularPID;
 
     private final Debouncer dangerDebounce = new Debouncer(0.2);
-    private final List<Pose2d> estimates = new ArrayList<>();
-    private final List<Pose3d> targets = new ArrayList<>();
     private final ReefAssistData reefAssist = new ReefAssistData();
 
     private Pose2d autoLast = null;
@@ -143,12 +131,10 @@ public final class Swerve extends GRRSubsystem {
         state = api.state;
         vision = VisionManager.getInstance();
 
-        autoPIDx = new PIDController(15.0, 0.0, 0.0);
-        autoPIDy = new PIDController(15.0, 0.0, 0.0);
+        autoPIDx = new PIDController(10.0, 0.0, 0.0);
+        autoPIDy = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
-
-        autoGoToProfile = new TrapezoidProfile(new Constraints(0.35, 0.6));
 
         angularPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 30.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);
@@ -163,20 +149,15 @@ public final class Swerve extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        // Refresh the swerve API.
         api.refresh();
 
-        vision.addYawMeasurements(state.imu.yawMeasurements);
-        VisionEstimates visionEstimates = vision.getUnreadResults();
+        // Apply vision estimates to the pose estimator.
+        api.addVisionMeasurements(vision.getUnreadResults(state.imu.yawMeasurements));
 
-        api.addVisionMeasurements(visionEstimates.measurements().stream().toArray(VisionMeasurement[]::new));
-
-        estimates.clear();
-        estimates.addAll(visionEstimates.getPoses());
-
-        targets.clear();
-        targets.addAll(visionEstimates.targets());
-
+        // Calculate helpers
         Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
+        Translation2d reefTranslation = state.translation.minus(reefCenter);
         Translation2d robotToReef = reefCenter.minus(state.translation);
         Rotation2d reefToRobotAngle = robotToReef.getAngle();
         Rotation2d reefAngle = new Rotation2d(
@@ -184,6 +165,8 @@ public final class Swerve extends GRRSubsystem {
             Math2.kThirdPi
         );
 
+        // Save the current alliance's reef location, and the rotation
+        // to the reef wall relevant to the robot's position.
         onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
         betweenPoles =
             Math.abs(
@@ -192,13 +175,20 @@ public final class Swerve extends GRRSubsystem {
             FieldConstants.kL1CenterOrOutside;
 
         reefReference = new Pose2d(reefCenter, reefAngle);
+
+        // If the robot is rotated to face the reef, within an arbitrary tolerance.
         facingReef = Math2.epsilonEquals(
             0.0,
-            reefReference.getRotation().minus(state.rotation).getRadians(),
+            reefAngle.minus(state.rotation).getRadians(),
             kFacingReefTolerance.value()
         );
 
-        wallDistance = calculateWallDistance();
+        // Calculate the distance from the robot's center to the nearest reef wall face.
+        wallDistance = Math.max(
+            0,
+            reefAngle.rotateBy(Rotation2d.kPi).minus(reefTranslation.getAngle()).getCos() * reefTranslation.getNorm() -
+            FieldConstants.kReefCenterToWallDistance
+        );
     }
 
     /**
@@ -209,6 +199,9 @@ public final class Swerve extends GRRSubsystem {
         return state.pose;
     }
 
+    /**
+     * Returns the directionless measured velocity of the robot, in m/s.
+     */
     @NotLogged
     public double getVelocity() {
         return state.velocity;
@@ -228,20 +221,6 @@ public final class Swerve extends GRRSubsystem {
      */
     public boolean wildlifeConservationProgram() {
         return dangerDebounce.calculate(wallDistance > kReefDangerDistance.value());
-    }
-
-    /**
-     * Calculates the corrected distance from the reef.
-     * @return The corrected distance.
-     */
-    private double calculateWallDistance() {
-        final Translation2d difference = state.translation.minus(reefReference.getTranslation());
-
-        final double rawDistance = difference.getNorm();
-
-        final double correctedDistance =
-            reefReference.getRotation().rotateBy(Rotation2d.kPi).minus(difference.getAngle()).getCos() * rawDistance;
-        return Math.max(0, correctedDistance - FieldConstants.kReefCenterToWallDistance);
     }
 
     /**
@@ -324,7 +303,8 @@ public final class Swerve extends GRRSubsystem {
      * @param x The X value from the driver's joystick.
      * @param y The Y value from the driver's joystick.
      * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
-     *
+     * @param left A supplier that returns {@code true} if the robot should target
+     *             the left reef pole, or {@code false} to target the right pole.
      */
     public Command driveReef(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular, BooleanSupplier left) {
         Mutable<Boolean> exitLock = new Mutable<>(false);
@@ -388,7 +368,7 @@ public final class Swerve extends GRRSubsystem {
                 if (!Math2.epsilonEquals(angularInput, 0.0)) exitLock.value = true;
                 api.applyAssistedDriverInput(xInput, yInput, angularInput, assist, Perspective.kOperator, true, true);
             })
-            .onEnd(reefAssist::reset);
+            .onEnd(() -> reefAssist.running = false);
     }
 
     /**
@@ -400,68 +380,14 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Drives to the starting position of the selected
-     * autonomous routine. Useful for testing.
-     */
-    public Command goToAutoStart() {
-        return resetAutoPID()
-            .andThen(
-                commandBuilder()
-                    .onInitialize(() ->
-                        angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond)
-                    )
-                    .onExecute(() -> {
-                        Optional<Pose2d> endPoint = GRRDashboard.getSelectedAuto().startingPose();
-                        if (endPoint.isEmpty()) {
-                            api.applyStop(false);
-                            return;
-                        }
-
-                        Translation2d difference = state.translation.minus(endPoint.get().getTranslation());
-                        Rotation2d angle = difference.getAngle();
-                        double distance = difference.getNorm();
-
-                        if (distance < 1e-3) {
-                            api.applyStop(false);
-                            return;
-                        }
-
-                        State setpoint = autoGoToProfile.calculate(
-                            TimedRobot.kDefaultPeriod,
-                            new State(distance, state.velocity),
-                            new State(0.0, 0.0)
-                        );
-
-                        Pose2d pose = state.pose;
-                        Pose2d target = pose.interpolate(endPoint.get(), setpoint.position / distance);
-
-                        autoLast = autoNext;
-                        autoNext = target;
-
-                        api.applySpeeds(
-                            new ChassisSpeeds(
-                                angle.getCos() * setpoint.velocity + autoPIDx.calculate(pose.getX(), target.getX()),
-                                angle.getSin() * setpoint.velocity + autoPIDy.calculate(pose.getY(), target.getY()),
-                                angularPID.calculate(pose.getRotation().getRadians(), target.getRotation().getRadians())
-                            ),
-                            Perspective.kBlue,
-                            true,
-                            false
-                        );
-                    })
-                    .onEnd(() -> {
-                        autoLast = null;
-                        autoNext = autoLast;
-                    })
-            )
-            .withName("Swerve.goToAutoStart()");
-    }
-
-    /**
-     * Resets the autonomous trajectory following PID controllers.
+     * Resets the autonomous trajectory following PID controllers. This
+     * command does not require the swerve subsystem, and can be safely
+     * composed in parallel with another swerve command.
      */
     public Command resetAutoPID() {
         return Commands.runOnce(() -> {
+            autoLast = null;
+            autoNext = autoLast;
             autoPIDx.reset();
             autoPIDy.reset();
             autoPIDangular.reset();
@@ -504,20 +430,9 @@ public final class Swerve extends GRRSubsystem {
     @Logged
     public final class ReefAssistData {
 
-        private Pose2d targetPipe;
-        private boolean running;
-        private double error;
-        private double output;
-
-        private ReefAssistData() {
-            reset();
-        }
-
-        private void reset() {
-            targetPipe = Pose2d.kZero;
-            running = false;
-            error = 0.0;
-            output = 0.0;
-        }
+        private Pose2d targetPipe = Pose2d.kZero;
+        private boolean running = false;
+        private double error = 0.0;
+        private double output = 0.0;
     }
 }

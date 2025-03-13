@@ -2,6 +2,8 @@ package org.team340.lib.swerve;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
+import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -444,6 +446,7 @@ public class SwerveAPI implements AutoCloseable {
      * Represents a measurement from vision to apply to the pose estimator.
      * @see {@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
      */
+    @Logged(strategy = Strategy.OPT_IN)
     public static final record VisionMeasurement(Pose2d visionPose, double timestamp, Matrix<N3, N1> stdDevs) {
         /**
          * Represents a measurement from vision to apply to the pose estimator.
@@ -514,7 +517,7 @@ public class SwerveAPI implements AutoCloseable {
             StatusCode phoenixStatus = StatusCode.OK;
             if (!sync) {
                 if (timesync) {
-                    phoenixStatus = BaseStatusSignal.waitForAll(config.odometryPeriod * 2.0, signals);
+                    phoenixStatus = BaseStatusSignal.waitForAll(config.period, signals);
                 } else {
                     Sleep.seconds(Math.max(0.0, config.odometryPeriod - (Timer.getFPGATimestamp() - lastTime)));
                     lastTime = Timer.getFPGATimestamp();

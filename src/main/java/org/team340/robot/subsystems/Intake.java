@@ -50,7 +50,7 @@ public final class Intake extends GRRSubsystem {
         current = motor.getStatorCurrent();
 
         PhoenixUtil.run("Set Intake Signal Frequencies", () -> BaseStatusSignal.setUpdateFrequencyForAll(100, current));
-        PhoenixUtil.run("Optimize Intake CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(5, motor));
+        PhoenixUtil.run("Optimize Intake CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(10, motor));
 
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = false;

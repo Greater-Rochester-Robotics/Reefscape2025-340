@@ -43,6 +43,13 @@ public interface TrajectorySample<Self extends TrajectorySample<Self>>
     Self flipped();
 
     /**
+     * Returns this sample, mirrored across the field width.
+     *
+     * @return this sample, mirrored across the field width.
+     */
+    Self mirrored();
+
+    /**
      * Returns this sample, offset by the given timestamp.
      *
      * @param timestampOffset the offset to apply to the timestamp.

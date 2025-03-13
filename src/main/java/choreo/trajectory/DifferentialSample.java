@@ -159,6 +159,16 @@ public class DifferentialSample implements TrajectorySample<DifferentialSample> 
         };
     }
 
+    public DifferentialSample mirrored() {
+        /**
+         * CAUTION
+         * Needed to implement mirroring fast, we don't use
+         * differential drive so there's no need for us to
+         * implement this behavior.
+         */
+        return this;
+    }
+
     public DifferentialSample offsetBy(double timestampOffset) {
         return new DifferentialSample(t + timestampOffset, x, y, heading, vl, vr, omega, al, ar, fl, fr);
     }

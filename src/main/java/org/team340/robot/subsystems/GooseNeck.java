@@ -200,7 +200,7 @@ public final class GooseNeck extends GRRSubsystem {
             BaseStatusSignal.setUpdateFrequencyForAll(500, beamBreak, beamBreakVolatile)
         );
         PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
-            ParentDevice.optimizeBusUtilizationForAll(5, pivotMotor, beakMotor, candi)
+            ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi)
         );
 
         positionControl = new MotionMagicVoltage(0.0);
@@ -218,6 +218,10 @@ public final class GooseNeck extends GRRSubsystem {
                 MathUtil.inputModulus(candi.getPWM2Position(false).waitForUpdate(1.0).getValueAsDouble(), -0.5, 0.5)
             )
         );
+
+        // Warm-up enums
+        GoosePosition.kStow.rotations();
+        GooseSpeed.kIntake.voltage();
     }
 
     @Override
