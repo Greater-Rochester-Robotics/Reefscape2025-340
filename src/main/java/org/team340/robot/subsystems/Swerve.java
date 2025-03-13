@@ -179,15 +179,15 @@ public final class Swerve extends GRRSubsystem {
             FieldConstants.kReefCenterToWallDistance
         );
 
-        // Determine the robot's position relative to the reef.
+        // Determine the optimal position for the goose neck to score L1.
         boolean onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
         boolean betweenPoles =
             Math.abs(
                 reefToRobot.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
             ) <
             FieldConstants.kL1CenterOrOutside;
-     
-            Translation2d targetOffset = betweenPoles
+
+        Translation2d targetOffset = betweenPoles
             ? new Translation2d(FieldConstants.kPipeFromCenterX, 0.0)
             : new Translation2d(FieldConstants.kL1OffsetX, FieldConstants.kL1OffsetY * (onLeft ? -1.0 : 1.0));
 
