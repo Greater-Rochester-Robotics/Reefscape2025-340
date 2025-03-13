@@ -119,7 +119,8 @@ public final class Robot extends TimedRobot {
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
-        coDriver.y().whileTrue(routines.climb());
+        coDriver.b().whileTrue(climber.climb());
+        coDriver.x().whileTrue(climber.deploy());
 
         coDriver.leftStick().and(coDriver.rightStick()).toggleOnTrue(climber.coastMode());
 

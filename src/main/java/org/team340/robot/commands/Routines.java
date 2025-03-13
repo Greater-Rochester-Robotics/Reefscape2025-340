@@ -186,7 +186,7 @@ public final class Routines {
         ).withName("Routines.assistedScore()");
     }
 
-    public Command climb() {
+    public Command climbSequence() {
         return either(climber.climb(), climber.deploy(), climber::isDeployed).withName("Routines.climb()");
     }
 

@@ -24,7 +24,7 @@ public final class Climber extends GRRSubsystem {
 
     private static enum ClimberPosition {
         kDeploy(94.0),
-        kClimb(420.0);
+        kClimb(415.0);
 
         private final TunableDouble rotations;
 
@@ -58,7 +58,7 @@ public final class Climber extends GRRSubsystem {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 425.0;
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 422.0;
 
         PhoenixUtil.run("Clear Climber Sticky Faults", () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
@@ -114,7 +114,7 @@ public final class Climber extends GRRSubsystem {
      * Makes the climber go to the climb position.
      */
     public Command climb() {
-        return goTo(ClimberPosition.kClimb).withName("Climber.climb()");
+        return goTo(ClimberPosition.kClimb).onlyIf(this::isDeployed).withName("Climber.climb()");
     }
 
     /**

@@ -242,7 +242,10 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command tareRotation() {
         return commandBuilder("Swerve.tareRotation()")
-            .onInitialize(() -> api.tareRotation(Perspective.kOperator))
+            .onInitialize(() -> {
+                api.tareRotation(Perspective.kOperator);
+                vision.clearYawMeasurements();
+            })
             .isFinished(true)
             .ignoringDisable(true);
     }
@@ -401,6 +404,7 @@ public final class Swerve extends GRRSubsystem {
      */
     public void resetPose(Pose2d pose) {
         api.resetPose(pose);
+        vision.clearYawMeasurements();
     }
 
     /**

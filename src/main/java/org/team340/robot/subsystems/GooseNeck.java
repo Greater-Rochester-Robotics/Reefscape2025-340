@@ -170,7 +170,7 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
-        candiConfig.PWM2.AbsoluteSensorOffset = 0.92;
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.923;
         candiConfig.PWM2.SensorDirection = true;
 
         PhoenixUtil.run("Clear Goose Neck Pivot Sticky Faults", () -> pivotMotor.clearStickyFaults());
