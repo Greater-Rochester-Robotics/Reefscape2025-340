@@ -29,7 +29,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.NotifierCommand;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
@@ -80,7 +79,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static enum GooseSpeed {
         kIntake(-6.0),
         kSeat(-2.3),
-        kScoreL1(-3.5),
+        kScoreL1(-3.0),
         kAlgae(12.0),
         kScoreForward(9.0),
         kBarf(-8.0),
@@ -423,7 +422,6 @@ public final class GooseNeck extends GRRSubsystem {
 
     public Command score(
         ReefSelection selection,
-        DoubleSupplier l1Angle,
         BooleanSupplier runManual,
         BooleanSupplier allowGoosing,
         BooleanSupplier safe
@@ -431,14 +429,12 @@ public final class GooseNeck extends GRRSubsystem {
         Mutable<Boolean> beamTrigger = new Mutable<>(false);
 
         return goTo(
-            () -> !selection.isL1() ? GoosePosition.kScoreForward.rotations() : l1Angle.getAsDouble(),
+            () -> !selection.isL1() ? GoosePosition.kScoreForward : GoosePosition.kScoreL1,
             () -> !selection.isL1() && allowGoosing.getAsBoolean(),
             () -> {
                 double currentPosition = getPosition();
                 if (Math.abs(currentPosition) > kStickyScoreTolerance.value()) {
                     return currentPosition < 0.0;
-                } else if (selection.isL1()) {
-                    return false;
                 } else {
                     return selection.isLeft();
                 }
@@ -490,33 +486,8 @@ public final class GooseNeck extends GRRSubsystem {
             .withName("GooseNeck.swallow()");
     }
 
-    /**
-     * alias for goTo that takes the GoosePosition suplier
-     * @param position
-     * @param allowGoosing
-     * @param left
-     * @param safe
-     * @return
-     */
     private Command goTo(
         Supplier<GoosePosition> position,
-        BooleanSupplier allowGoosing,
-        BooleanSupplier left,
-        BooleanSupplier safe
-    ) {
-        return goTo(() -> position.get().rotations(), allowGoosing, left, safe);
-    }
-
-    /**
-     * turn gooseneck to angle position
-     * @param position
-     * @param allowGoosing
-     * @param left
-     * @param safe
-     * @return
-     */
-    private Command goTo(
-        DoubleSupplier position,
         BooleanSupplier allowGoosing,
         BooleanSupplier left,
         BooleanSupplier safe
@@ -532,7 +503,7 @@ public final class GooseNeck extends GRRSubsystem {
                 torquePID.reset();
             })
             .onExecute(() -> {
-                double target = position.getAsDouble() * (left.getAsBoolean() ? -1.0 : 1.0);
+                double target = position.get().rotations() * (left.getAsBoolean() ? -1.0 : 1.0);
                 if (lastTarget.value != target) {
                     timer.stop();
                     timer.reset();

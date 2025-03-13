@@ -17,7 +17,6 @@ public final class Constants {
 
     public static final int kDriver = 0;
     public static final int kCoDriver = 1;
-    public static final Translation2d kGooseAxis = new Translation2d(.305, 0.0);
 
     public static final class FieldConstants {
 
@@ -34,11 +33,6 @@ public final class Constants {
 
         public static final double kPipeOffsetX = -0.681;
         public static final double kPipeOffsetY = -0.164;
-        public static final double kPipeFromCenterX = -0.533;
-        public static final double kL1CenterOrOutside = 0.188; //was .291
-
-        public static final double kL1OffsetX = -0.584; //was -.533
-        public static final double kL1OffsetY = -0.419;
 
         public static final double kReefCenterToWallDistance = 0.781;
     }
