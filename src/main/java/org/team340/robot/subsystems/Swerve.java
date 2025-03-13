@@ -180,7 +180,7 @@ public final class Swerve extends GRRSubsystem {
         );
 
         // Determine the optimal position for the goose neck to score L1.
-        boolean onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
+        boolean onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0.0;
         boolean betweenPoles =
             Math.abs(
                 reefToRobot.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
