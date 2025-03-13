@@ -119,12 +119,8 @@ public final class Swerve extends GRRSubsystem {
     private Pose2d autoNext = null;
     private Pose2d reefReference = Pose2d.kZero;
     private boolean facingReef = false;
-    private boolean onLeft = false;
-    private boolean betweenPoles = false;
     private double wallDistance = 0.0;
-
-    private Translation2d targetSpot = new Translation2d();
-    private Translation2d goosePosition = new Translation2d();
+    private double l1GoosePosition = 0.0;
 
     public Swerve() {
         api = new SwerveAPI(kConfig);
@@ -157,9 +153,9 @@ public final class Swerve extends GRRSubsystem {
 
         // Calculate helpers
         Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
-        Translation2d reefTranslation = state.translation.minus(reefCenter);
-        Translation2d robotToReef = reefCenter.minus(state.translation);
-        Rotation2d reefToRobotAngle = robotToReef.getAngle();
+        Translation2d robotToReef = state.translation.minus(reefCenter);
+        Translation2d reefToRobot = reefCenter.minus(state.translation);
+        Rotation2d reefToRobotAngle = reefToRobot.getAngle();
         Rotation2d reefAngle = new Rotation2d(
             Math.floor(reefToRobotAngle.plus(new Rotation2d(Math2.kSixthPi)).getRadians() / Math2.kThirdPi) *
             Math2.kThirdPi
@@ -167,13 +163,6 @@ public final class Swerve extends GRRSubsystem {
 
         // Save the current alliance's reef location, and the rotation
         // to the reef wall relevant to the robot's position.
-        onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
-        betweenPoles =
-            Math.abs(
-                robotToReef.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
-            ) <
-            FieldConstants.kL1CenterOrOutside;
-
         reefReference = new Pose2d(reefCenter, reefAngle);
 
         // If the robot is rotated to face the reef, within an arbitrary tolerance.
@@ -186,9 +175,25 @@ public final class Swerve extends GRRSubsystem {
         // Calculate the distance from the robot's center to the nearest reef wall face.
         wallDistance = Math.max(
             0,
-            reefAngle.rotateBy(Rotation2d.kPi).minus(reefTranslation.getAngle()).getCos() * reefTranslation.getNorm() -
+            reefAngle.rotateBy(Rotation2d.kPi).minus(robotToReef.getAngle()).getCos() * robotToReef.getNorm() -
             FieldConstants.kReefCenterToWallDistance
         );
+
+        // Determine the robot's position relative to the reef.
+        boolean onLeft = reefToRobotAngle.minus(reefAngle).getRadians() < 0;
+        boolean betweenPoles =
+            Math.abs(
+                reefToRobot.minus(Constants.kGooseAxis.rotateBy(state.rotation)).rotateBy(reefAngle.unaryMinus()).getY()
+            ) <
+            FieldConstants.kL1CenterOrOutside;
+     
+            Translation2d targetOffset = betweenPoles
+            ? new Translation2d(FieldConstants.kPipeFromCenterX, 0.0)
+            : new Translation2d(FieldConstants.kL1OffsetX, FieldConstants.kL1OffsetY * (onLeft ? -1.0 : 1.0));
+
+        var l1Target = reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation()));
+        var goosePosition = state.translation.plus(Constants.kGooseAxis.rotateBy(state.rotation));
+        l1GoosePosition = l1Target.minus(goosePosition).rotateBy(state.rotation.unaryMinus()).getAngle().getRotations();
     }
 
     /**
@@ -208,6 +213,14 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
+     * Returns the goose position to apply for L1 scoring, in rotations.
+     */
+    @NotLogged
+    public double l1GoosePosition() {
+        return l1GoosePosition;
+    }
+
+    /**
      * Returns true if the goose is happy!!
      * (Robot is facing the reef and within the happy distance).
      */
@@ -221,21 +234,6 @@ public final class Swerve extends GRRSubsystem {
      */
     public boolean wildlifeConservationProgram() {
         return dangerDebounce.calculate(wallDistance > kReefDangerDistance.value());
-    }
-
-    /**
-     * calculates the angle the goose should be at for a level 1
-     * @return
-     */
-    public DoubleSupplier l1Angle() {
-        //TODO: remove targetSpot and Goose Position  intermediate values after testing
-        Translation2d targetOffset = betweenPoles
-            ? new Translation2d(FieldConstants.kPipeFromCenterX, 0.0)
-            : new Translation2d(FieldConstants.kL1OffsetX, FieldConstants.kL1OffsetY * (this.onLeft ? -1.0 : 1.0));
-
-        targetSpot = reefReference.getTranslation().plus(targetOffset.rotateBy(reefReference.getRotation()));
-        goosePosition = state.translation.plus(Constants.kGooseAxis.rotateBy(state.rotation));
-        return () -> targetSpot.minus(goosePosition).rotateBy(state.rotation.unaryMinus()).getAngle().getRotations();
     }
 
     /**
