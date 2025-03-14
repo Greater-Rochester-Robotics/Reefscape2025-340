@@ -24,7 +24,6 @@ import org.team340.robot.util.ReefSelection;
  * The Routines class contains command compositions, such as sequences
  * or parallel command groups, that require multiple subsystems.
  */
-@SuppressWarnings("unused")
 @Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
 

@@ -61,8 +61,8 @@ public final class Autos {
         // Add autonomous modes to the dashboard
         chooser.addRoutine("Left L4 x3 (Hopper)", () -> l4x3Hopper(false));
         chooser.addRoutine("Right L4 x3 (Hopper)", () -> l4x3Hopper(true));
-        chooser.addRoutine("Left L4 x3 (Baby Bird)", () -> l4x3BabyBird(false));
-        chooser.addRoutine("Right L4 x3 (Baby Bird)", () -> l4x3BabyBird(true));
+        // chooser.addRoutine("Left L4 x3 (Baby Bird)", () -> l4x3BabyBird(false));
+        // chooser.addRoutine("Right L4 x3 (Baby Bird)", () -> l4x3BabyBird(true));
         SmartDashboard.putData("autos", chooser);
     }
 

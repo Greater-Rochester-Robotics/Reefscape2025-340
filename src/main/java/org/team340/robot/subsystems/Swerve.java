@@ -115,7 +115,9 @@ public final class Swerve extends GRRSubsystem {
     private final Debouncer dangerDebounce = new Debouncer(0.2);
     private final ReefAssistData reefAssist = new ReefAssistData();
 
+    @SuppressWarnings("unused")
     private Pose2d autoLast = null;
+
     private Pose2d autoNext = null;
     private Pose2d reefReference = Pose2d.kZero;
     private boolean facingReef = false;
@@ -363,8 +365,6 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command resetAutoPID() {
         return Commands.runOnce(() -> {
-            autoLast = null;
-            autoNext = autoLast;
             autoPIDx.reset();
             autoPIDy.reset();
             autoPIDangular.reset();

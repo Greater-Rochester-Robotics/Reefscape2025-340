@@ -23,8 +23,8 @@ import org.team340.robot.Constants.UpperCAN;
 public final class Climber extends GRRSubsystem {
 
     private static enum ClimberPosition {
-        kDeploy(94.0),
-        kClimb(415.0);
+        kDeploy(90.0),
+        kClimb(412.0);
 
         private final TunableDouble rotations;
 
@@ -38,6 +38,7 @@ public final class Climber extends GRRSubsystem {
     }
 
     private static final TunableDouble kVoltageOut = Tunable.doubleValue("climber/kVoltageOut", 12.0);
+    private static final TunableDouble kOverrideVoltage = Tunable.doubleValue("climber/kOverrideVoltage", 4.0);
 
     private final TalonFX motor;
 
@@ -58,7 +59,7 @@ public final class Climber extends GRRSubsystem {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 422.0;
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 450.0;
 
         PhoenixUtil.run("Clear Climber Sticky Faults", () -> motor.clearStickyFaults());
         PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
@@ -98,7 +99,15 @@ public final class Climber extends GRRSubsystem {
      * @return True if the climber is deployed, false otherwise.
      */
     public boolean isDeployed() {
-        return getPosition() > ClimberPosition.kDeploy.rotations();
+        return getPosition() >= ClimberPosition.kDeploy.rotations();
+    }
+
+    /**
+     * Checks if the climber has climbed.
+     * @return True if the climber has climbed, false otherwise.
+     */
+    public boolean isClimbed() {
+        return getPosition() >= ClimberPosition.kDeploy.rotations();
     }
 
     // *************** Commands ***************
@@ -115,6 +124,17 @@ public final class Climber extends GRRSubsystem {
      */
     public Command climb() {
         return goTo(ClimberPosition.kClimb).onlyIf(this::isDeployed).withName("Climber.climb()");
+    }
+
+    /**
+     * Overrides the climber to go BEYOND
+     */
+    public Command override() {
+        return commandBuilder()
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(kOverrideVoltage.value())))
+            .onEnd(motor::stopMotor)
+            .onlyIf(this::isClimbed)
+            .withName("Climber.override()");
     }
 
     /**
