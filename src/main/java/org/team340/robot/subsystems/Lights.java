@@ -25,6 +25,7 @@ public final class Lights {
         kHasCoral(255, 255, 255),
         kGoose(255, 255, 255),
         kScored(0, 255, 0),
+        kGooseAssassination(255, 0, 0),
         kDisabled(255, 18, 0),
         kOff(0, 0, 0);
 
@@ -297,6 +298,17 @@ public final class Lights {
                 .withTimeout(1.5)
                 .ignoringDisable(true)
                 .withName("Lights.Top.scored()");
+        }
+
+        /**
+         * Displays that the goose has been killed.
+         */
+        public Command gooseAssassination() {
+            return commandBuilder()
+                .onInitialize(() -> set(Color.kGooseAssassination))
+                .onEnd(() -> set(Color.kOff))
+                .ignoringDisable(true)
+                .withName("Lights.Top.gooseAssassination()");
         }
 
         /**

@@ -16,7 +16,6 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.swerve.Perspective;
@@ -115,7 +114,9 @@ public final class Swerve extends GRRSubsystem {
     private final Debouncer dangerDebounce = new Debouncer(0.2);
     private final ReefAssistData reefAssist = new ReefAssistData();
 
+    @SuppressWarnings("unused")
     private Pose2d autoLast = null;
+
     private Pose2d autoNext = null;
     private Pose2d reefReference = Pose2d.kZero;
     private boolean facingReef = false;
@@ -218,7 +219,10 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command tareRotation() {
         return commandBuilder("Swerve.tareRotation()")
-            .onInitialize(() -> api.tareRotation(Perspective.kOperator))
+            .onInitialize(() -> {
+                api.tareRotation(Perspective.kOperator);
+                vision.clearYawMeasurements();
+            })
             .isFinished(true)
             .ignoringDisable(true);
     }
@@ -354,29 +358,17 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Resets the autonomous trajectory following PID controllers. This
-     * command does not require the swerve subsystem, and can be safely
-     * composed in parallel with another swerve command.
-     */
-    public Command resetAutoPID() {
-        return Commands.runOnce(() -> {
-            autoLast = null;
-            autoNext = autoLast;
-            autoPIDx.reset();
-            autoPIDy.reset();
-            autoPIDangular.reset();
-        })
-            .ignoringDisable(true)
-            .withName("Swerve.resetAutoPID");
-    }
-
-    /**
      * Resets the pose of the robot, inherently seeding field-relative movement. This
      * method is not intended for use outside of creating an {@link AutoFactory}.
      * @param pose The new blue origin relative pose to apply to the pose estimator.
      */
     public void resetPose(Pose2d pose) {
         api.resetPose(pose);
+        vision.clearYawMeasurements();
+
+        autoPIDx.reset();
+        autoPIDy.reset();
+        autoPIDangular.reset();
     }
 
     /**

@@ -119,12 +119,16 @@ public final class Robot extends TimedRobot {
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
-        coDriver.y().whileTrue(routines.climb());
+        coDriver.b().whileTrue(climber.climb());
+        coDriver.x().whileTrue(climber.deploy());
+        coDriver.y().whileTrue(climber.override());
 
         coDriver.leftStick().and(coDriver.rightStick()).toggleOnTrue(climber.coastMode());
 
         coDriver.povUp().onTrue(selection.incrementLevel());
         coDriver.povDown().onTrue(selection.decrementLevel());
+
+        coDriver.leftBumper().and(coDriver.rightBumper()).toggleOnTrue(routines.killTheGoose());
 
         // Set thread priority
         Threads.setCurrentThreadPriority(true, 10);

@@ -12,7 +12,6 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import java.util.ArrayList;
 import java.util.List;
 import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.team340.lib.swerve.SwerveAPI.TimestampedYaw;
@@ -58,6 +57,13 @@ public final class VisionManager {
     }
 
     /**
+     * Clears all yaw measurements from the pose estimation buffers.
+     */
+    public void clearYawMeasurements() {
+        for (var camera : cameras) camera.clearYawMeasurements();
+    }
+
+    /**
      * Gets unread results from all cameras.
      * @param yawMeasurements Robot yaw measurements since the last robot cycle.
      */
@@ -91,6 +97,13 @@ public final class VisionManager {
         private Camera(String cameraName, Transform3d robotToCamera) {
             camera = new PhotonCamera(cameraName);
             estimator = new PhotonPoseEstimator(aprilTags, kStrategy, robotToCamera);
+        }
+
+        /**
+         * Clears all yaw measurements from the buffer.
+         */
+        private void clearYawMeasurements() {
+            estimator.clearHeadingData();
         }
 
         /**
