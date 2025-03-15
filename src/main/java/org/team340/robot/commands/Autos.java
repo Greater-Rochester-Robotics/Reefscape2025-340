@@ -8,9 +8,13 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import org.team340.lib.util.Alliance;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
@@ -74,6 +78,10 @@ public final class Autos {
     }
 
     private AutoRoutine l4x3Hopper(boolean mirror) {
+        // TODO Make a proper fix for this tomfoolery. This is dumb and stupid but we need it to just work :P
+        if (Alliance.isBlue()) swerve.resetPose(new Pose2d(new Translation2d(), Rotation2d.kPi));
+        // TODO If you're reading this Bowan, you were right.
+
         AutoRoutine routine = factory.newRoutine("L4 x3 (Hopper)");
 
         AutoTrajectory startToJ = routine.trajectory("Start-J", mirror);
@@ -87,12 +95,7 @@ public final class Autos {
             .active()
             .onTrue(
                 sequence(
-                    parallel(
-                        selection.selectLevel(4),
-                        gooseNeck.setHasCoral(false),
-                        startToJ.resetOdometry(),
-                        swerve.resetAutoPID()
-                    ),
+                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(false), startToJ.resetOdometry()),
                     startToJ.spawnCmd()
                 )
             );
@@ -127,12 +130,7 @@ public final class Autos {
             .active()
             .onTrue(
                 sequence(
-                    parallel(
-                        selection.selectLevel(4),
-                        gooseNeck.setHasCoral(false),
-                        startToJ.resetOdometry(),
-                        swerve.resetAutoPID()
-                    ),
+                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(false), startToJ.resetOdometry()),
                     startToJ.spawnCmd()
                 )
             );

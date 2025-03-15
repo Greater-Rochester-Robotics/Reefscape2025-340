@@ -16,7 +16,6 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.team340.lib.swerve.Perspective;
@@ -359,21 +358,6 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Resets the autonomous trajectory following PID controllers. This
-     * command does not require the swerve subsystem, and can be safely
-     * composed in parallel with another swerve command.
-     */
-    public Command resetAutoPID() {
-        return Commands.runOnce(() -> {
-            autoPIDx.reset();
-            autoPIDy.reset();
-            autoPIDangular.reset();
-        })
-            .ignoringDisable(true)
-            .withName("Swerve.resetAutoPID");
-    }
-
-    /**
      * Resets the pose of the robot, inherently seeding field-relative movement. This
      * method is not intended for use outside of creating an {@link AutoFactory}.
      * @param pose The new blue origin relative pose to apply to the pose estimator.
@@ -381,6 +365,10 @@ public final class Swerve extends GRRSubsystem {
     public void resetPose(Pose2d pose) {
         api.resetPose(pose);
         vision.clearYawMeasurements();
+
+        autoPIDx.reset();
+        autoPIDy.reset();
+        autoPIDangular.reset();
     }
 
     /**
