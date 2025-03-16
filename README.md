@@ -19,4 +19,9 @@ FRC Team 340's code for the 2025 season, REEFSCAPE.
 
     To prevent the robot from beaching itself on Algae, the robot will automatically drive in the opposite direction of the IMU's reported pitch/roll if they are above a set tolerance.
 
+### Robot Logs
+Logs from matches during the 2025 season can be found [here](https://github.com/Greater-Rochester-Robotics/RobotLogs/tree/main/2025).
+
+<br>
+
 ![Robot](robot.png)
