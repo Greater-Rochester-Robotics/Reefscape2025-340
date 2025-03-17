@@ -16,6 +16,7 @@ import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -232,7 +233,7 @@ public final class Elevator extends GRRSubsystem {
             () -> {
                 if (dunk.getAsBoolean()) dunkinDonuts.value = true;
                 if (selection.getLevel() != 4) dunkinDonuts.value = false;
-                return dunkinDonuts.value ? kDunkRotations.value() : 0.0;
+                return (dunkinDonuts.value ? kDunkRotations.value() : 0.0) + (DriverStation.isAutonomous() ? 0.4 : 0.0);
             },
             safe
         ).beforeStarting(() -> dunkinDonuts.value = false);

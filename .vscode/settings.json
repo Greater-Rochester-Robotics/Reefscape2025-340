@@ -116,6 +116,7 @@
     "Interpolatable",
     "Itor",
     "JoystickProfiles",
+    "Kalman",
     "Keepalive",
     "Lerp",
     "Motorcontrol",

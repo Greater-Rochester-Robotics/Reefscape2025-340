@@ -1,21 +1,27 @@
-# GRRBase
-A template repository for Java-based robots in the FIRST Robotics Competition.
-
-### Code Styling
-All Java code follows the styling guide of [Prettier](https://prettier.io/). You can apply these rules via [Spotless](https://github.com/diffplug/spotless/tree/main) using the command `./gradlew spotlessApply`.
+# Reefscape2025-340
+FRC Team 340's code for the 2025 season, REEFSCAPE. 
 
 ### Highlights
 
-- [Swerve API](https://github.com/Greater-Rochester-Robotics/GRRBase/blob/main/src/main/java/org/team340/lib/swerve/SwerveAPI.java)
+- Full Field Localization
 
-    Supports various hardware configurations, from vendors such as CTRE, REV, and Redux Robotics, with features such as high frequency odometry, a custom ratelimiter to improve driver control while also reducing wheel scrub, and built-in support for tuning the drivetrain's configuration live via NetworkTables.
+    With 3 cameras used for AprilTag detection, the robot combines vision measurements with odometry using a Kalman filter to accurately track its position on the field throughout the entirety of a match.
 
-- [Custom Dashboard](https://github.com/Greater-Rochester-Robotics/GRRBase/tree/main/dashboard)
+- Assisted Reef Alignment
 
-    Includes an autonomous mode selection panel with animated previews of auto trajectories, and can be extended to add season-specific features.
+    When the robot is being commanded to score, driver input is fused with an additional calculated assist to "push" the robot to center itself on a selected reef pole, all without fully removing control from the driver, allowing them to evade defense or scattered game pieces.
 
-- [Pre-defined Loggers](https://github.com/Greater-Rochester-Robotics/GRRBase/tree/main/src/main/java/org/team340/lib/logging)
+- Wildlife Conservation Program
 
-    Utilizing Epilogue, an annotation-based logging framework, custom loggers for vendor and WPILib APIs are pre-defined to transparently log relevant data from the robot's hardware, without any extra setup required.
+    The robot locks its superstructure from moving while it is within close proximity to the reef, ensuring our end effector (nicknamed the "Goose Neck") does not crash itself into a reef pole.
 
-- [Various other utilities](https://github.com/Greater-Rochester-Robotics/GRRBase/tree/main/src/main/java/org/team340/lib/util)
+- Anti-Beach Protocol
+
+    To prevent the robot from beaching itself on Algae, the robot will automatically drive in the opposite direction of the IMU's reported pitch/roll if they are above a set tolerance.
+
+### Robot Logs
+Logs from matches during the 2025 season can be found [here](https://github.com/Greater-Rochester-Robotics/RobotLogs/tree/main/2025).
+
+<br>
+
+![Robot](robot.png)
