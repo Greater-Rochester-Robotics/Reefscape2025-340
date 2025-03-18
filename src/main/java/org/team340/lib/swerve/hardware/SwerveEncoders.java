@@ -231,7 +231,7 @@ public final class SwerveEncoders {
                 .setDisableZeroButton(true)
                 .setInvertDirection(inverted)
                 .setPositionFramePeriod(config.odometryPeriod)
-                .setStatusFramePeriod(config.period)
+                .setStatusFramePeriod(config.defaultFramePeriod)
                 .setVelocityFramePeriod(config.odometryPeriod)
                 .setZeroOffset(offset);
 
@@ -289,7 +289,7 @@ public final class SwerveEncoders {
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
             PhoenixUtil.run("Optimize Bus Utilization", () ->
-                canCoder.optimizeBusUtilization(1.0 / SwerveBaseHardware.kTelemetryCANPeriod, 0.05)
+                canCoder.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
             );
 
             if (turnMotor.getAPI() instanceof TalonFX talonFX) {

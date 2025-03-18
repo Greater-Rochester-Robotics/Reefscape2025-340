@@ -21,6 +21,8 @@ public class SwerveConfig {
     public double odometryPeriod = -1.0;
     /** The period to look ahead for discretizing chassis speeds in seconds. */
     public double discretizationPeriod = -1.0;
+    /** The default frame period for unused CAN signals in seconds. */
+    public double defaultFramePeriod = -1.0;
     /** PID gains for move motors, as a tuple of {@code [kP, kI, kD]}. */
     public double[] movePID;
     /** Feed forward gains for move motors, as a tuple of {@code [kS, kV]}. */
@@ -91,11 +93,13 @@ public class SwerveConfig {
      * @param period The robot's main loop period in seconds.
      * @param odometry The period to update odometry in seconds.
      * @param discretization The period to look ahead for discretizing chassis speeds in seconds.
+     * @param defaultFramePeriod The default frame period for unused CAN signals in seconds.
      */
-    public SwerveConfig setTimings(double period, double odometry, double discretization) {
+    public SwerveConfig setTimings(double period, double odometry, double discretization, double defaultFramePeriod) {
         this.period = period;
         odometryPeriod = odometry;
         discretizationPeriod = discretization;
+        this.defaultFramePeriod = defaultFramePeriod;
         return this;
     }
 
@@ -297,6 +301,7 @@ public class SwerveConfig {
         if (period == -1.0) missing.add("Period");
         if (odometryPeriod == -1.0) missing.add("Odometry Period");
         if (discretizationPeriod == -1.0) missing.add("Discretization Period");
+        if (defaultFramePeriod == -1.0) missing.add("Default Frame Period");
         if (movePID == null) missing.add("Move PID");
         if (moveFF == null) missing.add("Move FF");
         if (turnPID == null) missing.add("Turn PID");

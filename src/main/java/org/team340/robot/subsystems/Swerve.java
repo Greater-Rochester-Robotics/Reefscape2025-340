@@ -76,7 +76,7 @@ public final class Swerve extends GRRSubsystem {
         .setEncoder(SwerveEncoders.canCoder(LowerCAN.kBrEncoder, -0.079, false));
 
     private static final SwerveConfig kConfig = new SwerveConfig()
-        .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02)
+        .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02, 0.01)
         .setMovePID(0.27, 0.0, 0.0)
         .setMoveFF(0.0, 0.126)
         .setTurnPID(100.0, 0.0, 0.2)

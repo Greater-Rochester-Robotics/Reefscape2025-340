@@ -4,12 +4,20 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Watchdog;
 import java.lang.reflect.Field;
 
+/**
+ * Utility class for disabling {@link Watchdog} instances inside objects.
+ */
 public final class DisableWatchdog {
 
     private DisableWatchdog() {
         throw new AssertionError("This is a utility class!");
     }
 
+    /**
+     * Disables a {@link Watchdog} instance within the specified object.
+     * @param obj The object containing the {@link Watchdog} to disable.
+     * @param fieldName The name of the field the {@link Watchdog} is declared as.
+     */
     public static void in(Object obj, String fieldName) {
         try {
             Field field = null;
@@ -27,7 +35,7 @@ public final class DisableWatchdog {
             field.setAccessible(true);
             Watchdog watchdog = (Watchdog) field.get(obj);
             watchdog.disable();
-            watchdog.setTimeout(100000.0);
+            watchdog.setTimeout(1e6);
         } catch (Exception e) {
             DriverStation.reportWarning(
                 "Unable to disable watchdog: Attempted with accessor \"" +

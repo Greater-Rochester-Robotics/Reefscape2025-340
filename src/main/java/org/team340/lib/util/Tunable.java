@@ -13,6 +13,7 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
@@ -99,6 +100,15 @@ public final class Tunable {
             return value;
         }
 
+        /**
+         * Sets the value of the tunable.
+         * @param value The new value.
+         */
+        public void set(boolean value) {
+            this.value = value;
+            entry.set(value);
+        }
+
         @Override
         public void close() {
             entry.close();
@@ -152,6 +162,15 @@ public final class Tunable {
          */
         public int value() {
             return value;
+        }
+
+        /**
+         * Sets the value of the tunable.
+         * @param value The new value.
+         */
+        public void set(int value) {
+            this.value = value;
+            entry.set(value);
         }
 
         @Override
@@ -209,6 +228,15 @@ public final class Tunable {
             return value;
         }
 
+        /**
+         * Sets the value of the tunable.
+         * @param value The new value.
+         */
+        public void set(float value) {
+            this.value = value;
+            entry.set(value);
+        }
+
         @Override
         public void close() {
             entry.close();
@@ -262,6 +290,15 @@ public final class Tunable {
          */
         public double value() {
             return value;
+        }
+
+        /**
+         * Sets the value of the tunable.
+         * @param value The new value.
+         */
+        public void set(double value) {
+            this.value = value;
+            entry.set(value);
         }
 
         @Override
@@ -319,6 +356,15 @@ public final class Tunable {
             return value;
         }
 
+        /**
+         * Sets the value of the tunable.
+         * @param value The new value.
+         */
+        public void set(String value) {
+            this.value = value;
+            entry.set(value);
+        }
+
         @Override
         public void close() {
             entry.close();
@@ -331,10 +377,10 @@ public final class Tunable {
      * @param controller The PID controller.
      */
     public static void pidController(String name, PIDController controller) {
-        doubleValue(name + "/kP", controller.getP(), v -> controller.setP(v));
-        doubleValue(name + "/kI", controller.getI(), v -> controller.setI(v));
-        doubleValue(name + "/kD", controller.getD(), v -> controller.setD(v));
-        doubleValue(name + "/iZone", controller.getIZone(), v -> controller.setIZone(v));
+        doubleValue(name + "/kP", controller.getP(), controller::setP);
+        doubleValue(name + "/kI", controller.getI(), controller::setI);
+        doubleValue(name + "/kD", controller.getD(), controller::setD);
+        doubleValue(name + "/iZone", controller.getIZone(), controller::setIZone);
     }
 
     /**
@@ -343,10 +389,10 @@ public final class Tunable {
      * @param controller The PID controller.
      */
     public static void pidController(String name, ProfiledPIDController controller) {
-        doubleValue(name + "/kP", controller.getP(), v -> controller.setP(v));
-        doubleValue(name + "/kI", controller.getI(), v -> controller.setI(v));
-        doubleValue(name + "/kD", controller.getD(), v -> controller.setD(v));
-        doubleValue(name + "/iZone", controller.getIZone(), v -> controller.setIZone(v));
+        doubleValue(name + "/kP", controller.getP(), controller::setP);
+        doubleValue(name + "/kI", controller.getI(), controller::setI);
+        doubleValue(name + "/kD", controller.getD(), controller::setD);
+        doubleValue(name + "/iZone", controller.getIZone(), controller::setIZone);
         doubleValue(name + "/maxVelocity", controller.getConstraints().maxVelocity, v ->
             controller.setConstraints(new TrapezoidProfile.Constraints(v, controller.getConstraints().maxAcceleration))
         );
@@ -594,7 +640,7 @@ public final class Tunable {
 
     /**
      * Enables tuning a {@link TalonFX}'s motion magic config.
-     * @param The name for the tunable. Must be unique.
+     * @param name The name for the tunable. Must be unique.
      * @param talonFX The TalonFX to tune.
      */
     public static void motionProfile(String name, TalonFX talonFX) {
@@ -626,5 +672,14 @@ public final class Tunable {
             config.MotionMagicExpo_kA = v;
             talonFX.getConfigurator().apply(config);
         });
+    }
+
+    /**
+     * Enables tuning a {@link Debouncer}'s debounce time.
+     * @param name The name for the tunable. Must be unique.
+     * @param debouncer The debouncer to tune.
+     */
+    public static void debounce(String name, Debouncer debouncer) {
+        doubleValue(name, debouncer.getDebounceTime(), debouncer::setDebounceTime);
     }
 }

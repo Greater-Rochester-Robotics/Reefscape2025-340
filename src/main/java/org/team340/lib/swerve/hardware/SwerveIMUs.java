@@ -147,10 +147,10 @@ public final class SwerveIMUs {
             Canandgyro canandgyro = new Canandgyro(id);
 
             var settings = new CanandgyroSettings()
-                .setAccelerationFramePeriod(config.period)
-                .setAngularPositionFramePeriod(config.period)
+                .setAccelerationFramePeriod(config.defaultFramePeriod)
+                .setAngularPositionFramePeriod(config.odometryPeriod)
                 .setAngularVelocityFramePeriod(config.odometryPeriod)
-                .setStatusFramePeriod(config.period)
+                .setStatusFramePeriod(config.defaultFramePeriod)
                 .setYawFramePeriod(config.odometryPeriod);
 
             canandgyro.clearStickyFaults();
@@ -220,13 +220,18 @@ public final class SwerveIMUs {
 
             PhoenixUtil.run("Clear Sticky Faults", () -> pigeon2.clearStickyFaults());
             PhoenixUtil.run("Set Update Frequency", () ->
-                BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, yaw, yawVelocity)
-            );
-            PhoenixUtil.run("Set Update Frequency", () ->
-                BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.period, pitch, roll, pitchVelocity, rollVelocity)
+                BaseStatusSignal.setUpdateFrequencyForAll(
+                    1.0 / config.odometryPeriod,
+                    yaw,
+                    pitch,
+                    roll,
+                    yawVelocity,
+                    pitchVelocity,
+                    rollVelocity
+                )
             );
             PhoenixUtil.run("Optimize Bus Utilization", () ->
-                pigeon2.optimizeBusUtilization(1.0 / SwerveBaseHardware.kTelemetryCANPeriod, 0.05)
+                pigeon2.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
             );
 
             return new SwerveIMU() {

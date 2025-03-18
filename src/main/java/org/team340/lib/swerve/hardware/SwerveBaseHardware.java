@@ -8,13 +8,6 @@ import org.team340.lib.swerve.SwerveAPI;
 
 interface SwerveBaseHardware extends AutoCloseable {
     /**
-     * The CAN frame period in seconds to use for frames containing data
-     * utilized for telemetry that is not necessarily required for swerve
-     * to function.
-     */
-    static final double kTelemetryCANPeriod = 0.2;
-
-    /**
      * Returns the device's underlying API.
      */
     public abstract Object getAPI();

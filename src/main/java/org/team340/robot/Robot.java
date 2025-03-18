@@ -135,17 +135,17 @@ public final class Robot extends TimedRobot {
     }
 
     /**
-     * Returns the current match time in seconds.
-     */
-    public double matchTime() {
-        return Math.max(DriverStation.getMatchTime(), 0.0);
-    }
-
-    /**
      * Returns {@code true} if it is safe for the goose neck and elevator to move.
      */
     public boolean safeForGoose() {
         return !gooseNeck.beamBroken() && swerve.wildlifeConservationProgram();
+    }
+
+    /**
+     * Returns the current match time in seconds.
+     */
+    public double matchTime() {
+        return Math.max(DriverStation.getMatchTime(), 0.0);
     }
 
     @NotLogged

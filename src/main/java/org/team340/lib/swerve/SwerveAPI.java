@@ -180,6 +180,7 @@ public class SwerveAPI implements AutoCloseable {
         try {
             poseEstimator.resetPosition(odometryThread.lastYaw, state.modules.positions, pose);
             state.pose = poseEstimator.getEstimatedPosition();
+            odometryThread.yawMeasurements.clear();
         } finally {
             odometryMutex.unlock();
         }
@@ -194,10 +195,12 @@ public class SwerveAPI implements AutoCloseable {
     public void tareRotation(Perspective perspective) {
         var rotation = perspective.getTareRotation();
         if (rotation == null) return;
+
         odometryMutex.lock();
         try {
             poseEstimator.resetRotation(rotation);
             state.pose = poseEstimator.getEstimatedPosition();
+            odometryThread.yawMeasurements.clear();
         } finally {
             odometryMutex.unlock();
         }
@@ -233,7 +236,9 @@ public class SwerveAPI implements AutoCloseable {
      * @param x The X value of the driver's joystick, from {@code [-1.0, 1.0]}.
      * @param y The Y value of the driver's joystick, from {@code [-1.0, 1.0]}.
      * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
-     * @param assist Additional velocities to apply.
+     * @param assist Additional velocities to apply. Note that these speeds are
+     *               relative to the provided perspective, and are still restricted
+     *               by the ratelimiter if it is active.
      * @param perspective The forward perspective for the chassis speeds.
      * @param discretize If the generated speeds should be discretized.
      * @param ratelimit If the robot's acceleration should be constrained.

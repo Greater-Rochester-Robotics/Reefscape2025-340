@@ -138,9 +138,9 @@ public final class SwerveMotors {
             sparkConfig.encoder.positionConversionFactor(1.0).velocityConversionFactor(1.0 / 60.0);
 
             sparkConfig.signals
-                .appliedOutputPeriodMs((int) (config.period * 1000.0))
+                .appliedOutputPeriodMs((int) (config.defaultFramePeriod * 1000.0))
                 .faultsAlwaysOn(true)
-                .faultsPeriodMs((int) (config.period * 1000.0))
+                .faultsPeriodMs((int) (config.defaultFramePeriod * 1000.0))
                 .primaryEncoderPositionAlwaysOn(true)
                 .primaryEncoderPositionPeriodMs((int) (config.odometryPeriod * 1000.0))
                 .primaryEncoderVelocityAlwaysOn(true)
@@ -257,9 +257,9 @@ public final class SwerveMotors {
                 .quadratureAverageDepth(isMoveMotor ? 8 : 64);
 
             sparkConfig.signals
-                .appliedOutputPeriodMs((int) (config.period * 1000.0))
+                .appliedOutputPeriodMs((int) (config.defaultFramePeriod * 1000.0))
                 .faultsAlwaysOn(true)
-                .faultsPeriodMs((int) (config.period * 1000.0))
+                .faultsPeriodMs((int) (config.defaultFramePeriod * 1000.0))
                 .primaryEncoderPositionAlwaysOn(true)
                 .primaryEncoderPositionPeriodMs((int) (config.odometryPeriod * 1000.0))
                 .primaryEncoderVelocityAlwaysOn(true)
@@ -398,7 +398,7 @@ public final class SwerveMotors {
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
             PhoenixUtil.run("Optimize Bus Utilization", () ->
-                talonFX.optimizeBusUtilization(1.0 / SwerveBaseHardware.kTelemetryCANPeriod, 0.05)
+                talonFX.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
             );
 
             if (isMoveMotor) PhoenixUtil.run("Zero Rotor Encoder", () -> talonFX.setPosition(0.0));
