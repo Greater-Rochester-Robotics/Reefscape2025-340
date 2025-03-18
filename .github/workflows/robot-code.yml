@@ -1,5 +1,5 @@
 name: Robot Code
-on: [pull_request, push]
+on: push
 
 env:
   NODE_VERSION: 20
