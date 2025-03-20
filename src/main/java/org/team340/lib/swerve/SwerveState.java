@@ -10,7 +10,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import java.util.ArrayList;
 import java.util.List;
-import org.team340.lib.swerve.SwerveAPI.TimestampedYaw;
+import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
 
 /**
  * Represents the state of the robot's drivetrain.
@@ -48,29 +48,6 @@ public final class SwerveState {
     }
 
     /**
-     * Measurements from the IMU.
-     */
-    @Logged(strategy = Strategy.OPT_IN)
-    public static final class IMU {
-
-        /** All yaw measurements since the {@link SwerveState} has been refreshed. */
-        public final List<TimestampedYaw> yawMeasurements;
-        /** The robot's yaw. */
-        public Rotation2d yaw;
-        /** The robot's pitch. */
-        public Rotation2d pitch;
-        /** The robot's roll. */
-        public Rotation2d roll;
-
-        private IMU() {
-            yawMeasurements = new ArrayList<>();
-            yaw = Rotation2d.kZero;
-            pitch = Rotation2d.kZero;
-            roll = Rotation2d.kZero;
-        }
-    }
-
-    /**
      * Represents the state of the odometry thread.
      */
     @Logged(strategy = Strategy.OPT_IN)
@@ -88,10 +65,10 @@ public final class SwerveState {
 
     /** Information about module states and positions. */
     public final Modules modules;
-    /** Measurements from the IMU. */
-    public final IMU imu;
     /** The state of the odometry thread. */
     public final OdometryThread odometryThread;
+    /** All pose estimates from the odometry thread since the {@link SwerveState} has been refreshed. */
+    public final List<TimestampedPose> poseHistory;
     /** The current measured robot-relative speeds. */
     public final ChassisSpeeds speeds;
     /** The next target robot-relative speeds. Updated when using {@code applySpeeds()}. */
@@ -104,17 +81,23 @@ public final class SwerveState {
     public Translation2d translation;
     /** The robot's rotation (yaw) as reported from the pose estimator. */
     public Rotation2d rotation;
+    /** The robot's pitch. */
+    public Rotation2d pitch;
+    /** The robot's roll. */
+    public Rotation2d roll;
     /** The timestamp of the swerve state in seconds (FPGA time). */
     public double timestamp;
 
     SwerveState(SwerveModule[] modules) {
         this.modules = new Modules(modules);
-        imu = new IMU();
         odometryThread = new OdometryThread();
+        poseHistory = new ArrayList<>();
         speeds = new ChassisSpeeds();
         targetSpeeds = new ChassisSpeeds();
         pose = Pose2d.kZero;
         translation = Translation2d.kZero;
         rotation = Rotation2d.kZero;
+        pitch = Rotation2d.kZero;
+        roll = Rotation2d.kZero;
     }
 }

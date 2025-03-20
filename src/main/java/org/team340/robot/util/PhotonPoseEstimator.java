@@ -22,6 +22,10 @@
  * SOFTWARE.
  */
 
+/**
+ * Modified PhotonPoseEstimator that adds {@code clearHeadingData()}.
+ */
+
 package org.team340.robot.util;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;

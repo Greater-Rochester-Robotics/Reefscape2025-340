@@ -85,7 +85,7 @@ public final class Swerve extends GRRSubsystem {
         .setDriverProfile(4.0, 1.5, 0.15, 4.7, 2.0, 0.05)
         .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
-        .setOdometryStd(0.1, 0.1, 0.1)
+        .setOdometryStd(0.1, 0.1, 0.05)
         .setIMU(SwerveIMUs.canandgyro(LowerCAN.kCanandgyro))
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
@@ -149,7 +149,7 @@ public final class Swerve extends GRRSubsystem {
         api.refresh();
 
         // Apply vision estimates to the pose estimator.
-        api.addVisionMeasurements(vision.getUnreadResults(state.imu.yawMeasurements));
+        api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory));
 
         // Calculate helpers
         Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
@@ -221,7 +221,7 @@ public final class Swerve extends GRRSubsystem {
         return commandBuilder("Swerve.tareRotation()")
             .onInitialize(() -> {
                 api.tareRotation(Perspective.kOperator);
-                vision.clearYawMeasurements();
+                vision.reset();
             })
             .isFinished(true)
             .ignoringDisable(true);
@@ -235,8 +235,8 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command drive(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
         return commandBuilder("Swerve.drive()").onExecute(() -> {
-            double pitch = state.imu.pitch.getRadians();
-            double roll = state.imu.roll.getRadians();
+            double pitch = state.pitch.getRadians();
+            double roll = state.roll.getRadians();
 
             var antiBeach = Perspective.kOperator.toPerspectiveSpeeds(
                 new ChassisSpeeds(
@@ -364,7 +364,7 @@ public final class Swerve extends GRRSubsystem {
      */
     public void resetPose(Pose2d pose) {
         api.resetPose(pose);
-        vision.clearYawMeasurements();
+        vision.reset();
 
         autoPIDx.reset();
         autoPIDy.reset();

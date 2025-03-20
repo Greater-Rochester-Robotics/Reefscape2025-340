@@ -149,6 +149,7 @@
     "Setpoints",
     "Signif",
     "Significand",
+    "SolvePNP",
     "Subnormals",
     "Subuid",
     "TalonFX",

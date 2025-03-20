@@ -37,16 +37,13 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
         backend.log("speeds", state.speeds, ChassisSpeeds.struct);
         backend.log("velocity", state.velocity);
         backend.log("pose", state.pose, Pose2d.struct);
+        backend.log("pitch", state.pitch, Rotation2d.struct);
+        backend.log("roll", state.roll, Rotation2d.struct);
 
         var modules = backend.getNested("modules");
         modules.log("positions", state.modules.positions, SwerveModulePosition.struct);
         modules.log("states", state.modules.states, SwerveModuleState.struct);
         modules.log("lastTarget", state.modules.lastTarget, SwerveModuleState.struct);
-
-        var imu = backend.getNested("imu");
-        imu.log("yaw", state.imu.yaw, Rotation2d.struct);
-        imu.log("pitch", state.imu.pitch, Rotation2d.struct);
-        imu.log("roll", state.imu.roll, Rotation2d.struct);
 
         var odometryThread = backend.getNested("odometryThread");
         odometryThread.log("timesync", state.odometryThread.timesync);
