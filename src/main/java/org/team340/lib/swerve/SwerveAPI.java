@@ -194,6 +194,10 @@ public class SwerveAPI implements AutoCloseable {
 
         odometryMutex.lock();
         try {
+            // Patch for an upstream bug.
+            // TODO PR a proper fix to PoseEstimator.resetRotation()
+            odometry.resetPose(state.pose);
+
             poseEstimator.resetRotation(rotation);
             state.pose = poseEstimator.getEstimatedPosition();
             odometryThread.poseHistory.clear();

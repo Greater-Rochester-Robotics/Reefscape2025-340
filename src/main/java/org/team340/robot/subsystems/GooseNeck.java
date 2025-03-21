@@ -52,7 +52,7 @@ public final class GooseNeck extends GRRSubsystem {
      */
     private static enum GoosePosition {
         kStow(0.0),
-        kScoreL1(-0.1),
+        kScoreL1(0.4),
         kScoreForward(0.5);
 
         private TunableDouble rotations;
@@ -79,9 +79,9 @@ public final class GooseNeck extends GRRSubsystem {
     private static enum GooseSpeed {
         kIntake(-6.0),
         kSeat(-2.3),
-        kScoreL1(-3.0),
-        kAlgae(12.0),
+        kScoreL1(6.5),
         kScoreForward(9.0),
+        kAlgae(12.0),
         kBarf(-8.0),
         kSwallow(8.0);
 
@@ -106,7 +106,7 @@ public final class GooseNeck extends GRRSubsystem {
         0.2
     );
 
-    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.062);
+    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.056);
     private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.03);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 12.0);
@@ -439,7 +439,7 @@ public final class GooseNeck extends GRRSubsystem {
                     return selection.isLeft();
                 }
             },
-            () -> selection.isL1() || safe.getAsBoolean()
+            safe
         )
             .alongWith(
                 new CommandBuilder()

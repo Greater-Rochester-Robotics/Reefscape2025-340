@@ -126,13 +126,12 @@ public final class VisionManager {
          * @param targets A list of targets to add to.
          */
         private void refresh(List<VisionMeasurement> measurements, List<Pose3d> targets) {
-            for (PhotonPipelineResult result : camera.getAllUnreadResults()) {
-                // If we are disabled, use Constrained SolvePNP to estimate the robot's heading.
-                // See https://github.com/Greater-Rochester-Robotics/Reefscape2025-340/issues/19
-                estimator.setPrimaryStrategy(
-                    DriverStation.isEnabled() ? PNP_DISTANCE_TRIG_SOLVE : CONSTRAINED_SOLVEPNP
-                );
+            // If we are disabled, use Constrained SolvePNP to estimate the robot's heading.
+            // See https://github.com/Greater-Rochester-Robotics/Reefscape2025-340/issues/19
+            boolean usingTrig = DriverStation.isEnabled();
+            estimator.setPrimaryStrategy(usingTrig ? PNP_DISTANCE_TRIG_SOLVE : CONSTRAINED_SOLVEPNP);
 
+            for (PhotonPipelineResult result : camera.getAllUnreadResults()) {
                 // Get an estimate from the PhotonPoseEstimator.
                 var estimate = estimator.update(result, Optional.empty(), Optional.empty(), constrainedPnpParams);
                 if (estimate.isEmpty() || estimate.get().targetsUsed.isEmpty()) continue;
@@ -152,14 +151,12 @@ public final class VisionManager {
 
                 // Calculate the pose estimation weights for X/Y location. As
                 // distance increases, the tag is trusted exponentially less.
-                double xyStd = 0.1 * distance * distance;
+                double xyStd = (usingTrig ? 0.1 : 0.4) * distance * distance;
 
                 // Calculate the angular pose estimation weight. If we're solving via trig, reject
                 // the heading estimate to ensure the pose estimator doesn't "poison" itself with
                 // essentially duplicate data. Otherwise, weight the estimate similar to X/Y.
-                double angStd = !estimator.getPrimaryStrategy().equals(PNP_DISTANCE_TRIG_SOLVE)
-                    ? 0.12 * distance * distance
-                    : 1e5;
+                double angStd = (usingTrig ? 1e5 : 0.14) * distance * distance;
 
                 // Push the measurement to the supplied measurements list.
                 measurements.add(

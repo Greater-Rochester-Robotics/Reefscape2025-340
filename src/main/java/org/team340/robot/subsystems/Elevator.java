@@ -16,7 +16,6 @@ import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -35,12 +34,12 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.5),
-        kBarf(0.5),
+        kIntake(0.45),
+        kBarf(0.45),
         kSwallow(0.9),
         kBabyBird(10.9),
-        kL1(0.0),
-        kL2(10.5),
+        kL1(6.0),
+        kL2(10.75),
         kL3(22.5),
         kL4(40.25);
 
@@ -233,7 +232,7 @@ public final class Elevator extends GRRSubsystem {
             () -> {
                 if (dunk.getAsBoolean()) dunkinDonuts.value = true;
                 if (selection.getLevel() != 4) dunkinDonuts.value = false;
-                return (dunkinDonuts.value ? kDunkRotations.value() : 0.0) + (DriverStation.isAutonomous() ? 0.4 : 0.0);
+                return dunkinDonuts.value ? kDunkRotations.value() : 0.0;
             },
             safe
         ).beforeStarting(() -> dunkinDonuts.value = false);

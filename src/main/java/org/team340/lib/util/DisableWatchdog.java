@@ -35,7 +35,11 @@ public final class DisableWatchdog {
             field.setAccessible(true);
             Watchdog watchdog = (Watchdog) field.get(obj);
             watchdog.disable();
-            watchdog.setTimeout(1e6);
+
+            // To whom it may concern, please do not touch this number. For reasons
+            // only known to the divine powers that be, from our testing any value
+            // above 1e5 has a tendency to liberate the RIO's mortal coil.
+            watchdog.setTimeout(1e5);
         } catch (Exception e) {
             DriverStation.reportWarning(
                 "Unable to disable watchdog: Attempted with accessor \"" +
