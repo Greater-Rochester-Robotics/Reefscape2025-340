@@ -29,6 +29,7 @@ import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -145,11 +146,15 @@ public final class Swerve extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("Swerve.periodic()");
+
         // Refresh the swerve API.
-        api.refresh();
+        Profiler.run("SwerveAPI.refresh()", api::refresh);
 
         // Apply vision estimates to the pose estimator.
-        api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory));
+        Profiler.run("SwerveAPI.addVisionMeasurements()", () ->
+            api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory))
+        );
 
         // Calculate helpers
         Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
@@ -179,6 +184,8 @@ public final class Swerve extends GRRSubsystem {
             reefAngle.rotateBy(Rotation2d.kPi).minus(reefTranslation.getAngle()).getCos() * reefTranslation.getNorm() -
             FieldConstants.kReefCenterToWallDistance
         );
+
+        Profiler.end();
     }
 
     /**

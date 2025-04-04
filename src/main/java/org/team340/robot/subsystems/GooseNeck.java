@@ -32,6 +32,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.CommandBuilder;
@@ -78,8 +79,8 @@ public final class GooseNeck extends GRRSubsystem {
 
     private static enum GooseSpeed {
         kIntake(-6.0),
-        kSeat(-2.3),
-        kScoreL1(6.5),
+        kSeat(-1.8),
+        kScoreL1(4.75),
         kScoreForward(9.0),
         kAlgae(12.0),
         kBarf(-8.0),
@@ -106,7 +107,7 @@ public final class GooseNeck extends GRRSubsystem {
         0.2
     );
 
-    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.056);
+    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.035);
     private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.03);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 12.0);
@@ -196,7 +197,7 @@ public final class GooseNeck extends GRRSubsystem {
             )
         );
         PhoenixUtil.run("Set Goose Neck Fast Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(500, beamBreak, beamBreakVolatile)
+            BaseStatusSignal.setUpdateFrequencyForAll(400, beamBreak, beamBreakVolatile)
         );
         PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
             ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi)
@@ -225,7 +226,9 @@ public final class GooseNeck extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("GooseNeck.periodic()");
         BaseStatusSignal.refreshAll(position, velocity, beamBreak);
+        Profiler.end();
     }
 
     // *************** Helper Functions ***************
@@ -292,7 +295,7 @@ public final class GooseNeck extends GRRSubsystem {
                         return;
                     }
 
-                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.02).getValue());
+                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.005).getValue());
 
                     switch (state.value) {
                         case kInit:

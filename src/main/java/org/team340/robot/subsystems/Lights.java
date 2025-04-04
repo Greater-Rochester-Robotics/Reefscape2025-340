@@ -26,7 +26,7 @@ public final class Lights {
         kGoose(255, 255, 255),
         kScored(0, 255, 0),
         kGooseAssassination(255, 0, 0),
-        kDisabled(255, 18, 0),
+        kDisabled(255, 32, 0),
         kOff(0, 0, 0);
 
         private final TunableInteger r;

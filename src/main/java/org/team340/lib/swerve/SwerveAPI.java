@@ -21,6 +21,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -145,14 +146,15 @@ public class SwerveAPI implements AutoCloseable {
     public void addVisionMeasurements(VisionMeasurement... measurements) {
         odometryMutex.lock();
         try {
+            Arrays.sort(measurements);
             for (VisionMeasurement measurement : measurements) {
                 if (measurement.stdDevs == null) {
-                    poseEstimator.addVisionMeasurement(measurement.visionPose, measurement.timestamp);
+                    poseEstimator.addVisionMeasurement(measurement.pose(), measurement.timestamp());
                 } else {
                     poseEstimator.addVisionMeasurement(
-                        measurement.visionPose,
-                        measurement.timestamp,
-                        measurement.stdDevs
+                        measurement.pose(),
+                        measurement.timestamp(),
+                        measurement.stdDevs()
                     );
                 }
             }
@@ -452,20 +454,41 @@ public class SwerveAPI implements AutoCloseable {
      * @see {@link PoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
      */
     @Logged(strategy = Strategy.OPT_IN)
-    public static final record VisionMeasurement(Pose2d visionPose, double timestamp, Matrix<N3, N1> stdDevs) {
+    public static final record VisionMeasurement(Pose2d pose, double timestamp, Matrix<N3, N1> stdDevs)
+        implements Comparable<VisionMeasurement> {
         /**
          * Represents a measurement from vision to apply to the pose estimator.
-         * @see {@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d, double)}.
+         * @see {@link PoseEstimator#addVisionMeasurement(Pose2d, double)}.
          */
-        public VisionMeasurement(Pose2d visionPose, double timestamp) {
-            this(visionPose, timestamp, null);
+        public VisionMeasurement(Pose2d pose, double timestamp) {
+            this(pose, timestamp, null);
+        }
+
+        @Override
+        public int compareTo(VisionMeasurement o) {
+            return Double.compare(timestamp, o.timestamp());
+        }
+
+        @Override
+        public String toString() {
+            return String.format("VisionMeasurement(%s, timestamp: %.3f)", pose, timestamp);
         }
     }
 
     /**
      * Contains a {@link Pose2d} alongside a timestamp in seconds.
      */
-    public static final record TimestampedPose(Pose2d pose, double timestamp) {}
+    public static final record TimestampedPose(Pose2d pose, double timestamp) implements Comparable<TimestampedPose> {
+        @Override
+        public int compareTo(TimestampedPose o) {
+            return Double.compare(timestamp, o.timestamp());
+        }
+
+        @Override
+        public String toString() {
+            return String.format("TimestampedPose(%s, timestamp: %.3f)", pose, timestamp);
+        }
+    }
 
     /**
      * Manages swerve odometry. Will run asynchronously at the configured odometry update

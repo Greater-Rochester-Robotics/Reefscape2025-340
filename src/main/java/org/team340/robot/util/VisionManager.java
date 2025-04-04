@@ -81,7 +81,7 @@ public final class VisionManager {
             camera.refresh(measurements, targets);
         }
 
-        estimates.addAll(measurements.stream().map(m -> m.visionPose()).toList());
+        estimates.addAll(measurements.stream().map(m -> m.pose()).toList());
         return measurements.stream().toArray(VisionMeasurement[]::new);
     }
 
