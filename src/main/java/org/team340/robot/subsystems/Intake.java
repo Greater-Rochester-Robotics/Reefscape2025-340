@@ -13,6 +13,7 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -59,7 +60,9 @@ public final class Intake extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("Intake.periodic()");
         BaseStatusSignal.refreshAll(current);
+        Profiler.end();
     }
 
     // *************** Commands ***************

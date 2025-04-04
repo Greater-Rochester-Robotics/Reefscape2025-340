@@ -32,6 +32,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.CommandBuilder;
@@ -79,7 +80,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static enum GooseSpeed {
         kIntake(-6.0),
         kSeat(-1.8),
-        kScoreL1(6.5),
+        kScoreL1(4.75),
         kScoreForward(9.0),
         kAlgae(12.0),
         kBarf(-8.0),
@@ -225,7 +226,9 @@ public final class GooseNeck extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("GooseNeck.periodic()");
         BaseStatusSignal.refreshAll(position, velocity, beamBreak);
+        Profiler.end();
     }
 
     // *************** Helper Functions ***************

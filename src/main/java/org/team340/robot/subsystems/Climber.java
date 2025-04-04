@@ -13,6 +13,7 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -81,7 +82,9 @@ public final class Climber extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("Climber.periodic()");
         BaseStatusSignal.refreshAll(position, velocity);
+        Profiler.end();
     }
 
     // *************** Helper Functions ***************

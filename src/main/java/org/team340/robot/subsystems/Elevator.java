@@ -22,6 +22,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -38,7 +39,7 @@ public final class Elevator extends GRRSubsystem {
         kBarf(0.45),
         kSwallow(0.9),
         kBabyBird(10.9),
-        kL1(6.0),
+        kL1(5.0),
         kL2(10.75),
         kL3(22.5),
         kL4(40.25);
@@ -178,7 +179,9 @@ public final class Elevator extends GRRSubsystem {
 
     @Override
     public void periodic() {
+        Profiler.start("Elevator.periodic()");
         BaseStatusSignal.refreshAll(leadPosition, followPosition, leadVelocity, followVelocity, limitSwitch);
+        Profiler.end();
     }
 
     // *************** Helper Functions ***************
