@@ -14,6 +14,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,8 +36,8 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.4),
-        kBarf(0.4),
+        kIntake(0.18),
+        kBarf(0.18),
         kSwallow(0.9),
         kBabyBird(10.9),
         kL1(5.0),
@@ -69,8 +70,12 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -4.0);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
+        "elevator/kAtPositionTolerance",
+        0.25
+    );
     private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
     private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
@@ -89,6 +94,7 @@ public final class Elevator extends GRRSubsystem {
     private final VoltageOut voltageControl;
     private final Follower followControl;
 
+    private boolean atPosition = false;
     private boolean homed = false;
 
     public Elevator() {
@@ -186,6 +192,11 @@ public final class Elevator extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
+    @NotLogged
+    public boolean atPosition() {
+        return atPosition;
+    }
+
     public boolean safeForIntake() {
         return getPosition() <= ElevatorPosition.kIntake.rotations() + kCloseToTolerance.value();
     }
@@ -269,6 +280,8 @@ public final class Elevator extends GRRSubsystem {
 
                 double target = position.get().rotations();
                 double currentPosition = getPosition();
+                atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionTolerance.value());
+
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
                         ElevatorPosition close = ElevatorPosition.closeTo(currentPosition);

@@ -142,6 +142,16 @@ public final class Robot extends TimedRobot {
     }
 
     /**
+     * Returns {@code true} if the robot is ready to score.
+     */
+    public boolean readyToScore() {
+        return (
+            swerve.wildlifeConservationProgram() &&
+            (Robot.isSimulation() || (gooseNeck.hasCoral() && elevator.atPosition()))
+        );
+    }
+
+    /**
      * Returns the current match time in seconds.
      */
     public double matchTime() {

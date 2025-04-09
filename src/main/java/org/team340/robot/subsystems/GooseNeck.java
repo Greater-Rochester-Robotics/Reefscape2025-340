@@ -512,10 +512,10 @@ public final class GooseNeck extends GRRSubsystem {
                     timer.reset();
                 }
 
+                double currentPosition = getPosition();
                 lastTarget.value = target;
 
                 if (allowGoosing.getAsBoolean()) {
-                    double currentPosition = getPosition();
                     boolean atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionTolerance.value());
                     goosing = true;
 
@@ -547,10 +547,10 @@ public final class GooseNeck extends GRRSubsystem {
 
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
-                        double currentPosition = getPosition();
                         GoosePosition close = GoosePosition.closeTo(
                             currentPosition * (left.getAsBoolean() ? -1.0 : 1.0)
                         );
+
                         holdPosition.value = close != null
                             ? close.rotations() * (left.getAsBoolean() ? -1.0 : 1.0)
                             : currentPosition;

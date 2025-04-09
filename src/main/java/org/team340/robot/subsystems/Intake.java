@@ -65,7 +65,9 @@ public final class Intake extends GRRSubsystem {
         Profiler.end();
     }
 
-    // *************** Commands ***************
+    public boolean coralDetected() {
+        return true;
+    }
 
     /**
      * Runs the intake.
