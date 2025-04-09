@@ -35,8 +35,8 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.45),
-        kBarf(0.45),
+        kIntake(0.4),
+        kBarf(0.4),
         kSwallow(0.9),
         kBabyBird(10.9),
         kL1(5.0),

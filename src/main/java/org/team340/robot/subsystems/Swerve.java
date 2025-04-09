@@ -44,7 +44,7 @@ import org.team340.robot.util.VisionManager;
 @Logged
 public final class Swerve extends GRRSubsystem {
 
-    private static final double kMoveRatio = (54.0 / 10.0) * (18.0 / 38.0) * (45.0 / 15.0);
+    private static final double kMoveRatio = (54.0 / 12.0) * (18.0 / 38.0) * (45.0 / 15.0);
     private static final double kTurnRatio = (22.0 / 10.0) * (88.0 / 16.0);
     private static final double kModuleOffset = Units.inchesToMeters(12.5);
 
@@ -78,12 +78,12 @@ public final class Swerve extends GRRSubsystem {
 
     private static final SwerveConfig kConfig = new SwerveConfig()
         .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02, 0.01)
-        .setMovePID(0.27, 0.0, 0.0)
-        .setMoveFF(0.0, 0.126)
+        .setMovePID(0.3, 0.0, 0.0)
+        .setMoveFF(0.15, 0.128)
         .setTurnPID(100.0, 0.0, 0.2)
         .setBrakeMode(false, true)
-        .setLimits(4.0, 0.05, 17.5, 14.0, 30.0)
-        .setDriverProfile(4.0, 1.5, 0.15, 4.7, 2.0, 0.05)
+        .setLimits(4.5, 0.05, 16.5, 11.5, 28.0)
+        .setDriverProfile(4.5, 1.5, 0.15, 4.7, 2.0, 0.05)
         .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.05)
