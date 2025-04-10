@@ -94,7 +94,7 @@ public final class Routines {
             deadline(
                 gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
-                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
+                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.2))
             )
         ).withName("Routines.intake()");
     }
@@ -178,7 +178,9 @@ public final class Routines {
             either(
                 swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft),
                 sequence(
-                    swerve.repulsorDrive(selection::isLeft, robot::readyToScore).until(gooseNeck::noCoral),
+                    swerve
+                        .repulsorDrive(selection::isLeft, robot::readyToScore, selection::isL4)
+                        .until(gooseNeck::noCoral),
                     swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
                 ),
                 () -> !kAutoDrive.value() || gooseNeck.noCoral()

@@ -295,7 +295,7 @@ public final class GooseNeck extends GRRSubsystem {
                         return;
                     }
 
-                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.01).getValue());
+                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.005).getValue());
 
                     switch (state.value) {
                         case kInit:

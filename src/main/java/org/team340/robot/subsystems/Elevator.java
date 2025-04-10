@@ -70,7 +70,7 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -4.0);
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.25);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
     private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
         "elevator/kAtPositionTolerance",

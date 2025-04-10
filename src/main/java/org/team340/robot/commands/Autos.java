@@ -33,7 +33,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 0.5);
+    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 1.0);
 
     private final Robot robot;
 
@@ -116,35 +116,39 @@ public final class Autos {
     }
 
     private Command forPiece(boolean left) {
-        parallel(
+        return parallel(
             sequence(
                 pickupCycle(left ? I : F, left),
-                pickupCycle(left ? J : E, left),
                 pickupCycle(left ? K : D, left),
-                pickupCycle(left ? L : C, left)
+                pickupCycle(left ? L : C, left),
+                pickupCycle(left ? A : B, left)
             ),
-            sequence(routines.score(() -> false, () -> true), routines.intake()).repeatedly()
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
         ).beforeStarting(parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true)));
-        return none();
     }
 
     private Command pickupCycle(ReefLocation reefLocation, boolean left) {
         return sequence(
             parallel(
-                swerve.repulsorDrive(reefLocation, robot::readyToScore).until(gooseNeck::noCoral),
+                swerve
+                    .repulsorDrive(reefLocation, robot::readyToScore, selection::isL4)
+                    .until(() -> !swerve.wildlifeConservationProgram() && gooseNeck.noCoral()),
                 either(selection.setLeft(), selection.setRight(), () -> reefLocation.left)
             ),
             swerve
                 .repulsorDrive(
                     () -> {
                         var sample = FieldConstants.kStationSample;
-                        if (Alliance.isBlue()) sample = sample.flipped();
+                        if (Alliance.isRed()) sample = sample.flipped();
                         if (left) sample = sample.mirrored();
                         return sample.getPose();
                     },
                     kIntakeSlowdown::value
                 )
-                .until(intake::coralDetected)
+                .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
         );
     }
 }

@@ -2,11 +2,14 @@ package org.team340.robot.subsystems;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.CANrange;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.UpdateModeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.units.measure.Current;
@@ -30,28 +33,52 @@ public final class Intake extends GRRSubsystem {
     private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.2);
 
     private final TalonFX motor;
+    private final CANrange canRange;
 
     private final StatusSignal<Current> current;
+    private final StatusSignal<Boolean> detected;
 
     private final VoltageOut voltageControl;
 
     public Intake() {
         motor = new TalonFX(UpperCAN.kIntakeMotor);
+        canRange = new CANrange(UpperCAN.kIntakeCANrange);
 
-        TalonFXConfiguration config = new TalonFXConfiguration();
+        TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
-        config.CurrentLimits.StatorCurrentLimit = 40.0;
-        config.CurrentLimits.SupplyCurrentLimit = 30.0;
+        motorConfig.CurrentLimits.StatorCurrentLimit = 40.0;
+        motorConfig.CurrentLimits.SupplyCurrentLimit = 30.0;
 
-        config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        motorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+
+        CANrangeConfiguration canRangeConfig = new CANrangeConfiguration();
+
+        canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 15000.0;
+        canRangeConfig.ProximityParams.ProximityThreshold = 0.08;
+        canRangeConfig.ProximityParams.ProximityHysteresis = 0.02;
+
+        canRangeConfig.FovParams.FOVRangeX = 6.75;
+        canRangeConfig.FovParams.FOVRangeY = 6.75;
+
+        canRangeConfig.ToFParams.UpdateMode = UpdateModeValue.ShortRangeUserFreq;
+        canRangeConfig.ToFParams.UpdateFrequency = 50.0;
 
         PhoenixUtil.run("Clear Intake Motor Sticky Faults", () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", () -> motor.getConfigurator().apply(config));
+        PhoenixUtil.run("Clear Intake CANrange Sticky Faults", () -> canRange.clearStickyFaults());
+        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", () -> motor.getConfigurator().apply(motorConfig));
+        PhoenixUtil.run("Apply Intake CANrange CANrangeConfiguration", () ->
+            canRange.getConfigurator().apply(canRangeConfig)
+        );
 
         current = motor.getStatorCurrent();
+        detected = canRange.getIsDetected();
 
-        PhoenixUtil.run("Set Intake Signal Frequencies", () -> BaseStatusSignal.setUpdateFrequencyForAll(100, current));
-        PhoenixUtil.run("Optimize Intake CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(10, motor));
+        PhoenixUtil.run("Set Intake Signal Frequencies", () ->
+            BaseStatusSignal.setUpdateFrequencyForAll(100, current, detected)
+        );
+        PhoenixUtil.run("Optimize Intake CAN Utilization", () ->
+            ParentDevice.optimizeBusUtilizationForAll(10, motor, canRange)
+        );
 
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = false;
@@ -61,12 +88,12 @@ public final class Intake extends GRRSubsystem {
     @Override
     public void periodic() {
         Profiler.start("Intake.periodic()");
-        BaseStatusSignal.refreshAll(current);
+        BaseStatusSignal.refreshAll(current, detected);
         Profiler.end();
     }
 
     public boolean coralDetected() {
-        return true;
+        return detected.getValue();
     }
 
     /**

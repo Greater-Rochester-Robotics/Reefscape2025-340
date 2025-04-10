@@ -29,6 +29,11 @@ public final class ReefSelection {
     }
 
     @NotLogged
+    public boolean isL4() {
+        return level == 4;
+    }
+
+    @NotLogged
     public boolean isLeft() {
         return left;
     }

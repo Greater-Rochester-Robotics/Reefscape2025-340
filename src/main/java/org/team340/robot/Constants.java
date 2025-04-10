@@ -84,6 +84,7 @@ public final class Constants {
 
         // Intake
         public static final int kIntakeMotor = 40;
+        public static final int kIntakeCANrange = 41;
 
         // Climber
         public static final int kClimberMotor = 50;

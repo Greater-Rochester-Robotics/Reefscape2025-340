@@ -96,7 +96,7 @@ public final class Swerve extends GRRSubsystem {
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
     private static final TunableDouble kTurboSpin = Tunable.doubleValue("swerve/kTurboSpin", 8.0);
-    private static final TunableDouble kInLineTolerance = Tunable.doubleValue("swerve/kInLineTolerance", 0.49);
+    private static final TunableDouble kInLineTolerance = Tunable.doubleValue("swerve/kInLineTolerance", 0.35);
 
     private static final TunableDouble kBeachSpeed = Tunable.doubleValue("swerve/beach/speed", 3.0);
     private static final TunableDouble kBeachTolerance = Tunable.doubleValue("swerve/beach/tolerance", 0.15);
@@ -105,6 +105,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kRepulsorLead = Tunable.doubleValue("swerve/repulsor/leadDistance", 0.65);
     private static final TunableDouble kRepulsorVelocity = Tunable.doubleValue("swerve/repulsor/velocity", 3.5);
     private static final TunableDouble kRepulsorSlowLead = Tunable.doubleValue("swerve/repulsor/slowdownLead", 0.71);
+    private static final TunableDouble kRepulsorSlowL4Lead = Tunable.doubleValue("swerve/repulsor/slowdownL4Lead", 0.9);
     private static final TunableDouble kRepulsorSlowScore = Tunable.doubleValue("swerve/repulsor/slowdownScore", 0.95);
     private static final TunableDouble kRepulsorTolerance = Tunable.doubleValue("swerve/repulsor/tolerance", 0.25);
     private static final TunableDouble kRepulsorAngTolerance = Tunable.doubleValue("swerve/repulsor/angTolerance", 0.3);
@@ -115,7 +116,7 @@ public final class Swerve extends GRRSubsystem {
 
     private static final TunableDouble kFacingReefTolerance = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
     private static final TunableDouble kReefDangerDistance = Tunable.doubleValue("swerve/kReefDangerDistance", 0.6);
-    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 3.75);
+    private static final TunableDouble kReefHappyDistance = Tunable.doubleValue("swerve/kReefHappyDistance", 3.25);
 
     private final SwerveAPI api;
     private final SwerveState state;
@@ -377,18 +378,20 @@ public final class Swerve extends GRRSubsystem {
      * @param left A supplier that returns {@code true} if the robot should target
      *             the left reef pole, or {@code false} to target the right pole.
      * @param ready If the robot is ready to approach the scoring location.
+     * @param l4 If the robot is scoring L4.
      */
-    public Command repulsorDrive(BooleanSupplier left, BooleanSupplier ready) {
-        return repulsorDrive(() -> reefReference.getRotation(), left, ready);
+    public Command repulsorDrive(BooleanSupplier left, BooleanSupplier ready, BooleanSupplier l4) {
+        return repulsorDrive(() -> reefReference.getRotation(), left, ready, l4);
     }
 
     /**
      * Drives the robot to the reef autonomously.
      * @param location The reef location to drive to.
      * @param ready If the robot is ready to approach the scoring location.
+     * @param l4 If the robot is scoring L4.
      */
-    public Command repulsorDrive(ReefLocation location, BooleanSupplier ready) {
-        return repulsorDrive(() -> location.side, () -> location.left, ready);
+    public Command repulsorDrive(ReefLocation location, BooleanSupplier ready, BooleanSupplier l4) {
+        return repulsorDrive(() -> location.side, () -> location.left, ready, l4);
     }
 
     /**
@@ -397,8 +400,14 @@ public final class Swerve extends GRRSubsystem {
      * @param left A supplier that returns {@code true} if the robot should target
      *             the left reef pole, or {@code false} to target the right pole.
      * @param ready If the robot is ready to approach the scoring location.
+     * @param l4 If the robot is scoring L4.
      */
-    private Command repulsorDrive(Supplier<Rotation2d> side, BooleanSupplier left, BooleanSupplier ready) {
+    private Command repulsorDrive(
+        Supplier<Rotation2d> side,
+        BooleanSupplier left,
+        BooleanSupplier ready,
+        BooleanSupplier l4
+    ) {
         Mutable<Pose2d> lastTarget = new Mutable<>(Pose2d.kZero);
         Mutable<Boolean> nowSafe = new Mutable<>(false);
 
@@ -432,7 +441,10 @@ public final class Swerve extends GRRSubsystem {
 
                 return target;
             },
-            () -> !nowSafe.value ? kRepulsorSlowLead.value() : kRepulsorSlowScore.value()
+            () ->
+                !nowSafe.value
+                    ? (l4.getAsBoolean() ? kRepulsorSlowL4Lead.value() : kRepulsorSlowLead.value())
+                    : kRepulsorSlowScore.value()
         ).beforeStarting(() -> {
             lastTarget.value = Pose2d.kZero;
             nowSafe.value = false;
