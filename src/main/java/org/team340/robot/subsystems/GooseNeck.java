@@ -285,7 +285,7 @@ public final class GooseNeck extends GRRSubsystem {
         Debouncer debounce = new Debouncer(0.065, DebounceType.kRising);
         Timer delay = new Timer();
 
-        return goTo(() -> GoosePosition.kStow, () -> true, () -> false, safe).withDeadline(
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
             new NotifierCommand(
                 () -> {
                     if (swallow.getAsBoolean()) {
