@@ -9,6 +9,9 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -34,6 +37,9 @@ import org.team340.robot.util.ReefSelection;
 public final class Autos {
 
     private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 1.0);
+    private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
+    private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 0.65);
+    private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
 
     private final Robot robot;
 
@@ -70,6 +76,8 @@ public final class Autos {
         chooser.addCmd("For Piece Right", () -> forPiece(false));
         chooser.addRoutine("Ol' Reliable Left (x3.5 L4)", () -> olReliable(true));
         chooser.addRoutine("Ol' Reliable Right (x3.5 L4)", () -> olReliable(false));
+        chooser.addCmd("Sneaky Two Left", () -> sneakyTwo(true));
+        chooser.addCmd("Sneaky Two Right", () -> sneakyTwo(false));
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -118,37 +126,102 @@ public final class Autos {
     private Command forPiece(boolean left) {
         return parallel(
             sequence(
-                pickupCycle(left ? I : F, left),
+                factory.trajectoryCmd("Start-J", !left),
+                waitUntil(gooseNeck::noCoral),
+                pickup(left ? J : E, left),
                 pickupCycle(left ? K : D, left),
                 pickupCycle(left ? L : C, left),
-                pickupCycle(left ? A : B, left)
+                pickupCycle(left ? A : B, left),
+                pickupCycle(left ? B : A, left)
             ),
             sequence(
                 routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
                 routines.intake()
             ).repeatedly()
-        ).beforeStarting(parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true)));
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
+    }
+
+    private Command sneakyTwo(boolean left) {
+        return parallel(
+            sequence(
+                score(left ? G : H, left),
+                avoid(left),
+                pickup(G, left),
+                avoid(left),
+                score(left ? H : G, left),
+                avoid(left),
+                swerve.stop(false)
+            ),
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
     }
 
     private Command pickupCycle(ReefLocation reefLocation, boolean left) {
-        return sequence(
-            parallel(
-                swerve
-                    .repulsorDrive(reefLocation, robot::readyToScore, selection::isL4)
-                    .until(() -> !swerve.wildlifeConservationProgram() && gooseNeck.noCoral()),
-                either(selection.setLeft(), selection.setRight(), () -> reefLocation.left)
+        return sequence(score(reefLocation, left), pickup(reefLocation, left));
+    }
+
+    private Command score(ReefLocation reefLocation, boolean left) {
+        return deadline(
+            sequence(
+                waitUntil(gooseNeck::hasCoral),
+                waitUntil(() -> !swerve.wildlifeConservationProgram() && gooseNeck.noCoral())
             ),
-            swerve
-                .repulsorDrive(
-                    () -> {
-                        var sample = FieldConstants.kStationSample;
-                        if (Alliance.isRed()) sample = sample.flipped();
-                        if (left) sample = sample.mirrored();
+            swerve.repulsorDrive(reefLocation, robot::readyToScore, selection::isL4),
+            either(selection.setLeft(), selection.setRight(), () -> reefLocation.left)
+        );
+    }
+
+    private Command pickup(ReefLocation start, boolean left) {
+        Timer timer = new Timer();
+
+        return swerve
+            .repulsorDrive(
+                () -> {
+                    var sample = start.back ? FieldConstants.kStationBackwards : FieldConstants.kStationForwards;
+                    if (Alliance.isRed()) sample = sample.flipped();
+                    if (left) sample = sample.mirrored();
+
+                    if (!timer.hasElapsed(kIntakeRotDelay.value())) {
+                        return new Pose2d(
+                            sample.x,
+                            sample.y,
+                            Alliance.isBlue() ? start.side : start.side.rotateBy(Rotation2d.kPi)
+                        );
+                    } else {
                         return sample.getPose();
-                    },
-                    kIntakeSlowdown::value
-                )
-                .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
+                    }
+                },
+                kIntakeSlowdown::value
+            )
+            .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
+            .beforeStarting(timer::restart);
+    }
+
+    private Command avoid(boolean left) {
+        return swerve.repulsorDrive(
+            () -> {
+                var sample = FieldConstants.kAvoidLocation;
+                if (Alliance.isRed()) sample = sample.flipped();
+                if (left) sample = sample.mirrored();
+                return sample.getPose();
+            },
+            kAvoidSlowdown::value,
+            kAvoidTolerance::value
         );
     }
 }

@@ -147,7 +147,7 @@ public final class Robot extends TimedRobot {
     public boolean readyToScore() {
         return (
             swerve.wildlifeConservationProgram() &&
-            (Robot.isSimulation() || (gooseNeck.hasCoral() && elevator.atPosition()))
+            (Robot.isSimulation() || (gooseNeck.hasCoral() && elevator.atPosition() && elevator.scoring()))
         );
     }
 

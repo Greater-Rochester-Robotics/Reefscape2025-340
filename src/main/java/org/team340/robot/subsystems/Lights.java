@@ -270,9 +270,7 @@ public final class Lights {
                         if (position < 0.0) percent = 1.0 - percent;
                         int closestLED = (int) Math.round(percent * (kStripLength - 1));
                         for (int i = 0; i < kStripLength; i++) {
-                            if ((selection.isLeft() ? i > kStripLength - 4 : i < 4)) {
-                                set(i, RobotController.getRSLState() ? Color.kGoose : Color.kOff);
-                            } else if (Math.abs(closestLED - i) <= 1) {
+                            if (Math.abs(closestLED - i) <= 1) {
                                 set(i, Color.kGoose);
                             } else {
                                 set(i, Color.kOff);

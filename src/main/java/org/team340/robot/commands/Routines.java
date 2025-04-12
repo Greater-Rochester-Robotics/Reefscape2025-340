@@ -94,7 +94,7 @@ public final class Routines {
             deadline(
                 gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
-                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.2))
+                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
             )
         ).withName("Routines.intake()");
     }
@@ -158,7 +158,12 @@ public final class Routines {
                     () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,
                     robot::safeForGoose
                 ),
-                gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)
+                gooseNeck.score(
+                    selection,
+                    runManual,
+                    () -> allowGoosing.getAsBoolean() && swerve.goosingTime(),
+                    robot::safeForGoose
+                )
             ),
             parallel(elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
         )
