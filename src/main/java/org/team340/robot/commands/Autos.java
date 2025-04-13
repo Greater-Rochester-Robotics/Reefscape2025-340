@@ -1,6 +1,7 @@
 package org.team340.robot.commands;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
+import static org.team340.robot.Constants.FieldConstants.ReefLocation.*;
 
 import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
@@ -10,14 +11,17 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import org.team340.lib.util.Alliance;
+import org.team340.lib.util.Tunable;
+import org.team340.lib.util.Tunable.TunableDouble;
+import org.team340.robot.Constants.FieldConstants;
+import org.team340.robot.Constants.FieldConstants.ReefLocation;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
-import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
 import org.team340.robot.subsystems.Lights;
@@ -31,6 +35,11 @@ import org.team340.robot.util.ReefSelection;
 @SuppressWarnings("unused")
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
+
+    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 1.0);
+    private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
+    private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 0.65);
+    private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
 
     private final Robot robot;
 
@@ -63,10 +72,12 @@ public final class Autos {
         chooser = new AutoChooser();
 
         // Add autonomous modes to the dashboard
-        chooser.addRoutine("Left L4 x3 (Hopper)", () -> l4x3Hopper(false));
-        chooser.addRoutine("Right L4 x3 (Hopper)", () -> l4x3Hopper(true));
-        // chooser.addRoutine("Left L4 x3 (Baby Bird)", () -> l4x3BabyBird(false));
-        // chooser.addRoutine("Right L4 x3 (Baby Bird)", () -> l4x3BabyBird(true));
+        chooser.addCmd("For Piece Left", () -> forPiece(true));
+        chooser.addCmd("For Piece Right", () -> forPiece(false));
+        chooser.addRoutine("Ol' Reliable Left (x3.5 L4)", () -> olReliable(true));
+        chooser.addRoutine("Ol' Reliable Right (x3.5 L4)", () -> olReliable(false));
+        chooser.addCmd("Sneaky Two Left", () -> sneakyTwo(true));
+        chooser.addCmd("Sneaky Two Right", () -> sneakyTwo(false));
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -77,19 +88,15 @@ public final class Autos {
         return chooser.selectedCommandScheduler();
     }
 
-    private AutoRoutine l4x3Hopper(boolean mirror) {
-        // TODO Make a proper fix for this tomfoolery. This is dumb and stupid but we need it to just work :P
-        if (Alliance.isBlue()) swerve.resetPose(new Pose2d(new Translation2d(), Rotation2d.kPi));
-        // TODO If you're reading this Bowan, you were right.
+    private AutoRoutine olReliable(boolean left) {
+        AutoRoutine routine = factory.newRoutine("Ol' Reliable");
 
-        AutoRoutine routine = factory.newRoutine("L4 x3 (Hopper)");
-
-        AutoTrajectory startToJ = routine.trajectory("Start-J", mirror);
-        AutoTrajectory jToHopper = routine.trajectory("J-Hopper", mirror);
-        AutoTrajectory hopperToK = routine.trajectory("Hopper-K", mirror);
-        AutoTrajectory kToHopper = routine.trajectory("K-Hopper", mirror);
-        AutoTrajectory hopperToL = routine.trajectory("Hopper-L", mirror);
-        AutoTrajectory lToHopper = routine.trajectory("L-Hopper", mirror);
+        AutoTrajectory startToJ = routine.trajectory("Start-J", !left);
+        AutoTrajectory jToHopper = routine.trajectory("J-Hopper", !left);
+        AutoTrajectory hopperToK = routine.trajectory("Hopper-K", !left);
+        AutoTrajectory kToHopper = routine.trajectory("K-Hopper", !left);
+        AutoTrajectory hopperToL = routine.trajectory("Hopper-L", !left);
+        AutoTrajectory lToHopper = routine.trajectory("L-Hopper", !left);
 
         routine
             .active()
@@ -116,39 +123,105 @@ public final class Autos {
         return routine;
     }
 
-    private AutoRoutine l4x3BabyBird(boolean mirror) {
-        AutoRoutine routine = factory.newRoutine("L4 x3 (Baby Bird)");
+    private Command forPiece(boolean left) {
+        return parallel(
+            sequence(
+                factory.trajectoryCmd("Start-J", !left),
+                waitUntil(gooseNeck::noCoral),
+                pickup(left ? J : E, left),
+                pickupCycle(left ? K : D, left),
+                pickupCycle(left ? L : C, left),
+                pickupCycle(left ? A : B, left),
+                pickupCycle(left ? B : A, left)
+            ),
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
+    }
 
-        AutoTrajectory startToJ = routine.trajectory("Start-J", mirror);
-        AutoTrajectory jToBird = routine.trajectory("J-Bird", mirror);
-        AutoTrajectory birdToK = routine.trajectory("Bird-K", mirror);
-        AutoTrajectory kToBird = routine.trajectory("K-Bird", mirror);
-        AutoTrajectory birdToL = routine.trajectory("Bird-L", mirror);
-        AutoTrajectory lToHopper = routine.trajectory("L-Hopper", mirror);
+    private Command sneakyTwo(boolean left) {
+        return parallel(
+            sequence(
+                score(left ? G : H, left),
+                avoid(left),
+                pickup(G, left),
+                avoid(left),
+                score(left ? H : G, left),
+                avoid(left),
+                swerve.stop(false)
+            ),
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
+    }
 
-        routine
-            .active()
-            .onTrue(
-                sequence(
-                    parallel(selection.selectLevel(4), gooseNeck.setHasCoral(false), startToJ.resetOdometry()),
-                    startToJ.spawnCmd()
-                )
-            );
+    private Command pickupCycle(ReefLocation reefLocation, boolean left) {
+        return sequence(score(reefLocation, left), pickup(reefLocation, left));
+    }
 
-        Trigger toIntake = routine.anyActive(jToBird, kToBird, lToHopper);
-        Trigger startBird = jToBird.atTime(0.75).or(kToBird.atTime(0.75));
+    private Command score(ReefLocation reefLocation, boolean left) {
+        return deadline(
+            sequence(
+                waitUntil(gooseNeck::hasCoral),
+                waitUntil(() -> !swerve.wildlifeConservationProgram() && gooseNeck.noCoral())
+            ),
+            swerve.repulsorDrive(reefLocation, robot::readyToScore, selection::isL4),
+            either(selection.setLeft(), selection.setRight(), () -> reefLocation.left)
+        );
+    }
 
-        startBird.onTrue(routines.babyBird(() -> true));
-        routine.observe(gooseNeck::hasCoral).onTrue(routines.score(toIntake, () -> true, ElevatorPosition.kBabyBird));
+    private Command pickup(ReefLocation start, boolean left) {
+        Timer timer = new Timer();
 
-        startToJ.active().onTrue(gooseNeck.setHasCoral(true));
-        startToJ.chain(jToBird);
-        jToBird.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(birdToK.spawnCmd()));
-        birdToK.chain(kToBird);
-        kToBird.done().onTrue(waitUntil(gooseNeck::hasCoral).andThen(birdToL.spawnCmd()));
-        birdToL.chain(lToHopper);
-        lToHopper.atTime(0.75).onTrue(routines.intake());
+        return swerve
+            .repulsorDrive(
+                () -> {
+                    var sample = start.back ? FieldConstants.kStationBackwards : FieldConstants.kStationForwards;
+                    if (Alliance.isRed()) sample = sample.flipped();
+                    if (left) sample = sample.mirrored();
 
-        return routine;
+                    if (!timer.hasElapsed(kIntakeRotDelay.value())) {
+                        return new Pose2d(
+                            sample.x,
+                            sample.y,
+                            Alliance.isBlue() ? start.side : start.side.rotateBy(Rotation2d.kPi)
+                        );
+                    } else {
+                        return sample.getPose();
+                    }
+                },
+                kIntakeSlowdown::value
+            )
+            .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
+            .beforeStarting(timer::restart);
+    }
+
+    private Command avoid(boolean left) {
+        return swerve.repulsorDrive(
+            () -> {
+                var sample = FieldConstants.kAvoidLocation;
+                if (Alliance.isRed()) sample = sample.flipped();
+                if (left) sample = sample.mirrored();
+                return sample.getPose();
+            },
+            kAvoidSlowdown::value,
+            kAvoidTolerance::value
+        );
     }
 }

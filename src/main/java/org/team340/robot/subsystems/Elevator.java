@@ -14,6 +14,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,19 +36,25 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         kDown(0.0),
-        kIntake(0.45),
-        kBarf(0.45),
+        kIntake(0.18),
+        kBarf(0.18),
         kSwallow(0.9),
         kBabyBird(10.9),
-        kL1(5.0),
-        kL2(10.75),
-        kL3(22.5),
-        kL4(40.25);
+        kL1(5.0, true),
+        kL2(10.75, true),
+        kL3(22.5, true),
+        kL4(40.25, true);
 
         private final TunableDouble rotations;
+        private final boolean scoring;
 
         private ElevatorPosition(double rotations) {
+            this(rotations, false);
+        }
+
+        private ElevatorPosition(double rotations, boolean scoring) {
             this.rotations = Tunable.doubleValue("elevator/positions/" + name(), rotations);
+            this.scoring = scoring;
         }
 
         public double rotations() {
@@ -69,8 +76,12 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.25);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
+        "elevator/kAtPositionTolerance",
+        0.15
+    );
     private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
     private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
@@ -89,6 +100,8 @@ public final class Elevator extends GRRSubsystem {
     private final VoltageOut voltageControl;
     private final Follower followControl;
 
+    private boolean atPosition = false;
+    private boolean scoring = false;
     private boolean homed = false;
 
     public Elevator() {
@@ -186,6 +199,16 @@ public final class Elevator extends GRRSubsystem {
 
     // *************** Helper Functions ***************
 
+    @NotLogged
+    public boolean atPosition() {
+        return atPosition;
+    }
+
+    @NotLogged
+    public boolean scoring() {
+        return scoring;
+    }
+
     public boolean safeForIntake() {
         return getPosition() <= ElevatorPosition.kIntake.rotations() + kCloseToTolerance.value();
     }
@@ -267,8 +290,12 @@ public final class Elevator extends GRRSubsystem {
                     return;
                 }
 
-                double target = position.get().rotations();
+                ElevatorPosition targetPos = position.get();
+                double target = targetPos.rotations();
                 double currentPosition = getPosition();
+                atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionTolerance.value());
+                scoring = targetPos.scoring;
+
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
                         ElevatorPosition close = ElevatorPosition.closeTo(currentPosition);
@@ -286,7 +313,11 @@ public final class Elevator extends GRRSubsystem {
                     leadMotor.setControl(positionControl.withPosition(target + fudge.getAsDouble()));
                 }
             })
-            .onEnd(leadMotor::stopMotor);
+            .onEnd(() -> {
+                leadMotor.stopMotor();
+                atPosition = false;
+                scoring = false;
+            });
     }
 
     public Command thing() {

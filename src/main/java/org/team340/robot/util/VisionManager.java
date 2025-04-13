@@ -8,6 +8,8 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -90,6 +92,7 @@ public final class VisionManager {
         private final PhotonCamera camera;
         private final PhotonPoseEstimator estimator;
         private final Optional<ConstrainedSolvepnpParams> constrainedPnpParams;
+        private final Debouncer disabledDebounce = new Debouncer(5.0, DebounceType.kFalling);
 
         /**
          * Create a camera.
@@ -128,7 +131,7 @@ public final class VisionManager {
         private void refresh(List<VisionMeasurement> measurements, List<Pose3d> targets) {
             // If we are disabled, use Constrained SolvePNP to estimate the robot's heading.
             // See https://github.com/Greater-Rochester-Robotics/Reefscape2025-340/issues/19
-            boolean usingTrig = DriverStation.isEnabled();
+            boolean usingTrig = disabledDebounce.calculate(DriverStation.isEnabled());
             estimator.setPrimaryStrategy(usingTrig ? PNP_DISTANCE_TRIG_SOLVE : CONSTRAINED_SOLVEPNP);
 
             for (PhotonPipelineResult result : camera.getAllUnreadResults()) {

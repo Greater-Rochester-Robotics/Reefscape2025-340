@@ -10,6 +10,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
+import org.team340.lib.util.Tunable;
+import org.team340.lib.util.Tunable.TunableBoolean;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Climber;
 import org.team340.robot.subsystems.Elevator;
@@ -24,8 +26,11 @@ import org.team340.robot.util.ReefSelection;
  * The Routines class contains command compositions, such as sequences
  * or parallel command groups, that require multiple subsystems.
  */
+@SuppressWarnings("unused")
 @Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
+
+    private static final TunableBoolean kAutoDrive = Tunable.booleanValue("routines/kAutoDrive", true);
 
     private final Robot robot;
 
@@ -49,13 +54,6 @@ public final class Routines {
         selection = robot.selection;
     }
 
-    public Command stow(ElevatorPosition elevatorPosition) {
-        return parallel(
-            elevator.goTo(elevatorPosition, robot::safeForGoose),
-            gooseNeck.stow(robot::safeForGoose)
-        ).withName("Routines.stow(" + elevatorPosition.name() + ")");
-    }
-
     /**
      * Intakes and seats a coral.
      */
@@ -73,6 +71,7 @@ public final class Routines {
     public Command intake(BooleanSupplier button) {
         Debouncer debounce = new Debouncer(0.8);
         Timer chokeTimer = new Timer();
+
         BooleanSupplier chokingGoose = () -> {
             if (debounce.calculate(gooseNeck.beamBroken())) chokeTimer.start();
 
@@ -95,11 +94,15 @@ public final class Routines {
             deadline(
                 gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
-                intake.intake(chokingGoose)
+                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
             )
         ).withName("Routines.intake()");
     }
 
+    /**
+     * Intakes from the coral station via the baby bird method.
+     * @param button If the intake button is still pressed.
+     */
     public Command babyBird(BooleanSupplier button) {
         return deadline(
             gooseNeck.babyBird(button, robot::safeForGoose),
@@ -132,25 +135,16 @@ public final class Routines {
     }
 
     /**
-     * Scores a coral. Also allows the goose neck to goose around.
-     * @param forceBeak Forces the goose beak to spit the coral, even if a pipe is not detected.
+     * Scores a coral.
+     * @param runManual A boolean supplier that when {@code true} will force the
+     *                  goose beak to spit, even if a pipe is not detected.
      * @param allowGoosing If the goose neck is allowed to goose around.
      */
     public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
-        return score(runManual, allowGoosing, ElevatorPosition.kDown).withName("Routines.score()");
-    }
-
-    /**
-     * Scores a coral.
-     * @param runManual A boolean supplier that when {@code true} will force the goose beak to spit, even if a pipe is not detected.
-     * @param allowGoosing If the goose neck is allowed to goose around.
-     * @param waitPosition The position for the elevator while waiting for a happy goose.
-     */
-    public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing, ElevatorPosition waitPosition) {
         return sequence(
             deadline(
                 waitUntil(swerve::happyGoose),
-                elevator.goTo(waitPosition, robot::safeForGoose),
+                elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
                 gooseNeck.stow(robot::safeForGoose)
             ),
             deadline(
@@ -164,29 +158,39 @@ public final class Routines {
                     () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,
                     robot::safeForGoose
                 ),
-                gooseNeck.score(selection, runManual, allowGoosing, robot::safeForGoose)
+                gooseNeck.score(
+                    selection,
+                    runManual,
+                    () -> allowGoosing.getAsBoolean() && swerve.goosingTime(),
+                    robot::safeForGoose
+                )
             ),
-            parallel(elevator.goTo(waitPosition, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
+            parallel(elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
         )
             .alongWith(selection.whileScoring())
             .withName("Routines.score()");
     }
 
     /**
-     * Scores a coral, with driver assists. The drivetrain will be "pushed" to
-     * center itself on a reef pipe, and the robot will also face the reef.
-     * @param runManual A boolean supplier that when {@code true} will force the goose beak to spit, even if a pipe is not detected.
+     * Scores a coral, with driver assists. Intended to be used during teleop control.
+     * @param runManual A boolean supplier that when {@code true} will force the
+     *                  goose beak to spit, even if a pipe is not detected.
      * @param allowGoosing If the goose neck is allowed to goose around.
      */
     public Command assistedScore(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
         return parallel(
             score(runManual, allowGoosing),
-            swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft)
+            either(
+                swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft),
+                sequence(
+                    swerve
+                        .repulsorDrive(selection::isLeft, robot::readyToScore, selection::isL4)
+                        .until(gooseNeck::noCoral),
+                    swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
+                ),
+                () -> !kAutoDrive.value() || gooseNeck.noCoral()
+            )
         ).withName("Routines.assistedScore()");
-    }
-
-    public Command climbSequence() {
-        return either(climber.climb(), climber.deploy(), climber::isDeployed).withName("Routines.climb()");
     }
 
     /**
