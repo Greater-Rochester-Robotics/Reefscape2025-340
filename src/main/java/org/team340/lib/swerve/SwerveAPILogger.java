@@ -37,6 +37,7 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
         backend.log("speeds", state.speeds, ChassisSpeeds.struct);
         backend.log("velocity", state.velocity);
         backend.log("pose", state.pose, Pose2d.struct);
+        backend.log("yawDouble", state.rotation.getDegrees());
         backend.log("pitch", state.pitch, Rotation2d.struct);
         backend.log("roll", state.roll, Rotation2d.struct);
 
