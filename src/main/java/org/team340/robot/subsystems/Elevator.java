@@ -123,12 +123,12 @@ public final class Elevator extends GRRSubsystem {
 
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        motorConfig.Slot0.kP = 2.0;
+        motorConfig.Slot0.kP = 4.0;
         motorConfig.Slot0.kI = 0.0;
         motorConfig.Slot0.kD = 0.0;
-        motorConfig.Slot0.kG = 0.45;
+        motorConfig.Slot0.kG = 0.55;
         motorConfig.Slot0.kS = 0.0;
-        motorConfig.Slot0.kV = 0.2;
+        motorConfig.Slot0.kV = 0.16;
         motorConfig.Slot0.kA = 0.004;
 
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 42.75;
