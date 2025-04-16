@@ -36,7 +36,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 1.0);
+    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 0.68);
     private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
     private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 0.65);
     private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
