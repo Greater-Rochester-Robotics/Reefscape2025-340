@@ -78,10 +78,7 @@ public final class Elevator extends GRRSubsystem {
 
     private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.25);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
-    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
-        "elevator/kAtPositionTolerance",
-        0.2
-    );
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue("elevator/kAtPositionTolerance", 0.2);
     private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
     private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
@@ -126,13 +123,13 @@ public final class Elevator extends GRRSubsystem {
 
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        motorConfig.Slot0.kP = 1.2;
+        motorConfig.Slot0.kP = 2.0;
         motorConfig.Slot0.kI = 0.0;
         motorConfig.Slot0.kD = 0.0;
         motorConfig.Slot0.kG = 0.45;
         motorConfig.Slot0.kS = 0.0;
-        motorConfig.Slot0.kV = 0.136;
-        motorConfig.Slot0.kA = 0.003;
+        motorConfig.Slot0.kV = 0.2;
+        motorConfig.Slot0.kA = 0.004;
 
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 42.75;
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;

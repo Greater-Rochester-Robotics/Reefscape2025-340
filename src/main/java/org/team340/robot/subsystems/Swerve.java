@@ -108,7 +108,7 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kRepulsorSlowL4Lead = Tunable.doubleValue("swerve/repulsor/slowdownL4Lead", 1.2);
     private static final TunableDouble kRepulsorSlowScore = Tunable.doubleValue("swerve/repulsor/slowdownScore", 1.25);
     private static final TunableDouble kRepulsorTolerance = Tunable.doubleValue("swerve/repulsor/tolerance", 0.2);
-    private static final TunableDouble kRepulsorAngTolerance = Tunable.doubleValue("swerve/repulsor/angTolerance", 0.3);
+    private static final TunableDouble kRepulsorAngTolerance = Tunable.doubleValue("swerve/repulsor/angTolerance", 0.4);
 
     private static final TunableDouble kReefAssistX = Tunable.doubleValue("swerve/reefAssist/x", 0.681);
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/reefAssist/kP", 20.0);

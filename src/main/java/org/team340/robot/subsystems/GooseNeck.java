@@ -80,7 +80,7 @@ public final class GooseNeck extends GRRSubsystem {
     private static enum GooseSpeed {
         kIntake(-4.0),
         kSeat(-1.8),
-        kScoreL1(4.75),
+        kScoreL1(4.0),
         kScoreForward(9.0),
         kAlgae(12.0),
         kBarf(-8.0),
