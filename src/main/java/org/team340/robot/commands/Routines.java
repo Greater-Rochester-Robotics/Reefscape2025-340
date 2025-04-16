@@ -69,13 +69,13 @@ public final class Routines {
      * @param button If the intake button is still pressed.
      */
     public Command intake(BooleanSupplier button) {
-        Debouncer debounce = new Debouncer(0.8);
+        Debouncer debounce = new Debouncer(1.0);
         Timer chokeTimer = new Timer();
 
         BooleanSupplier chokingGoose = () -> {
             if (debounce.calculate(gooseNeck.beamBroken())) chokeTimer.start();
 
-            if (chokeTimer.isRunning() && !chokeTimer.hasElapsed(0.35)) {
+            if (chokeTimer.isRunning() && !chokeTimer.hasElapsed(0.45)) {
                 return true;
             } else {
                 chokeTimer.stop();

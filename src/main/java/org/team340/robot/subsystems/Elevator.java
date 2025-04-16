@@ -38,7 +38,7 @@ public final class Elevator extends GRRSubsystem {
         kDown(0.0),
         kIntake(0.18),
         kBarf(0.18),
-        kSwallow(0.9),
+        kSwallow(0.65),
         kBabyBird(10.9),
         kL1(5.0, true),
         kL2(10.75, true),
