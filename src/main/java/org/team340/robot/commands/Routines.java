@@ -55,6 +55,16 @@ public final class Routines {
     }
 
     /**
+     * Stows the elevator and goose neck.
+     */
+    public Command stow() {
+        return parallel(
+            elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+            gooseNeck.stow(robot::safeForGoose)
+        ).withName("Routines.stow()");
+    }
+
+    /**
      * Intakes and seats a coral.
      */
     public Command intake() {

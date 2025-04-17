@@ -78,6 +78,8 @@ public final class Autos {
         chooser.addRoutine("Ol' Reliable Right (x3.5 L4)", () -> olReliable(false));
         chooser.addCmd("Sneaky Two Left", () -> sneakyTwo(true));
         chooser.addCmd("Sneaky Two Right", () -> sneakyTwo(false));
+        chooser.addCmd("Stinky One Left", () -> stinkyOne(true));
+        chooser.addCmd("Stinky One Right", () -> stinkyOne(false));
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -164,6 +166,25 @@ public final class Autos {
                 routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
                 routines.intake()
             ).repeatedly()
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
+    }
+
+    private Command stinkyOne(boolean left) {
+        return sequence(
+            deadline(waitSeconds(3.0), swerve.stop(false), routines.stow()),
+            parallel(
+                sequence(score(left ? G : H, left), avoid(left), swerve.stop(false)),
+                sequence(
+                    routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                    routines.stow()
+                )
+            )
         ).beforeStarting(
             parallel(
                 either(selection.setRight(), selection.setLeft(), () -> left),
