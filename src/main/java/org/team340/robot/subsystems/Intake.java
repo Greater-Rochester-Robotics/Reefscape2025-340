@@ -11,6 +11,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.UpdateModeValue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.Timer;
@@ -39,6 +40,8 @@ public final class Intake extends GRRSubsystem {
     private final StatusSignal<Boolean> detected;
 
     private final VoltageOut voltageControl;
+
+    private boolean unjamming = false;
 
     public Intake() {
         motor = new TalonFX(UpperCAN.kIntakeMotor);
@@ -92,6 +95,11 @@ public final class Intake extends GRRSubsystem {
         Profiler.end();
     }
 
+    @NotLogged
+    public boolean unjamming() {
+        return unjamming;
+    }
+
     public boolean coralDetected() {
         return detected.getValue();
     }
@@ -121,8 +129,13 @@ public final class Intake extends GRRSubsystem {
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }
+
+                unjamming = unjamTimer.isRunning();
             })
-            .onEnd(motor::stopMotor);
+            .onEnd(() -> {
+                motor.stopMotor();
+                unjamming = false;
+            });
     }
 
     /**

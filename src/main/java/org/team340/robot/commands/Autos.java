@@ -126,8 +126,10 @@ public final class Autos {
     private Command forPiece(boolean left) {
         return parallel(
             sequence(
-                factory.trajectoryCmd("Start-J", !left),
-                waitUntil(gooseNeck::noCoral),
+                deadline(
+                    waitUntil(gooseNeck::noCoral),
+                    sequence(factory.trajectoryCmd("Start-J", !left), swerve.stop(false))
+                ),
                 pickup(left ? J : E, left),
                 pickupCycle(left ? K : D, left),
                 pickupCycle(left ? L : C, left),

@@ -92,7 +92,7 @@ public final class Routines {
                 intake.swallow()
             ),
             deadline(
-                gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
+                gooseNeck.intake(button, () -> chokingGoose.getAsBoolean() || intake.unjamming(), robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
                 intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
             )
