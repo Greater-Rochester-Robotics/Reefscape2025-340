@@ -82,7 +82,7 @@ public final class GooseNeck extends GRRSubsystem {
         kIntake(-4.0),
         kSeat(-1.8),
         kScoreL1(4.0),
-        kScoreForward(12.0),
+        kScoreForward(9.0),
         kAlgae(12.0),
         kBarf(-8.0),
         kSwallow(8.0);
@@ -164,8 +164,8 @@ public final class GooseNeck extends GRRSubsystem {
 
         beakConfig.Commutation.MotorArrangement = MotorArrangementValue.Minion_JST;
 
-        beakConfig.CurrentLimits.StatorCurrentLimit = 50.0;
-        beakConfig.CurrentLimits.SupplyCurrentLimit = 30.0;
+        beakConfig.CurrentLimits.StatorCurrentLimit = 60.0;
+        beakConfig.CurrentLimits.SupplyCurrentLimit = 40.0;
 
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
