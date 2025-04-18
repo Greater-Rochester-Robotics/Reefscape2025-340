@@ -249,6 +249,7 @@ public final class GooseNeck extends GRRSubsystem {
         return goosing;
     }
 
+    @NotLogged
     public double getPosition() {
         return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
     }
