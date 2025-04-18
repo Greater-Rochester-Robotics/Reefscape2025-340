@@ -7,7 +7,7 @@
       "height": 1048,
       "state": {
         "sidebar": {
-          "width": 500,
+          "width": 380,
           "expanded": [
             "/Telemetry/swerve/api/state",
             "/Tunables",
@@ -42,11 +42,12 @@
             "/Tunables/elevator/positions",
             "/NT/Telemetry/swerve/api/hardware/frontLeft",
             "/NT/Telemetry/swerve/api/hardware/frontLeft/moveMotor",
-            "/NT"
+            "/NT",
+            "/NT/Telemetry"
           ]
         },
         "tabs": {
-          "selected": 3,
+          "selected": 1,
           "tabs": [
             {
               "type": 0,
@@ -99,6 +100,26 @@
                       "model": "Crab Bot",
                       "color": "#ffff00"
                     }
+                  },
+                  {
+                    "type": "ghost",
+                    "logKey": "NT:/Telemetry/swerve/repulsor/target",
+                    "logType": "Pose2d",
+                    "visible": true,
+                    "options": {
+                      "model": "Duck Bot",
+                      "color": "#00ffff"
+                    }
+                  },
+                  {
+                    "type": "cone",
+                    "logKey": "NT:/Telemetry/swerve/reefAssist/targetPipe",
+                    "logType": "Pose2d",
+                    "visible": true,
+                    "options": {
+                      "color": "#ff00ff",
+                      "position": "center"
+                    }
                   }
                 ],
                 "game": "2025 Field (Welded)",
@@ -109,17 +130,17 @@
                 "cameraIndex": -1,
                 "orbitFov": 50,
                 "cameraPosition": [
-                  -3.1029035307949497,
-                  18.202078571653665,
-                  -10.320254882049857
+                  9.821284658344002,
+                  9.702609154350258,
+                  -12.10256114494437
                 ],
                 "cameraTarget": [
-                  -2.5442643867606445,
-                  -3.3429384403860527,
-                  1.4669598971685158
+                  -0.6508618026588086,
+                  -3.9374821361462984,
+                  2.281629237100511
                 ]
               },
-              "controlsHeight": 200
+              "controlsHeight": 186
             },
             {
               "type": 9,
@@ -154,7 +175,7 @@
               },
               "controllerUUID": "urb1100erunfr2vqbgvi7b2i75ahq2w5",
               "renderer": null,
-              "controlsHeight": 200
+              "controlsHeight": 155
             },
             {
               "type": 1,
@@ -278,7 +299,7 @@
               },
               "controllerUUID": "g9i4kjxj9nejvmfhy4r0lid3dd2c2xt3",
               "renderer": null,
-              "controlsHeight": 200
+              "controlsHeight": 341
             },
             {
               "type": 1,
@@ -372,7 +393,7 @@
               },
               "controllerUUID": "4b9ch8c2jwykjcxyungobkyycurd3cwn",
               "renderer": null,
-              "controlsHeight": 200
+              "controlsHeight": 186
             },
             {
               "type": 1,
@@ -447,7 +468,7 @@
               },
               "controllerUUID": "u3k6vwaigskyf09zwcfqbh4ao7p4tfmr",
               "renderer": null,
-              "controlsHeight": 200
+              "controlsHeight": 141
             },
             {
               "type": 1,
@@ -616,7 +637,7 @@
               },
               "controllerUUID": "dy67a45r3vuxdyac0ha2ibp131m8ye88",
               "renderer": null,
-              "controlsHeight": 200
+              "controlsHeight": 143
             },
             {
               "type": 8,
