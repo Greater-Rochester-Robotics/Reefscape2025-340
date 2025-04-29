@@ -38,9 +38,9 @@ public final class Elevator extends GRRSubsystem {
         kDown(0.0),
         kIntake(0.18),
         kBarf(0.18),
-        kSwallow(0.9),
+        kSwallow(0.65),
         kBabyBird(10.9),
-        kL1(5.0, true),
+        kL1(4.0, true),
         kL2(10.75, true),
         kL3(22.5, true),
         kL4(40.25, true);
@@ -76,12 +76,9 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.25);
+    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
     private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
-    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue(
-        "elevator/kAtPositionTolerance",
-        0.15
-    );
+    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue("elevator/kAtPositionTolerance", 0.2);
     private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
     private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
     private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
@@ -126,13 +123,13 @@ public final class Elevator extends GRRSubsystem {
 
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        motorConfig.Slot0.kP = 1.2;
+        motorConfig.Slot0.kP = 4.0;
         motorConfig.Slot0.kI = 0.0;
         motorConfig.Slot0.kD = 0.0;
-        motorConfig.Slot0.kG = 0.45;
+        motorConfig.Slot0.kG = 0.58;
         motorConfig.Slot0.kS = 0.0;
-        motorConfig.Slot0.kV = 0.136;
-        motorConfig.Slot0.kA = 0.003;
+        motorConfig.Slot0.kV = 0.16;
+        motorConfig.Slot0.kA = 0.004;
 
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 42.75;
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;

@@ -26,6 +26,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.NotifierCommand;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
@@ -78,9 +79,9 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        kIntake(-6.0),
+        kIntake(-4.0),
         kSeat(-1.8),
-        kScoreL1(4.75),
+        kScoreL1(4.0),
         kScoreForward(9.0),
         kAlgae(12.0),
         kBarf(-8.0),
@@ -107,8 +108,8 @@ public final class GooseNeck extends GRRSubsystem {
         0.2
     );
 
-    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.035);
-    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.03);
+    private static final TunableDouble kFindEdgeDelay = Tunable.doubleValue("gooseNeck/kFindEdgeDelay", 0.16);
+    private static final TunableDouble kSeatDelay = Tunable.doubleValue("gooseNeck/kSeatDelay", 0.09);
     private static final TunableDouble kTorqueDelay = Tunable.doubleValue("gooseNeck/kTorqueDelay", 0.2);
     private static final TunableDouble kTorqueMax = Tunable.doubleValue("gooseNeck/kTorqueMax", 12.0);
 
@@ -163,8 +164,8 @@ public final class GooseNeck extends GRRSubsystem {
 
         beakConfig.Commutation.MotorArrangement = MotorArrangementValue.Minion_JST;
 
-        beakConfig.CurrentLimits.StatorCurrentLimit = 50.0;
-        beakConfig.CurrentLimits.SupplyCurrentLimit = 30.0;
+        beakConfig.CurrentLimits.StatorCurrentLimit = 60.0;
+        beakConfig.CurrentLimits.SupplyCurrentLimit = 40.0;
 
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -197,7 +198,7 @@ public final class GooseNeck extends GRRSubsystem {
             )
         );
         PhoenixUtil.run("Set Goose Neck Fast Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(400, beamBreak, beamBreakVolatile)
+            BaseStatusSignal.setUpdateFrequencyForAll(250, beamBreak, beamBreakVolatile)
         );
         PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
             ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi)
@@ -248,6 +249,7 @@ public final class GooseNeck extends GRRSubsystem {
         return goosing;
     }
 
+    @NotLogged
     public double getPosition() {
         return BaseStatusSignal.getLatencyCompensatedValueAsDouble(position, velocity);
     }
@@ -281,78 +283,81 @@ public final class GooseNeck extends GRRSubsystem {
             kDone
         }
 
+        AtomicBoolean swallowAtomic = new AtomicBoolean(false);
         Mutable<State> state = new Mutable<>(State.kInit);
         Debouncer debounce = new Debouncer(0.065, DebounceType.kRising);
         Timer delay = new Timer();
 
-        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe).withDeadline(
-            new NotifierCommand(
-                () -> {
-                    if (swallow.getAsBoolean()) {
-                        beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSwallow.voltage()));
-                        hasCoral.set(false);
+        return goTo(() -> GoosePosition.kStow, () -> false, () -> false, safe)
+            .alongWith(Commands.run(() -> swallowAtomic.set(swallow.getAsBoolean())))
+            .withDeadline(
+                new NotifierCommand(
+                    () -> {
+                        boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.006).getValue());
+
+                        if (swallowAtomic.get()) {
+                            beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSwallow.voltage()));
+                            hasCoral.set(false);
+                            state.value = State.kInit;
+                            return;
+                        }
+
+                        switch (state.value) {
+                            case kInit:
+                                if (!beamBroken) {
+                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
+                                    break;
+                                }
+
+                                delay.restart();
+                                state.value = State.kSawCoral;
+                            // Fall-through
+
+                            case kSawCoral:
+                                if (!delay.hasElapsed(kFindEdgeDelay.value()) && beamBroken) {
+                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
+                                    break;
+                                }
+
+                                state.value = State.kFindingFallingEdge;
+                            // Fall-through
+
+                            case kFindingFallingEdge:
+                                if (beamBroken) {
+                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSeat.voltage()));
+                                    break;
+                                }
+
+                                state.value = State.kSeating;
+                                delay.restart();
+                            // Fall-through
+
+                            case kSeating:
+                                if (!delay.hasElapsed(kSeatDelay.value())) {
+                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSeat.voltage()));
+                                    break;
+                                }
+
+                                state.value = State.kDone;
+                            // Fall-through
+
+                            case kDone:
+                                hasCoral.set(true);
+                                beakMotor.stopMotor();
+                                break;
+                        }
+                    },
+                    0.0
+                )
+                    .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.kInit)))
+                    .beforeStarting(() -> {
                         state.value = State.kInit;
-                        return;
-                    }
-
-                    boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.005).getValue());
-
-                    switch (state.value) {
-                        case kInit:
-                            if (!beamBroken) {
-                                beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
-                                break;
-                            }
-
-                            delay.restart();
-                            state.value = State.kSawCoral;
-                        // Fall-through
-
-                        case kSawCoral:
-                            if (!delay.hasElapsed(kFindEdgeDelay.value()) && beamBroken) {
-                                beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kIntake.voltage()));
-                                break;
-                            }
-
-                            state.value = State.kFindingFallingEdge;
-                        // Fall-through
-
-                        case kFindingFallingEdge:
-                            if (beamBroken) {
-                                beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSeat.voltage()));
-                                break;
-                            }
-
-                            state.value = State.kSeating;
-                            delay.restart();
-                        // Fall-through
-
-                        case kSeating:
-                            if (!delay.hasElapsed(kSeatDelay.value())) {
-                                beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.kSeat.voltage()));
-                                break;
-                            }
-
-                            state.value = State.kDone;
-                        // Fall-through
-
-                        case kDone:
-                            hasCoral.set(true);
-                            beakMotor.stopMotor();
-                            break;
-                    }
-                },
-                0.0
-            )
-                .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.kInit)))
-                .beforeStarting(() -> {
-                    state.value = State.kInit;
-                    debounce.calculate(false);
-                })
-                .finallyDo(beakMotor::stopMotor)
-                .onlyIf(this::noCoral)
-                .withName("GooseNeck.receive()")
-        );
+                        debounce.calculate(false);
+                    })
+                    .finallyDo(beakMotor::stopMotor)
+                    .onlyIf(this::noCoral)
+                    .withName("GooseNeck.receive()")
+            );
     }
 
     public Command babyBird(BooleanSupplier button, BooleanSupplier safe) {

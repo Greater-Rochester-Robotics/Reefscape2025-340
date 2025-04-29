@@ -167,8 +167,8 @@ public final class Constants {
             )
         );
 
-        private static double kStationX = 1.58;
-        private static double kStationY = 0.63;
+        private static double kStationX = 1.53;
+        private static double kStationY = 0.64;
 
         public static final SwerveSample kStationForwards = new SwerveSample(
             0.0,

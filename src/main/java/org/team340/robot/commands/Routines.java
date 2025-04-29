@@ -55,6 +55,16 @@ public final class Routines {
     }
 
     /**
+     * Stows the elevator and goose neck.
+     */
+    public Command stow() {
+        return parallel(
+            elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+            gooseNeck.stow(robot::safeForGoose)
+        ).withName("Routines.stow()");
+    }
+
+    /**
      * Intakes and seats a coral.
      */
     public Command intake() {
@@ -69,13 +79,13 @@ public final class Routines {
      * @param button If the intake button is still pressed.
      */
     public Command intake(BooleanSupplier button) {
-        Debouncer debounce = new Debouncer(0.8);
+        Debouncer debounce = new Debouncer(1.0);
         Timer chokeTimer = new Timer();
 
         BooleanSupplier chokingGoose = () -> {
             if (debounce.calculate(gooseNeck.beamBroken())) chokeTimer.start();
 
-            if (chokeTimer.isRunning() && !chokeTimer.hasElapsed(0.35)) {
+            if (chokeTimer.isRunning() && !chokeTimer.hasElapsed(0.45)) {
                 return true;
             } else {
                 chokeTimer.stop();
@@ -92,7 +102,7 @@ public final class Routines {
                 intake.swallow()
             ),
             deadline(
-                gooseNeck.intake(button, chokingGoose, robot::safeForGoose),
+                gooseNeck.intake(button, () -> chokingGoose.getAsBoolean() || intake.unjamming(), robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
                 intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
             )

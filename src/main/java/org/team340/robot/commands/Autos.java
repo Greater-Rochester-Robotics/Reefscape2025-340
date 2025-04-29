@@ -36,7 +36,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 1.0);
+    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 0.68);
     private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
     private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 0.65);
     private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
@@ -78,6 +78,8 @@ public final class Autos {
         chooser.addRoutine("Ol' Reliable Right (x3.5 L4)", () -> olReliable(false));
         chooser.addCmd("Sneaky Two Left", () -> sneakyTwo(true));
         chooser.addCmd("Sneaky Two Right", () -> sneakyTwo(false));
+        chooser.addCmd("Stinky One Left", () -> stinkyOne(true));
+        chooser.addCmd("Stinky One Right", () -> stinkyOne(false));
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -126,8 +128,11 @@ public final class Autos {
     private Command forPiece(boolean left) {
         return parallel(
             sequence(
-                factory.trajectoryCmd("Start-J", !left),
-                waitUntil(gooseNeck::noCoral),
+                race(
+                    waitSeconds(3.0),
+                    waitUntil(gooseNeck::noCoral).andThen(waitSeconds(0.2)),
+                    sequence(factory.trajectoryCmd("Start-J", !left), swerve.stop(false))
+                ),
                 pickup(left ? J : E, left),
                 pickupCycle(left ? K : D, left),
                 pickupCycle(left ? L : C, left),
@@ -162,6 +167,25 @@ public final class Autos {
                 routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
                 routines.intake()
             ).repeatedly()
+        ).beforeStarting(
+            parallel(
+                either(selection.setRight(), selection.setLeft(), () -> left),
+                selection.selectLevel(4),
+                gooseNeck.setHasCoral(true)
+            )
+        );
+    }
+
+    private Command stinkyOne(boolean left) {
+        return sequence(
+            deadline(waitSeconds(3.0), swerve.stop(false), routines.stow()),
+            parallel(
+                sequence(score(left ? G : H, left), avoid(left), swerve.stop(false)),
+                sequence(
+                    routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                    routines.stow()
+                )
+            )
         ).beforeStarting(
             parallel(
                 either(selection.setRight(), selection.setLeft(), () -> left),
