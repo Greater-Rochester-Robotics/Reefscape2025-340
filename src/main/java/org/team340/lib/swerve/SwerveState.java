@@ -85,6 +85,8 @@ public final class SwerveState {
     public Rotation2d pitch;
     /** The robot's roll. */
     public Rotation2d roll;
+    /** The uncorrected blue origin relative odometry pose of the robot. */
+    public Pose2d odometryPose;
     /** The timestamp of the swerve state in seconds (FPGA time). */
     public double timestamp;
 
@@ -99,5 +101,6 @@ public final class SwerveState {
         rotation = Rotation2d.kZero;
         pitch = Rotation2d.kZero;
         roll = Rotation2d.kZero;
+        odometryPose = Pose2d.kZero;
     }
 }

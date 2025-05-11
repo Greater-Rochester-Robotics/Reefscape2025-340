@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import java.util.function.Function;
 import org.team340.lib.util.Alliance;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
@@ -36,9 +37,9 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 0.68);
+    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 8.7);
     private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
-    private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 0.65);
+    private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 8.9);
     private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
 
     private final Robot robot;
@@ -80,6 +81,7 @@ public final class Autos {
         chooser.addCmd("Sneaky Two Right", () -> sneakyTwo(false));
         chooser.addCmd("Stinky One Left", () -> stinkyOne(true));
         chooser.addCmd("Stinky One Right", () -> stinkyOne(false));
+        chooser.addCmd("Test 2", this::test2);
         SmartDashboard.putData("autos", chooser);
     }
 
@@ -88,6 +90,41 @@ public final class Autos {
      */
     public Command runSelectedAuto() {
         return chooser.selectedCommandScheduler();
+    }
+
+    public Command test2() {
+        Function<ReefLocation, Command> goReef = reefLocation ->
+            swerve
+                .apfDrive(reefLocation, robot::readyToScore, selection::isL4)
+                .withDeadline(sequence(waitUntil(() -> !swerve.wildlifeConservationProgram()), waitSeconds(0.75)));
+
+        Function<Boolean, Command> goIntake = left ->
+            swerve.apfDrive(
+                () -> {
+                    var sample = FieldConstants.kStationForwards;
+                    if (Alliance.isRed()) sample = sample.flipped();
+                    if (left) sample = sample.mirrored();
+                    return sample.getPose();
+                },
+                kIntakeSlowdown::value,
+                kAvoidTolerance::value
+            );
+
+        return sequence(
+            factory.resetOdometry("Start-J", true),
+            goReef.apply(ReefLocation.A),
+            avoid(true),
+            goReef.apply(ReefLocation.E),
+            goIntake.apply(false),
+            goReef.apply(ReefLocation.B),
+            avoid(false),
+            goReef.apply(ReefLocation.K),
+            avoid(true),
+            goReef.apply(ReefLocation.B),
+            avoid(false),
+            goIntake.apply(true),
+            avoid(true)
+        );
     }
 
     private AutoRoutine olReliable(boolean left) {
@@ -205,7 +242,7 @@ public final class Autos {
                 waitUntil(gooseNeck::hasCoral),
                 waitUntil(() -> !swerve.wildlifeConservationProgram() && gooseNeck.noCoral())
             ),
-            swerve.repulsorDrive(reefLocation, robot::readyToScore, selection::isL4),
+            swerve.apfDrive(reefLocation, robot::readyToScore, selection::isL4),
             either(selection.setLeft(), selection.setRight(), () -> reefLocation.left)
         );
     }
@@ -214,7 +251,7 @@ public final class Autos {
         Timer timer = new Timer();
 
         return swerve
-            .repulsorDrive(
+            .apfDrive(
                 () -> {
                     var sample = start.back ? FieldConstants.kStationBackwards : FieldConstants.kStationForwards;
                     if (Alliance.isRed()) sample = sample.flipped();
@@ -237,7 +274,7 @@ public final class Autos {
     }
 
     private Command avoid(boolean left) {
-        return swerve.repulsorDrive(
+        return swerve.apfDrive(
             () -> {
                 var sample = FieldConstants.kAvoidLocation;
                 if (Alliance.isRed()) sample = sample.flipped();

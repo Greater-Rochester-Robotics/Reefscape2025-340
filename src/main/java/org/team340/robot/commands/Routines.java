@@ -193,9 +193,7 @@ public final class Routines {
             either(
                 swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft),
                 sequence(
-                    swerve
-                        .repulsorDrive(selection::isLeft, robot::readyToScore, selection::isL4)
-                        .until(gooseNeck::noCoral),
+                    swerve.apfDrive(selection::isLeft, robot::readyToScore, selection::isL4).until(gooseNeck::noCoral),
                     swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
                 ),
                 () -> !kAutoDrive.value() || gooseNeck.noCoral()

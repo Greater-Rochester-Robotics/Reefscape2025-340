@@ -127,6 +127,7 @@
     "NTURI",
     "Odometry",
     "Overcurrent",
+    "PAPF",
     "PIDF",
     "Powerup",
     "Protobuf",

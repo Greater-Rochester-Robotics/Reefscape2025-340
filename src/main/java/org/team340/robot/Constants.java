@@ -4,15 +4,14 @@ import choreo.trajectory.SwerveSample;
 import choreo.util.ChoreoAllianceFlipUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import java.util.List;
-import org.team340.robot.util.RepulsorField.HorizontalObstacle;
-import org.team340.robot.util.RepulsorField.LineObstacle;
-import org.team340.robot.util.RepulsorField.Obstacle;
-import org.team340.robot.util.RepulsorField.TeardropObstacle;
-import org.team340.robot.util.RepulsorField.VerticalObstacle;
+import org.team340.robot.util.PAPFController.CircleObstacle;
+import org.team340.robot.util.PAPFController.LineObstacle;
+import org.team340.robot.util.PAPFController.Obstacle;
+import org.team340.robot.util.PAPFController.XLimitObstacle;
+import org.team340.robot.util.PAPFController.YLimitObstacle;
+import org.team340.robot.util.Vision.CameraConfig;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -26,21 +25,23 @@ public final class Constants {
     public static final int kDriver = 0;
     public static final int kCoDriver = 1;
 
-    public final class Cameras {
-
-        public static final Transform3d kMiddle = new Transform3d(
+    public static final CameraConfig[] kCameras = {
+        new CameraConfig(
+            "middle",
             new Translation3d(0.354, 0.0, 0.215),
             new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(0.0))
-        );
-        public static final Transform3d kLeft = new Transform3d(
+        ),
+        new CameraConfig(
+            "left",
             new Translation3d(0.316, 0.092, 0.211),
             new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(45.0))
-        );
-        public static final Transform3d kRight = new Transform3d(
+        ),
+        new CameraConfig(
+            "right",
             new Translation3d(0.316, -0.092, 0.211),
             new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(-45.0))
-        );
-    }
+        )
+    };
 
     public static final class LowerCAN {
 
@@ -141,31 +142,26 @@ public final class Constants {
         private static final double kCoralX = 1.6;
         private static final double kCoralY = 1.125;
 
-        public static final List<Obstacle> kObstacles = List.of(
+        public static final Obstacle[] kObstacles = {
             // Walls
-            new HorizontalObstacle(0.0, 0.15, true),
-            new HorizontalObstacle(kWidth, 0.15, false),
-            new VerticalObstacle(0.0, 0.15, true),
-            new VerticalObstacle(kLength, 0.15, false),
-            // Reef
-            new TeardropObstacle(kReefCenterBlue, 1.0, 2.5, 0.83, 3.0, 2.0, true),
-            new TeardropObstacle(kReefCenterRed, 1.0, 2.5, 0.83, 3.0, 2.0, true),
+            new XLimitObstacle(0.0, false, 0.1),
+            new XLimitObstacle(kLength, true, 0.1),
+            new YLimitObstacle(0.0, false, 0.1),
+            new YLimitObstacle(kWidth, true, 0.1),
             // Coral stations
-            new LineObstacle(new Translation2d(0.0, kCoralY), new Translation2d(kCoralX, 0.0), 0.15, true),
-            new LineObstacle(new Translation2d(0.0, kWidth - kCoralY), new Translation2d(kCoralX, kWidth), 0.15, true),
-            new LineObstacle(
-                new Translation2d(kLength, kCoralY),
-                new Translation2d(kLength - kCoralX, 0.0),
-                0.15,
-                true
-            ),
+            new LineObstacle(new Translation2d(0.0, kCoralY), new Translation2d(kCoralX, 0.0), 0.1, true),
+            new LineObstacle(new Translation2d(0.0, kWidth - kCoralY), new Translation2d(kCoralX, kWidth), 0.1, true),
+            new LineObstacle(new Translation2d(kLength, kCoralY), new Translation2d(kLength - kCoralX, 0.0), 0.1, true),
             new LineObstacle(
                 new Translation2d(kLength, kWidth - kCoralY),
                 new Translation2d(kLength - kCoralX, kWidth),
-                0.15,
+                0.1,
                 true
-            )
-        );
+            ),
+            // Reef
+            new CircleObstacle(kReefCenterBlue, 0.83, 1.0),
+            new CircleObstacle(kReefCenterRed, 0.83, 1.0)
+        };
 
         private static double kStationX = 1.53;
         private static double kStationY = 0.64;

@@ -15,6 +15,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -38,9 +39,8 @@ import org.team340.robot.Constants.FieldConstants;
 import org.team340.robot.Constants.FieldConstants.ReefLocation;
 import org.team340.robot.Constants.LowerCAN;
 import org.team340.robot.Constants.UpperCAN;
-import org.team340.robot.util.RepulsorField;
-import org.team340.robot.util.RepulsorField.RepulsorSample;
-import org.team340.robot.util.VisionManager;
+import org.team340.robot.util.PAPFController;
+import org.team340.robot.util.Vision;
 
 /**
  * The robot's swerve drivetrain.
@@ -101,14 +101,15 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble kBeachSpeed = Tunable.doubleValue("swerve/beach/speed", 3.0);
     private static final TunableDouble kBeachTolerance = Tunable.doubleValue("swerve/beach/tolerance", 0.15);
 
-    private static final TunableDouble kRepulsorX = Tunable.doubleValue("swerve/repulsor/x", 1.05);
-    private static final TunableDouble kRepulsorLead = Tunable.doubleValue("swerve/repulsor/leadDistance", 0.78);
-    private static final TunableDouble kRepulsorVelocity = Tunable.doubleValue("swerve/repulsor/velocity", 3.4);
-    private static final TunableDouble kRepulsorSlowLead = Tunable.doubleValue("swerve/repulsor/slowdownLead", 0.75);
-    private static final TunableDouble kRepulsorSlowL4Lead = Tunable.doubleValue("swerve/repulsor/slowdownL4Lead", 1.0);
-    private static final TunableDouble kRepulsorSlowScore = Tunable.doubleValue("swerve/repulsor/slowdownScore", 1.2);
-    private static final TunableDouble kRepulsorTolerance = Tunable.doubleValue("swerve/repulsor/tolerance", 0.2);
-    private static final TunableDouble kRepulsorAngTolerance = Tunable.doubleValue("swerve/repulsor/angTolerance", 0.4);
+    private static final TunableDouble kAPFx = Tunable.doubleValue("swerve/apf/x", 1.05);
+    private static final TunableDouble kAPFVel = Tunable.doubleValue("swerve/apf/velocity", 4.5);
+    private static final TunableDouble kAPFLeadMin = Tunable.doubleValue("swerve/apf/leadMin", 0.78);
+    private static final TunableDouble kAPFLeadMult = Tunable.doubleValue("swerve/apf/leadMult", 0.35);
+    private static final TunableDouble kAPFLeadAccel = Tunable.doubleValue("swerve/apf/leadAccel", 7.7);
+    private static final TunableDouble kAPFLeadL4Accel = Tunable.doubleValue("swerve/apf/leadL4Accel", 5.78);
+    private static final TunableDouble kAPFScoreAccel = Tunable.doubleValue("swerve/apf/scoreAccel", 4.8);
+    private static final TunableDouble kAPFTolerance = Tunable.doubleValue("swerve/apf/tolerance", 0.2);
+    private static final TunableDouble kAPFAngTolerance = Tunable.doubleValue("swerve/apf/angTolerance", 0.4);
 
     private static final TunableDouble kReefAssistX = Tunable.doubleValue("swerve/reefAssist/x", 0.681);
     private static final TunableDouble kReefAssistKp = Tunable.doubleValue("swerve/reefAssist/kP", 20.0);
@@ -121,8 +122,8 @@ public final class Swerve extends GRRSubsystem {
 
     private final SwerveAPI api;
     private final SwerveState state;
-    private final VisionManager vision;
-    private final RepulsorField repulsor;
+    private final Vision vision;
+    private final PAPFController apf;
 
     private final PIDController autoPIDx;
     private final PIDController autoPIDy;
@@ -132,10 +133,6 @@ public final class Swerve extends GRRSubsystem {
 
     private final ReefAssistData reefAssist = new ReefAssistData();
 
-    @SuppressWarnings("unused")
-    private Pose2d autoLast = null;
-
-    private Pose2d autoNext = null;
     private Pose2d reefReference = Pose2d.kZero;
     private boolean facingReef = false;
     private double wallDistance = 0.0;
@@ -143,19 +140,19 @@ public final class Swerve extends GRRSubsystem {
     public Swerve() {
         api = new SwerveAPI(kConfig);
         state = api.state;
-        vision = VisionManager.getInstance();
-        repulsor = new RepulsorField(TimedRobot.kDefaultPeriod, FieldConstants.kObstacles);
+        vision = new Vision(Constants.kCameras);
+        apf = new PAPFController(4.0, 0.5, true, FieldConstants.kObstacles);
 
         autoPIDx = new PIDController(10.0, 0.0, 0.0);
         autoPIDy = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular = new PIDController(10.0, 0.0, 0.0);
         autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
 
-        angularPID = new ProfiledPIDController(10.0, 0.5, 0.25, new Constraints(10.0, 24.0));
+        angularPID = new ProfiledPIDController(10.0, 0.0, 0.0, new Constraints(10.0, 24.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);
-        angularPID.setIZone(0.8);
 
         api.enableTunables("swerve/api");
+        apf.enableTunables("swerve/apf");
         Tunable.pidController("swerve/autoPID", autoPIDx);
         Tunable.pidController("swerve/autoPID", autoPIDy);
         Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
@@ -171,7 +168,7 @@ public final class Swerve extends GRRSubsystem {
 
         // Apply vision estimates to the pose estimator.
         Profiler.run("SwerveAPI.addVisionMeasurements()", () ->
-            api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory))
+            api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory, state.odometryPose))
         );
 
         // Calculate helpers
@@ -220,6 +217,14 @@ public final class Swerve extends GRRSubsystem {
     @NotLogged
     public double getVelocity() {
         return state.velocity;
+    }
+
+    /**
+     * Remove @NotLogged for debugging
+     */
+    @NotLogged
+    public List<Pose2d> apfVisualization() {
+        return apf.visualizeField(30, FieldConstants.kLength, FieldConstants.kWidth);
     }
 
     /**
@@ -384,8 +389,8 @@ public final class Swerve extends GRRSubsystem {
      * @param ready If the robot is ready to approach the scoring location.
      * @param l4 If the robot is scoring L4.
      */
-    public Command repulsorDrive(BooleanSupplier left, BooleanSupplier ready, BooleanSupplier l4) {
-        return repulsorDrive(() -> reefReference.getRotation(), left, ready, l4);
+    public Command apfDrive(BooleanSupplier left, BooleanSupplier ready, BooleanSupplier l4) {
+        return apfDrive(() -> reefReference.getRotation(), left, ready, l4);
     }
 
     /**
@@ -394,8 +399,8 @@ public final class Swerve extends GRRSubsystem {
      * @param ready If the robot is ready to approach the scoring location.
      * @param l4 If the robot is scoring L4.
      */
-    public Command repulsorDrive(ReefLocation location, BooleanSupplier ready, BooleanSupplier l4) {
-        return repulsorDrive(
+    public Command apfDrive(ReefLocation location, BooleanSupplier ready, BooleanSupplier l4) {
+        return apfDrive(
             () -> Alliance.isBlue() ? location.side : location.side.rotateBy(Rotation2d.kPi),
             () -> location.left,
             ready,
@@ -404,14 +409,14 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Internal function, converts reef side to repulsor drive controller.
+     * Internal function, converts reef side to APF drive controller.
      * @param side A supplier that returns the side of the reef to target.
      * @param left A supplier that returns {@code true} if the robot should target
      *             the left reef pole, or {@code false} to target the right pole.
      * @param ready If the robot is ready to approach the scoring location.
      * @param l4 If the robot is scoring L4.
      */
-    private Command repulsorDrive(
+    private Command apfDrive(
         Supplier<Rotation2d> side,
         BooleanSupplier left,
         BooleanSupplier ready,
@@ -420,12 +425,13 @@ public final class Swerve extends GRRSubsystem {
         Mutable<Pose2d> lastTarget = new Mutable<>(Pose2d.kZero);
         Mutable<Boolean> nowSafe = new Mutable<>(false);
 
-        return repulsorDrive(
+        return apfDrive(
             () -> {
                 Pose2d target =
-                    reefAssist.targetPipe = generateReefLocation(kRepulsorX.value(), side.get(), left.getAsBoolean());
+                    reefAssist.targetPipe = generateReefLocation(kAPFx.value(), side.get(), left.getAsBoolean());
 
-                Rotation2d robotAngle = target.getTranslation().minus(state.translation).getAngle();
+                Translation2d error = target.getTranslation().minus(state.translation);
+                Rotation2d robotAngle = error.getAngle();
                 reefAssist.error = robotAngle.minus(side.get()).getRadians();
 
                 if (!target.equals(lastTarget.value)) nowSafe.value = false;
@@ -433,7 +439,9 @@ public final class Swerve extends GRRSubsystem {
 
                 if (!nowSafe.value) {
                     target = generateReefLocation(
-                        kRepulsorX.value() + kRepulsorLead.value(),
+                        kAPFx.value() +
+                        kAPFLeadMin.value() +
+                        (kAPFLeadMult.value() * (error.getNorm() - kAPFLeadMin.value())),
                         side.get(),
                         left.getAsBoolean()
                     );
@@ -442,9 +450,8 @@ public final class Swerve extends GRRSubsystem {
                         ready.getAsBoolean() &&
                         state.translation.getDistance(target.getTranslation()) *
                         (Math.abs(reefAssist.error) / Math.PI) <=
-                        kRepulsorTolerance.value() &&
-                        Math.abs(state.rotation.minus(target.getRotation()).getRadians()) <=
-                        kRepulsorAngTolerance.value()
+                        kAPFTolerance.value() &&
+                        Math.abs(state.rotation.minus(target.getRotation()).getRadians()) <= kAPFAngTolerance.value()
                     ) {
                         nowSafe.value = true;
                     }
@@ -454,8 +461,8 @@ public final class Swerve extends GRRSubsystem {
             },
             () ->
                 !nowSafe.value
-                    ? (l4.getAsBoolean() ? kRepulsorSlowL4Lead.value() : kRepulsorSlowLead.value())
-                    : kRepulsorSlowScore.value()
+                    ? (l4.getAsBoolean() ? kAPFLeadL4Accel.value() : kAPFLeadAccel.value())
+                    : kAPFScoreAccel.value()
         ).beforeStarting(() -> {
             lastTarget.value = Pose2d.kZero;
             nowSafe.value = false;
@@ -463,47 +470,41 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
-     * Drives the robot to a target position using the repulsor field, ending
+     * Drives the robot to a target position using the APF, ending
      * when the robot is within a specified tolerance of the target.
      * @param target A supplier that returns the target blue-origin relative field location.
-     * @param slowdownRange A supplier that returns the range in meters at which to begin slowing down the robot.
+     * @param deceleration A supplier that returns the deceleration for the robot to target in m/s/s.
      * @param endTolerance The tolerance in meters at which to end the command.
      */
-    public Command repulsorDrive(Supplier<Pose2d> target, DoubleSupplier slowdownRange, DoubleSupplier endTolerance) {
-        return repulsorDrive(target, slowdownRange).until(
+    public Command apfDrive(Supplier<Pose2d> target, DoubleSupplier deceleration, DoubleSupplier endTolerance) {
+        return apfDrive(target, deceleration).until(
             () -> target.get().getTranslation().getDistance(state.translation) < endTolerance.getAsDouble()
         );
     }
 
     /**
-     * Drives the robot to a target position using the repulsor field.
+     * Drives the robot to a target position using the APF.
      * @param target A supplier that returns the target blue-origin relative field location.
-     * @param slowdownRange A supplier that returns the range in meters at which to begin slowing down the robot.
+     * @param deceleration A supplier that returns the deceleration for the robot to target in m/s/s.
      */
-    public Command repulsorDrive(Supplier<Pose2d> target, DoubleSupplier slowdownRange) {
-        return commandBuilder("Swerve.repulsorDrive()")
+    public Command apfDrive(Supplier<Pose2d> target, DoubleSupplier deceleration) {
+        return commandBuilder("Swerve.apfDrive()")
             .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond))
             .onExecute(() -> {
-                repulsor.setTarget(target.get());
-                RepulsorSample sample = repulsor.sampleField(
-                    state.translation,
-                    kRepulsorVelocity.value(),
-                    slowdownRange.getAsDouble()
+                Pose2d goal = target.get();
+                var speeds = apf.calculate(
+                    state.pose,
+                    goal.getTranslation(),
+                    kAPFVel.value(),
+                    deceleration.getAsDouble()
                 );
 
-                api.applySpeeds(
-                    new ChassisSpeeds(
-                        sample.vx(),
-                        sample.vy(),
-                        angularPID.calculate(
-                            state.rotation.getRadians(),
-                            repulsor.getTarget().getRotation().getRadians()
-                        )
-                    ),
-                    Perspective.kBlue,
-                    true,
-                    true
+                speeds.omegaRadiansPerSecond = angularPID.calculate(
+                    state.rotation.getRadians(),
+                    goal.getRotation().getRadians()
                 );
+
+                api.applySpeeds(speeds, Perspective.kBlue, true, true);
             });
     }
 
@@ -535,9 +536,6 @@ public final class Swerve extends GRRSubsystem {
      * @param sample The next trajectory sample.
      */
     public void followTrajectory(SwerveSample sample) {
-        autoLast = autoNext;
-        autoNext = sample.getPose();
-
         Pose2d pose = state.pose;
         api.applySpeeds(
             new ChassisSpeeds(

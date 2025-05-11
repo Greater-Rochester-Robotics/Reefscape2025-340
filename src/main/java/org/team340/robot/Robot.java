@@ -80,7 +80,8 @@ public final class Robot extends TimedRobot {
         coDriver = new CommandXboxController(Constants.kCoDriver);
 
         // Create triggers
-        RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
+        // RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
+        RobotModeTriggers.autonomous().whileTrue(autos.test2());
         Trigger gooseAround = driver.x().negate().and(coDriver.a().negate());
 
         // Setup lights

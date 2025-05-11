@@ -1,5 +1,8 @@
 package org.team340.lib.util;
 
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -34,6 +37,29 @@ public final class Math2 {
     public static final double kFiveSixthsPi = (5.0 * Math.PI) / 6.0;
     /** {@code PI*2} (360deg) */
     public static final double kTwoPi = Math.PI * 2.0;
+
+    /**
+     * Checks if the distance between two {@link Translation2d}s is within a specified tolerance.
+     * @param expected The expected {@link Translation2d}.
+     * @param actual The actual {@link Translation2d}.
+     * @param tolerance The allowed distance between the actual and the expected translations, in meters.
+     */
+    public static boolean isNear(Translation2d expected, Translation2d actual, double tolerance) {
+        double dx = expected.getX() - actual.getX();
+        double dy = expected.getY() - actual.getY();
+        return dx * dx + dy * dy < tolerance * tolerance;
+    }
+
+    /**
+     * Checks if the angle between two {@link Rotation2d}s is within a specified tolerance.
+     * @param expected The expected {@link Rotation2d}.
+     * @param actual The actual {@link Rotation2d}.
+     * @param tolerance The allowed difference between the actual and the expected rotations, in radians.
+     */
+    public static boolean isNear(Rotation2d expected, Rotation2d actual, double tolerance) {
+        double dot = expected.getCos() * actual.getCos() + expected.getSin() * actual.getSin();
+        return Math.acos(MathUtil.clamp(dot, -1.0, 1.0)) < tolerance;
+    }
 
     /**
      * Returns a random double from {@code 0.0} to {@code max}.
