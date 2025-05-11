@@ -193,7 +193,7 @@ public final class PAPFController {
     }
 
     /**
-     * Enables publishing tunables for adjustment of the controller's constants.
+     * Enables publishing tunables for adjustment of the controller's parameters.
      * @param name The parent name for the tunables in NetworkTables.
      */
     public void enableTunables(String name) {
