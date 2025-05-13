@@ -7,10 +7,12 @@ import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -80,8 +82,8 @@ public final class Robot extends TimedRobot {
         coDriver = new CommandXboxController(Constants.kCoDriver);
 
         // Create triggers
-        // RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
-        RobotModeTriggers.autonomous().whileTrue(autos.test2());
+        RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
+        // RobotModeTriggers.autonomous().whileTrue(autos.test2());
         Trigger gooseAround = driver.x().negate().and(coDriver.a().negate());
 
         // Setup lights
@@ -132,7 +134,13 @@ public final class Robot extends TimedRobot {
         coDriver.leftBumper().and(coDriver.rightBumper()).toggleOnTrue(routines.killTheGoose());
 
         // Set thread priority
-        Threads.setCurrentThreadPriority(true, 10);
+        waitSeconds(5.0)
+            .until(DriverStation::isEnabled)
+            .andThen(() -> {
+                Threads.setCurrentThreadPriority(true, 10);
+                SmartDashboard.setNetworkTableInstance(NetworkTableInstance.getDefault());
+            })
+            .schedule();
     }
 
     /**
@@ -179,6 +187,7 @@ public final class Robot extends TimedRobot {
         Profiler.start("robotPeriodic");
         Profiler.run("scheduler", scheduler::run);
         Profiler.run("lights", lights::update);
+        Profiler.run("autoChooser", autos::update);
         Profiler.run("epilogue", () -> Epilogue.update(this));
         Profiler.run("tunables", Tunable::update);
         Profiler.end();

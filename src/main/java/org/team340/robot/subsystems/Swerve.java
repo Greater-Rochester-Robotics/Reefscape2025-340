@@ -1,11 +1,8 @@
 package org.team340.robot.subsystems;
 
-import choreo.auto.AutoFactory;
-import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.CANBus;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -30,16 +27,16 @@ import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
 import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.PAPFController;
 import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
-import org.team340.robot.Constants.FieldConstants;
-import org.team340.robot.Constants.FieldConstants.ReefLocation;
 import org.team340.robot.Constants.LowerCAN;
-import org.team340.robot.Constants.UpperCAN;
-import org.team340.robot.util.PAPFController;
+import org.team340.robot.Constants.RioCAN;
+import org.team340.robot.util.Field;
+import org.team340.robot.util.Field.ReefLocation;
 import org.team340.robot.util.Vision;
 
 /**
@@ -91,7 +88,7 @@ public final class Swerve extends GRRSubsystem {
         .setPowerProperties(Constants.kVoltage, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(kMoveRatio, kTurnRatio, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.05)
-        .setIMU(SwerveIMUs.canandgyro(UpperCAN.kCanandgyro))
+        .setIMU(SwerveIMUs.canandgyro(RioCAN.kCanandgyro))
         .setPhoenixFeatures(new CANBus(LowerCAN.kLowerCANBus), true, true, true)
         .setModules(kFrontLeft, kFrontRight, kBackLeft, kBackRight);
 
@@ -125,10 +122,6 @@ public final class Swerve extends GRRSubsystem {
     private final Vision vision;
     private final PAPFController apf;
 
-    private final PIDController autoPIDx;
-    private final PIDController autoPIDy;
-    private final PIDController autoPIDangular;
-
     private final ProfiledPIDController angularPID;
 
     private final ReefAssistData reefAssist = new ReefAssistData();
@@ -141,21 +134,13 @@ public final class Swerve extends GRRSubsystem {
         api = new SwerveAPI(kConfig);
         state = api.state;
         vision = new Vision(Constants.kCameras);
-        apf = new PAPFController(4.0, 0.5, true, FieldConstants.kObstacles);
-
-        autoPIDx = new PIDController(10.0, 0.0, 0.0);
-        autoPIDy = new PIDController(10.0, 0.0, 0.0);
-        autoPIDangular = new PIDController(10.0, 0.0, 0.0);
-        autoPIDangular.enableContinuousInput(-Math.PI, Math.PI);
+        apf = new PAPFController(4.0, 0.5, true, Field.kObstacles);
 
         angularPID = new ProfiledPIDController(10.0, 0.0, 0.0, new Constraints(10.0, 24.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);
 
         api.enableTunables("swerve/api");
         apf.enableTunables("swerve/apf");
-        Tunable.pidController("swerve/autoPID", autoPIDx);
-        Tunable.pidController("swerve/autoPID", autoPIDy);
-        Tunable.pidController("swerve/autoPIDangular", autoPIDangular);
         Tunable.pidController("swerve/angularPID", angularPID);
     }
 
@@ -172,7 +157,7 @@ public final class Swerve extends GRRSubsystem {
         );
 
         // Calculate helpers
-        Translation2d reefCenter = Alliance.isBlue() ? FieldConstants.kReefCenterBlue : FieldConstants.kReefCenterRed;
+        Translation2d reefCenter = Alliance.isBlue() ? Field.kReefCenterBlue : Field.kReefCenterRed;
         Translation2d reefTranslation = state.translation.minus(reefCenter);
         Rotation2d reefAngle = new Rotation2d(
             Math.floor(
@@ -197,7 +182,7 @@ public final class Swerve extends GRRSubsystem {
         wallDistance = Math.max(
             0,
             reefAngle.rotateBy(Rotation2d.kPi).minus(reefTranslation.getAngle()).getCos() * reefTranslation.getNorm() -
-            FieldConstants.kReefCenterToWallDistance
+            Field.kReefCenterToWallDistance
         );
 
         Profiler.end();
@@ -222,9 +207,9 @@ public final class Swerve extends GRRSubsystem {
     /**
      * Remove @NotLogged for debugging
      */
-    @NotLogged
+    // @NotLogged
     public List<Pose2d> apfVisualization() {
-        return apf.visualizeField(30, FieldConstants.kLength, FieldConstants.kWidth);
+        return apf.visualizeField(30, 1.0, Field.kLength, Field.kWidth);
     }
 
     /**
@@ -259,6 +244,21 @@ public final class Swerve extends GRRSubsystem {
         return commandBuilder("Swerve.tareRotation()")
             .onInitialize(() -> {
                 api.tareRotation(Perspective.kOperator);
+                vision.reset();
+            })
+            .isFinished(true)
+            .ignoringDisable(true);
+    }
+
+    /**
+     * Resets the pose of the robot, inherently seeding field-relative movement.
+     * @param pose A supplier that returns the new blue origin
+     *             relative pose to apply to the pose estimator.
+     */
+    public Command resetPose(Supplier<Pose2d> pose) {
+        return commandBuilder("Swerve.resetPose()")
+            .onInitialize(() -> {
+                api.resetPose(pose.get());
                 vision.reset();
             })
             .isFinished(true)
@@ -516,44 +516,11 @@ public final class Swerve extends GRRSubsystem {
         return commandBuilder("Swerve.stop(" + lock + ")").onExecute(() -> api.applyStop(lock));
     }
 
-    /**
-     * Resets the pose of the robot, inherently seeding field-relative movement. This
-     * method is not intended for use outside of creating an {@link AutoFactory}.
-     * @param pose The new blue origin relative pose to apply to the pose estimator.
-     */
-    public void resetPose(Pose2d pose) {
-        api.resetPose(pose);
-        vision.reset();
-
-        autoPIDx.reset();
-        autoPIDy.reset();
-        autoPIDangular.reset();
-    }
-
-    /**
-     * Follows a Choreo trajectory by moving towards the next sample. This method
-     * is not intended for use outside of creating an {@link AutoFactory}.
-     * @param sample The next trajectory sample.
-     */
-    public void followTrajectory(SwerveSample sample) {
-        Pose2d pose = state.pose;
-        api.applySpeeds(
-            new ChassisSpeeds(
-                sample.vx + autoPIDx.calculate(pose.getX(), sample.x),
-                sample.vy + autoPIDy.calculate(pose.getY(), sample.y),
-                sample.omega + autoPIDangular.calculate(pose.getRotation().getRadians(), sample.heading)
-            ),
-            Perspective.kBlue,
-            true,
-            false
-        );
-    }
-
     private Pose2d generateReefLocation(double xOffset, Rotation2d side, boolean left) {
         return new Pose2d(
             reefReference
                 .getTranslation()
-                .plus(new Translation2d(-xOffset, FieldConstants.kPipeOffsetY * (left ? 1.0 : -1.0)).rotateBy(side)),
+                .plus(new Translation2d(-xOffset, Field.kPipeOffsetY * (left ? 1.0 : -1.0)).rotateBy(side)),
             side
         );
     }

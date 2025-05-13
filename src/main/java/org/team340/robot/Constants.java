@@ -1,16 +1,7 @@
 package org.team340.robot;
 
-import choreo.trajectory.SwerveSample;
-import choreo.util.ChoreoAllianceFlipUtil;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import org.team340.robot.util.PAPFController.CircleObstacle;
-import org.team340.robot.util.PAPFController.LineObstacle;
-import org.team340.robot.util.PAPFController.Obstacle;
-import org.team340.robot.util.PAPFController.XLimitObstacle;
-import org.team340.robot.util.PAPFController.YLimitObstacle;
 import org.team340.robot.util.Vision.CameraConfig;
 
 /**
@@ -45,12 +36,9 @@ public final class Constants {
 
     public static final class LowerCAN {
 
-        // *************** Lower CAN Bus ***************
-
         public static final String kLowerCANBus = "LowerCAN";
 
         // Swerve
-
         public static final int kFlMove = 2;
         public static final int kFlTurn = 3;
         public static final int kFrMove = 4;
@@ -71,9 +59,7 @@ public final class Constants {
         public static final int kElevatorCANdi = 22;
     }
 
-    public static final class UpperCAN {
-
-        //*************** Upper CAN Bus ***************
+    public static final class RioCAN {
 
         // Swerve
         public static final int kCanandgyro = 14;
@@ -95,120 +81,5 @@ public final class Constants {
 
         public static final int kIntakeBeamBreak = 9;
         public static final int kLights = 9;
-    }
-
-    public static final class FieldConstants {
-
-        public static final double kLength = 17.548;
-        public static final double kWidth = 8.052;
-
-        public static final double kPipeOffsetY = 0.164;
-
-        public static final Translation2d kBlueLeftCorner = new Translation2d(0.0, kWidth);
-        public static final Translation2d kBlueRightCorner = new Translation2d(0.0, 0.0);
-        public static final Translation2d kRedLeftCorner = new Translation2d(kLength, 0.0);
-        public static final Translation2d kRedRightCorner = new Translation2d(kLength, kWidth);
-
-        public static final Translation2d kReefCenterBlue = new Translation2d(4.489, kWidth / 2.0);
-        public static final Translation2d kReefCenterRed = ChoreoAllianceFlipUtil.flip(kReefCenterBlue);
-
-        public static final double kReefCenterToWallDistance = 0.781;
-
-        public static enum ReefLocation {
-            A(Rotation2d.fromDegrees(0.0), true, false),
-            B(Rotation2d.fromDegrees(0.0), false, false),
-            C(Rotation2d.fromDegrees(60.0), true, false),
-            D(Rotation2d.fromDegrees(60.0), false, false),
-            E(Rotation2d.fromDegrees(120.0), true, true),
-            F(Rotation2d.fromDegrees(120.0), false, true),
-            G(Rotation2d.fromDegrees(180.0), true, true),
-            H(Rotation2d.fromDegrees(180.0), false, true),
-            I(Rotation2d.fromDegrees(-120.0), true, true),
-            J(Rotation2d.fromDegrees(-120.0), false, true),
-            K(Rotation2d.fromDegrees(-60.0), true, false),
-            L(Rotation2d.fromDegrees(-60.0), false, false);
-
-            public final Rotation2d side;
-            public final boolean left;
-            public final boolean back;
-
-            private ReefLocation(Rotation2d side, boolean left, boolean back) {
-                this.side = side;
-                this.left = left;
-                this.back = back;
-            }
-        }
-
-        private static final double kCoralX = 1.6;
-        private static final double kCoralY = 1.125;
-
-        public static final Obstacle[] kObstacles = {
-            // Walls
-            new XLimitObstacle(0.0, false, 0.1),
-            new XLimitObstacle(kLength, true, 0.1),
-            new YLimitObstacle(0.0, false, 0.1),
-            new YLimitObstacle(kWidth, true, 0.1),
-            // Coral stations
-            new LineObstacle(new Translation2d(0.0, kCoralY), new Translation2d(kCoralX, 0.0), 0.1, true),
-            new LineObstacle(new Translation2d(0.0, kWidth - kCoralY), new Translation2d(kCoralX, kWidth), 0.1, true),
-            new LineObstacle(new Translation2d(kLength, kCoralY), new Translation2d(kLength - kCoralX, 0.0), 0.1, true),
-            new LineObstacle(
-                new Translation2d(kLength, kWidth - kCoralY),
-                new Translation2d(kLength - kCoralX, kWidth),
-                0.1,
-                true
-            ),
-            // Reef
-            new CircleObstacle(kReefCenterBlue, 0.83, 1.0),
-            new CircleObstacle(kReefCenterRed, 0.83, 1.0)
-        };
-
-        private static double kStationX = 1.53;
-        private static double kStationY = 0.64;
-
-        public static final SwerveSample kStationForwards = new SwerveSample(
-            0.0,
-            kStationX,
-            kStationY,
-            Math.toRadians(-36.0),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            new double[0],
-            new double[0]
-        );
-
-        public static final SwerveSample kStationBackwards = new SwerveSample(
-            0.0,
-            kStationX,
-            kStationY,
-            Math.toRadians(144.0),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            new double[0],
-            new double[0]
-        );
-
-        public static final SwerveSample kAvoidLocation = new SwerveSample(
-            0.0,
-            6.45,
-            0.9,
-            Math.toRadians(180.0),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            new double[0],
-            new double[0]
-        );
     }
 }

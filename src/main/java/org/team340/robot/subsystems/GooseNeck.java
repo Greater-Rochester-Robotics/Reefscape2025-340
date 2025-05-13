@@ -39,7 +39,7 @@ import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.CommandBuilder;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.UpperCAN;
+import org.team340.robot.Constants.RioCAN;
 import org.team340.robot.util.ReefSelection;
 
 @Logged
@@ -131,9 +131,9 @@ public final class GooseNeck extends GRRSubsystem {
     private boolean goosing = false;
 
     public GooseNeck() {
-        pivotMotor = new TalonFX(UpperCAN.kGooseNeckMotor);
-        beakMotor = new TalonFXS(UpperCAN.kGooseBeakMotor);
-        candi = new CANdi(UpperCAN.kGooseCANdi);
+        pivotMotor = new TalonFX(RioCAN.kGooseNeckMotor);
+        beakMotor = new TalonFXS(RioCAN.kGooseBeakMotor);
+        candi = new CANdi(RioCAN.kGooseCANdi);
 
         TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
 

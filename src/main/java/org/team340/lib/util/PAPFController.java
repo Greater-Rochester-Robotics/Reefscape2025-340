@@ -1,4 +1,4 @@
-package org.team340.robot.util;
+package org.team340.lib.util;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
@@ -10,7 +10,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.team340.lib.util.Tunable;
 
 /**
  * Implements a predictive artificial potential field (P-APF),
@@ -210,15 +209,19 @@ public final class PAPFController {
      * regular use due to performance implications.
      * @param rows The number of rows (X+ direction) to sample. Columns are sampled
      *             relative to the ratio of {@code fieldWidth / fieldLength}.
+     * @param padding The distance past the field perimeter to sample in meters.
      * @param fieldLength The length of the field in meters.
      * @param fieldWidth The width of the field in meters.
      */
-    public List<Pose2d> visualizeField(int rows, double fieldLength, double fieldWidth) {
+    public List<Pose2d> visualizeField(int rows, double padding, double fieldLength, double fieldWidth) {
+        fieldLength += (padding * 2.0);
+        fieldWidth += (padding * 2.0);
+
         List<Pose2d> field = new ArrayList<>();
         NetForce sample = new NetForce();
         int columns = (int) Math.ceil(rows * (fieldWidth / fieldLength));
-        for (double x = 0.0; x < fieldLength + 1e-3; x += fieldLength / rows) {
-            for (double y = 0.0; y < fieldWidth + 1e-3; y += fieldWidth / columns) {
+        for (double x = -padding; x < fieldLength + 1e-3; x += fieldLength / rows) {
+            for (double y = -padding; y < fieldWidth + 1e-3; y += fieldWidth / columns) {
                 sample.reset();
                 forceAt(x, y, setpoint.getTranslation(), sample);
                 if (sample.x * sample.x + sample.y * sample.y > 1e-6) {
@@ -411,60 +414,58 @@ public final class PAPFController {
     }
 
     /**
-     * An infinite line parallel to the Y axis that pushes parallel to the X axis.
-     * Any location past the specified X coordinate will be pushed to the other
-     * side of the obstacle.
+     * An infinite line that pushes parallel to the X axis, to
+     * constrain forwards/backwards field-relative movement.
      */
-    public static final class XLimitObstacle extends Obstacle {
+    public static final class LongitudinalObstacle extends Obstacle {
 
         private final double x;
 
         /**
-         * Creates a vertical obstacle.
+         * Creates a longitudinal obstacle.
          * @param x The X coordinate of the line.
-         * @param upperBound If the obstacle represents the upper limit of the
-         *                   robot's Y location. {@code true} will push the robot
-         *                   to be below the specified Y coordinate, {@code false}
-         *                   will push the robot to be above the specified Y coordinate.
          * @param strength The strength of the obstacle's force.
+         * @param repulsive If the obstacle is a repulsive potential (pushes away). If
+         *                  {@code false}, the obstacle will behave as an attractive
+         *                  potential (pulls towards).
          */
-        public XLimitObstacle(double x, boolean upperBound, double strength) {
-            super(strength, !upperBound);
+        public LongitudinalObstacle(double x, double strength, boolean repulsive) {
+            super(strength, repulsive);
             this.x = x;
         }
 
         @Override
         public void applyForce(double x, double y, Translation2d target, NetForce netForce) {
-            netForce.x += getForceMagnitude(this.x - x);
+            double difference = x - this.x;
+            netForce.x += Math.copySign(getForceMagnitude(difference), difference);
         }
     }
 
     /**
-     * An infinite line parallel to the X axis that pushes parallel to the Y axis.
-     * Any location past the specified Y coordinate will be pushed to the other
-     * side of the obstacle.
+     * An infinite line that pushes parallel to the Y axis, to
+     * constrain left/right field-relative movement.
      */
-    public static final class YLimitObstacle extends Obstacle {
+    public static final class LateralObstacle extends Obstacle {
 
         private final double y;
 
         /**
-         * Creates a horizontal obstacle.
+         * Creates a lateral obstacle.
          * @param y The Y coordinate of the line.
-         * @param upperBound If the obstacle represents the upper limit of the
-         *                   robot's Y location. {@code true} will push the robot
-         *                   to be below the specified Y coordinate, {@code false}
-         *                   will push the robot to be above the specified Y coordinate.
          * @param strength The strength of the obstacle's force.
+         * @param repulsive If the obstacle is a repulsive potential (pushes away). If
+         *                  {@code false}, the obstacle will behave as an attractive
+         *                  potential (pulls towards).
          */
-        public YLimitObstacle(double y, boolean upperBound, double strength) {
-            super(strength, !upperBound);
+        public LateralObstacle(double y, double strength, boolean repulsive) {
+            super(strength, repulsive);
             this.y = y;
         }
 
         @Override
         public void applyForce(double x, double y, Translation2d target, NetForce netForce) {
-            netForce.y += getForceMagnitude(this.y - y);
+            double difference = y - this.y;
+            netForce.y += Math.copySign(getForceMagnitude(difference), difference);
         }
     }
 }

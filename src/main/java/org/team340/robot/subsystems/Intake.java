@@ -22,7 +22,7 @@ import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.UpperCAN;
+import org.team340.robot.Constants.RioCAN;
 
 @Logged
 public final class Intake extends GRRSubsystem {
@@ -44,8 +44,8 @@ public final class Intake extends GRRSubsystem {
     private boolean unjamming = false;
 
     public Intake() {
-        motor = new TalonFX(UpperCAN.kIntakeMotor);
-        canRange = new CANrange(UpperCAN.kIntakeCANrange);
+        motor = new TalonFX(RioCAN.kIntakeMotor);
+        canRange = new CANrange(RioCAN.kIntakeCANrange);
 
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
