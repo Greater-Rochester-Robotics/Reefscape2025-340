@@ -24,13 +24,13 @@ public class CANcoderLogger extends ClassSpecificLogger<CANcoder> {
     }
 
     @Override
-    public void update(EpilogueBackend backend, CANcoder canCoder) {
+    public void update(EpilogueBackend backend, CANcoder cancoder) {
         cache
-            .computeIfAbsent(canCoder, key -> {
-                var absolutePosition = canCoder.getAbsolutePosition(false);
-                var magnetHealth = canCoder.getMagnetHealth(false);
-                var position = canCoder.getPosition(false);
-                var velocity = canCoder.getVelocity(false);
+            .computeIfAbsent(cancoder, key -> {
+                var absolutePosition = cancoder.getAbsolutePosition(false);
+                var magnetHealth = cancoder.getMagnetHealth(false);
+                var position = cancoder.getPosition(false);
+                var velocity = cancoder.getVelocity(false);
 
                 BaseStatusSignal[] signals = { absolutePosition, magnetHealth, position, velocity };
 

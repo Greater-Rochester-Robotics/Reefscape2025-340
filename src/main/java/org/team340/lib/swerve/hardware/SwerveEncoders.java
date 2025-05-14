@@ -268,28 +268,28 @@ public final class SwerveEncoders {
      * @param offset Offset of the magnet in rotations.
      * @param inverted If the encoder is inverted.
      */
-    public static SwerveEncoder.Ctor canCoder(int id, double offset, boolean inverted) {
+    public static SwerveEncoder.Ctor cancoder(int id, double offset, boolean inverted) {
         return (config, turnMotor) -> {
             var deviceLogger = new CANcoderLogger();
-            CANcoder canCoder = new CANcoder(id, config.phoenixCanBus);
+            CANcoder cancoder = new CANcoder(id, config.phoenixCanBus);
             HookStatus tempHookStatus = new HookStatus(false, false);
 
-            StatusSignal<Angle> position = canCoder.getPosition().clone();
-            StatusSignal<AngularVelocity> velocity = canCoder.getVelocity().clone();
+            StatusSignal<Angle> position = cancoder.getPosition().clone();
+            StatusSignal<AngularVelocity> velocity = cancoder.getVelocity().clone();
 
-            var canCoderConfig = new CANcoderConfiguration();
-            canCoderConfig.MagnetSensor.MagnetOffset = offset;
-            canCoderConfig.MagnetSensor.SensorDirection = inverted
+            var cancoderConfig = new CANcoderConfiguration();
+            cancoderConfig.MagnetSensor.MagnetOffset = offset;
+            cancoderConfig.MagnetSensor.SensorDirection = inverted
                 ? SensorDirectionValue.Clockwise_Positive
                 : SensorDirectionValue.CounterClockwise_Positive;
 
-            PhoenixUtil.run("Clear Sticky Faults", () -> canCoder.clearStickyFaults());
-            PhoenixUtil.run("Apply CANcoderConfiguration", () -> canCoder.getConfigurator().apply(canCoderConfig));
+            PhoenixUtil.run("Clear Sticky Faults", () -> cancoder.clearStickyFaults());
+            PhoenixUtil.run("Apply CANcoderConfiguration", () -> cancoder.getConfigurator().apply(cancoderConfig));
             PhoenixUtil.run("Set Update Frequency", () ->
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
             PhoenixUtil.run("Optimize Bus Utilization", () ->
-                canCoder.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
+                cancoder.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
             );
 
             if (turnMotor.getAPI() instanceof TalonFX talonFX) {
@@ -329,12 +329,12 @@ public final class SwerveEncoders {
 
                 @Override
                 public Object getAPI() {
-                    return canCoder;
+                    return cancoder;
                 }
 
                 @Override
                 public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, canCoder, errorHandler);
+                    deviceLogger.tryUpdate(backend, cancoder, errorHandler);
                 }
 
                 @Override
@@ -344,7 +344,7 @@ public final class SwerveEncoders {
 
                 @Override
                 public void close() {
-                    canCoder.close();
+                    cancoder.close();
                 }
             };
         };

@@ -11,12 +11,12 @@ import org.team340.robot.util.Vision.CameraConfig;
  */
 public final class Constants {
 
-    public static final double kVoltage = 12.0;
+    public static final double VOLTAGE = 12.0;
 
-    public static final int kDriver = 0;
-    public static final int kCoDriver = 1;
+    public static final int DRIVER = 0;
+    public static final int CO_DRIVER = 1;
 
-    public static final CameraConfig[] kCameras = {
+    public static final CameraConfig[] CAMERAS = {
         new CameraConfig(
             "middle",
             new Translation3d(0.354, 0.0, 0.215),
@@ -36,50 +36,49 @@ public final class Constants {
 
     public static final class LowerCAN {
 
-        public static final String kLowerCANBus = "LowerCAN";
+        public static final String LOWER_CAN = "LowerCAN";
 
         // Swerve
-        public static final int kFlMove = 2;
-        public static final int kFlTurn = 3;
-        public static final int kFrMove = 4;
-        public static final int kFrTurn = 5;
-        public static final int kBlMove = 6;
-        public static final int kBlTurn = 7;
-        public static final int kBrMove = 8;
-        public static final int kBrTurn = 9;
+        public static final int FL_MOVE = 2;
+        public static final int FL_TURN = 3;
+        public static final int FR_MOVE = 4;
+        public static final int FR_TURN = 5;
+        public static final int BL_MOVE = 6;
+        public static final int BL_TURN = 7;
+        public static final int BR_MOVE = 8;
+        public static final int BR_TURN = 9;
 
-        public static final int kFlEncoder = 10;
-        public static final int kFrEncoder = 11;
-        public static final int kBlEncoder = 12;
-        public static final int kBrEncoder = 13;
+        public static final int FL_ENCODER = 10;
+        public static final int FR_ENCODER = 11;
+        public static final int BL_ENCODER = 12;
+        public static final int BR_ENCODER = 13;
 
         // Elevator
-        public static final int kElevatorLead = 20;
-        public static final int kElevatorFollow = 21;
-        public static final int kElevatorCANdi = 22;
+        public static final int ELEVATOR_LEAD = 20;
+        public static final int ELEVATOR_FOLLOW = 21;
+        public static final int ELEVATOR_CANDI = 22;
     }
 
     public static final class RioCAN {
 
         // Swerve
-        public static final int kCanandgyro = 14;
+        public static final int CANANDGYRO = 14;
 
         // Goose
-        public static final int kGooseNeckMotor = 30;
-        public static final int kGooseBeakMotor = 31;
-        public static final int kGooseCANdi = 32;
+        public static final int GOOSE_NECK = 30;
+        public static final int GOOSE_BEAK = 31;
+        public static final int GOOSE_CANDI = 32;
 
         // Intake
-        public static final int kIntakeMotor = 40;
-        public static final int kIntakeCANrange = 41;
+        public static final int INTAKE_MOTOR = 40;
+        public static final int INTAKE_CANRANGE = 41;
 
         // Climber
-        public static final int kClimberMotor = 50;
+        public static final int CLIMBER_MOTOR = 50;
     }
 
     public static final class RioIO {
 
-        public static final int kIntakeBeamBreak = 9;
-        public static final int kLights = 9;
+        public static final int LIGHTS = 9;
     }
 }

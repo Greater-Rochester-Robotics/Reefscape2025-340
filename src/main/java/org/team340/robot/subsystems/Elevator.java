@@ -21,9 +21,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
-import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -35,15 +33,14 @@ import org.team340.robot.util.ReefSelection;
 public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
-        kDown(0.0),
-        kIntake(0.18),
-        kBarf(0.18),
-        kSwallow(0.65),
-        kBabyBird(10.9),
-        kL1(4.0, true),
-        kL2(10.75, true),
-        kL3(22.5, true),
-        kL4(40.25, true);
+        DOWN(0.0),
+        INTAKE(0.18),
+        BARF(0.18),
+        SWALLOW(0.65),
+        L1(4.0, true),
+        L2(10.75, true),
+        L3(22.5, true),
+        L4(40.25, true);
 
         private final TunableDouble rotations;
         private final boolean scoring;
@@ -61,12 +58,12 @@ public final class Elevator extends GRRSubsystem {
             return rotations.value();
         }
 
-        private static ElevatorPosition closeTo(double position) {
+        private static ElevatorPosition closest(double position) {
             ElevatorPosition closest = null;
             double min = Double.MAX_VALUE;
             for (ElevatorPosition option : values()) {
                 double distance = Math.abs(option.rotations() - position);
-                if (Math2.epsilonEquals(0.0, distance, kCloseToTolerance.value()) && distance <= min) {
+                if (distance < CLOSEST_TOLERANCE.value() && distance <= min) {
                     closest = option;
                     min = distance;
                 }
@@ -76,12 +73,11 @@ public final class Elevator extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kDunkRotations = Tunable.doubleValue("elevator/kDunkRotations", -3.0);
-    private static final TunableDouble kCloseToTolerance = Tunable.doubleValue("elevator/kCloseToTolerance", 0.35);
-    private static final TunableDouble kAtPositionTolerance = Tunable.doubleValue("elevator/kAtPositionTolerance", 0.2);
-    private static final TunableDouble kZeroTolerance = Tunable.doubleValue("elevator/kZeroTolerance", 0.15);
-    private static final TunableDouble kHomingVoltage = Tunable.doubleValue("elevator/kHomingVoltage", -1.0);
-    private static final TunableDouble kTunableVoltage = Tunable.doubleValue("elevator/kTunableVoltage", 0.0);
+    private static final TunableDouble DUNK_ROTATIONS = Tunable.doubleValue("elevator/dunkRotations", -3.0);
+    private static final TunableDouble CLOSEST_TOLERANCE = Tunable.doubleValue("elevator/closestTolerance", 0.35);
+    private static final TunableDouble AT_POSITION_TOLERANCE = Tunable.doubleValue("elevator/atPositionTolerance", 0.2);
+    private static final TunableDouble ZERO_TOLERANCE = Tunable.doubleValue("elevator/zeroTolerance", 0.15);
+    private static final TunableDouble HOMING_VOLTS = Tunable.doubleValue("elevator/homingVoltage", -1.0);
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -103,16 +99,16 @@ public final class Elevator extends GRRSubsystem {
 
     public Elevator() {
         // MOTOR SETUP
-        leadMotor = new TalonFX(LowerCAN.kElevatorLead, LowerCAN.kLowerCANBus);
-        followMotor = new TalonFX(LowerCAN.kElevatorFollow, LowerCAN.kLowerCANBus);
-        candi = new CANdi(LowerCAN.kElevatorCANdi, LowerCAN.kLowerCANBus);
+        leadMotor = new TalonFX(LowerCAN.ELEVATOR_LEAD, LowerCAN.LOWER_CAN);
+        followMotor = new TalonFX(LowerCAN.ELEVATOR_FOLLOW, LowerCAN.LOWER_CAN);
+        candi = new CANdi(LowerCAN.ELEVATOR_CANDI, LowerCAN.LOWER_CAN);
 
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
         motorConfig.CurrentLimits.StatorCurrentLimit = 80.0;
         motorConfig.CurrentLimits.SupplyCurrentLimit = 70.0;
 
-        motorConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = LowerCAN.kElevatorCANdi;
+        motorConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = LowerCAN.ELEVATOR_CANDI;
         motorConfig.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
         motorConfig.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
@@ -189,9 +185,7 @@ public final class Elevator extends GRRSubsystem {
 
     @Override
     public void periodic() {
-        Profiler.start("Elevator.periodic()");
         BaseStatusSignal.refreshAll(leadPosition, followPosition, leadVelocity, followVelocity, limitSwitch);
-        Profiler.end();
     }
 
     // *************** Helper Functions ***************
@@ -207,7 +201,7 @@ public final class Elevator extends GRRSubsystem {
     }
 
     public boolean safeForIntake() {
-        return getPosition() <= ElevatorPosition.kIntake.rotations() + kCloseToTolerance.value();
+        return getPosition() <= ElevatorPosition.INTAKE.rotations() + CLOSEST_TOLERANCE.value();
     }
 
     /**
@@ -223,12 +217,6 @@ public final class Elevator extends GRRSubsystem {
 
     // *************** Commands ***************
 
-    public Command applyTunableVoltage() {
-        return commandBuilder("Elevator.applyTunableVoltage()")
-            .onExecute(() -> leadMotor.setControl(voltageControl.withOutput(kTunableVoltage.value())))
-            .onEnd(leadMotor::stopMotor);
-    }
-
     /**
      * Goes to a scoring position.
      * @param selection The reef selection helper.
@@ -241,21 +229,21 @@ public final class Elevator extends GRRSubsystem {
             () -> {
                 switch (selection.getLevel()) {
                     case 1:
-                        return ElevatorPosition.kL1;
+                        return ElevatorPosition.L1;
                     case 2:
-                        return ElevatorPosition.kL2;
+                        return ElevatorPosition.L2;
                     case 3:
-                        return ElevatorPosition.kL3;
+                        return ElevatorPosition.L3;
                     case 4:
-                        return ElevatorPosition.kL4;
+                        return ElevatorPosition.L4;
                     default:
-                        return ElevatorPosition.kDown;
+                        return ElevatorPosition.DOWN;
                 }
             },
             () -> {
                 if (dunk.getAsBoolean()) dunkinDonuts.value = true;
                 if (selection.getLevel() != 4) dunkinDonuts.value = false;
-                return dunkinDonuts.value ? kDunkRotations.value() : 0.0;
+                return dunkinDonuts.value ? DUNK_ROTATIONS.value() : 0.0;
             },
             safe
         ).beforeStarting(() -> dunkinDonuts.value = false);
@@ -282,7 +270,7 @@ public final class Elevator extends GRRSubsystem {
             .onInitialize(() -> holdPosition.value = -1.0)
             .onExecute(() -> {
                 if (!homed) {
-                    leadMotor.setControl(voltageControl.withOutput(kHomingVoltage.value()));
+                    leadMotor.setControl(voltageControl.withOutput(HOMING_VOLTS.value()));
                     homed = limitSwitch.getValue();
                     return;
                 }
@@ -290,12 +278,12 @@ public final class Elevator extends GRRSubsystem {
                 ElevatorPosition targetPos = position.get();
                 double target = targetPos.rotations();
                 double currentPosition = getPosition();
-                atPosition = Math2.epsilonEquals(currentPosition, target, kAtPositionTolerance.value());
+                atPosition = Math.abs(currentPosition - target) < AT_POSITION_TOLERANCE.value();
                 scoring = targetPos.scoring;
 
                 if (!safe.getAsBoolean()) {
                     if (holdPosition.value < 0.0) {
-                        ElevatorPosition close = ElevatorPosition.closeTo(currentPosition);
+                        ElevatorPosition close = ElevatorPosition.closest(currentPosition);
                         holdPosition.value = close != null ? close.rotations() : currentPosition;
                     }
 
@@ -304,7 +292,7 @@ public final class Elevator extends GRRSubsystem {
                     holdPosition.value = -1.0;
                 }
 
-                if (currentPosition - kZeroTolerance.value() <= 0.0 && target - kZeroTolerance.value() <= 0.0) {
+                if (currentPosition - ZERO_TOLERANCE.value() <= 0.0 && target - ZERO_TOLERANCE.value() <= 0.0) {
                     leadMotor.stopMotor();
                 } else {
                     leadMotor.setControl(positionControl.withPosition(target + fudge.getAsDouble()));

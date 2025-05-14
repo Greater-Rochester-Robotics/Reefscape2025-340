@@ -1,4 +1,4 @@
-package org.team340.lib.util;
+package org.team340.lib.math;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
@@ -10,6 +10,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.team340.lib.util.Tunable;
 
 /**
  * Implements a predictive artificial potential field (P-APF),
@@ -94,10 +95,10 @@ public final class PAPFController {
      * implemented downstream.
      * @param currentPose The current robot pose.
      * @param goal The desired position of the robot.
-     * @param velocity The desired cruise velocity of the robot, in m/s.
-     * @param deceleration The desired deceleration rate of the robot, in m/s/s.
+     * @param maxVelocity The desired cruise velocity of the robot, in m/s.
+     * @param maxDeceleration The desired deceleration rate of the robot, in m/s/s.
      */
-    public ChassisSpeeds calculate(Pose2d currentPose, Translation2d goal, double velocity, double deceleration) {
+    public ChassisSpeeds calculate(Pose2d currentPose, Translation2d goal, double maxVelocity, double maxDeceleration) {
         this.goal = new Pose2d(goal, currentPose.getRotation());
         prediction.clear();
 
@@ -156,13 +157,13 @@ public final class PAPFController {
         NetForce force = new NetForce();
         forceAt(currentPose.getX(), currentPose.getY(), setpoint.getTranslation(), force);
 
-        if (error < (velocity * velocity) / (2.0 * deceleration)) {
-            velocity = Math.sqrt(2.0 * deceleration * error);
+        if (error < (maxVelocity * maxVelocity) / (2.0 * maxDeceleration)) {
+            maxVelocity = Math.sqrt(2.0 * maxDeceleration * error);
         }
 
         double norm = Math.hypot(force.x, force.y);
         return norm > 1e-6
-            ? new ChassisSpeeds(velocity * (force.x / norm), velocity * (force.y / norm), 0.0)
+            ? new ChassisSpeeds(maxVelocity * (force.x / norm), maxVelocity * (force.y / norm), 0.0)
             : new ChassisSpeeds();
     }
 

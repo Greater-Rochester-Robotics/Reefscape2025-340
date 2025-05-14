@@ -18,7 +18,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import org.team340.lib.util.DisableWatchdog;
-import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
@@ -34,7 +33,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged
 public final class Robot extends TimedRobot {
 
-    private final CommandScheduler scheduler = CommandScheduler.getInstance();
+    public final CommandScheduler scheduler = CommandScheduler.getInstance();
 
     public final Climber climber;
     public final Elevator elevator;
@@ -78,12 +77,10 @@ public final class Robot extends TimedRobot {
         autos = new Autos(this);
 
         // Initialize controllers
-        driver = new CommandXboxController(Constants.kDriver);
-        coDriver = new CommandXboxController(Constants.kCoDriver);
+        driver = new CommandXboxController(Constants.DRIVER);
+        coDriver = new CommandXboxController(Constants.CO_DRIVER);
 
         // Create triggers
-        RobotModeTriggers.autonomous().whileTrue(autos.runSelectedAuto());
-        // RobotModeTriggers.autonomous().whileTrue(autos.test2());
         Trigger gooseAround = driver.x().negate().and(coDriver.a().negate());
 
         // Setup lights
@@ -97,7 +94,7 @@ public final class Robot extends TimedRobot {
             .onFalse(lights.top.scored().onlyIf(this::isEnabled));
 
         // Set default commands
-        elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.kDown, this::safeForGoose));
+        elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.DOWN, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
         swerve.setDefaultCommand(swerve.drive(this::driverX, this::driverY, this::driverAngular));
 
@@ -106,8 +103,6 @@ public final class Robot extends TimedRobot {
         driver.b().whileTrue(routines.swallow());
         driver.x().onTrue(none()); // Reserved (No goosing around)
         driver.y().onTrue(none()); // Reserved (Force goose spit)
-
-        driver.start().whileTrue(routines.babyBird(driver.start()));
 
         driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
         driver.axisLessThan(kRightY.value, -0.5).onTrue(selection.incrementLevel());
@@ -184,13 +179,10 @@ public final class Robot extends TimedRobot {
 
     @Override
     public void robotPeriodic() {
-        Profiler.start("robotPeriodic");
-        Profiler.run("scheduler", scheduler::run);
-        Profiler.run("lights", lights::update);
-        Profiler.run("autoChooser", autos::update);
-        Profiler.run("epilogue", () -> Epilogue.update(this));
-        Profiler.run("tunables", Tunable::update);
-        Profiler.end();
+        scheduler.run();
+        lights.update();
+        Epilogue.update(this);
+        Tunable.update();
     }
 
     @Override

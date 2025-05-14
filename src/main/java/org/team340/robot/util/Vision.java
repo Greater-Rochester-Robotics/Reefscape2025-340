@@ -42,7 +42,7 @@ public final class Vision {
 
     // Set to true to enable simulation. Note that this may
     // negatively impact performance on slower devices.
-    private static boolean kEnableSim = false;
+    private static boolean ENABLE_SIM = false;
 
     private final Camera[] cameras;
     private final AprilTagFieldLayout aprilTags;
@@ -59,14 +59,14 @@ public final class Vision {
     public Vision(CameraConfig[] cameras) {
         aprilTags = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
 
-        if (RobotBase.isSimulation() && kEnableSim) {
+        if (RobotBase.isSimulation() && ENABLE_SIM) {
             sim = new VisionSystemSim("simulation");
             sim.addAprilTags(aprilTags);
         } else {
             sim = null;
         }
 
-        cameras = RobotBase.isSimulation() && !kEnableSim ? new CameraConfig[0] : cameras;
+        cameras = RobotBase.isSimulation() && !ENABLE_SIM ? new CameraConfig[0] : cameras;
         this.cameras = Arrays.stream(cameras).map(config -> new Camera(config)).toArray(Camera[]::new);
 
         // Hit the undocumented Photon Turbo Button™

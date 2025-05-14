@@ -17,7 +17,6 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
-import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -27,11 +26,11 @@ import org.team340.robot.Constants.RioCAN;
 @Logged
 public final class Intake extends GRRSubsystem {
 
-    private static final TunableDouble kIntakeVoltage = Tunable.doubleValue("intake/kIntakeVoltage", 6.0);
-    private static final TunableDouble kBarfVoltage = Tunable.doubleValue("intake/kBarfVoltage", 7.0);
-    private static final TunableDouble kSwallowVoltage = Tunable.doubleValue("intake/kSwallowVoltage", -6.0);
-    private static final TunableDouble kCurrentThreshold = Tunable.doubleValue("intake/kCurrentThreshold", 24.0);
-    private static final TunableDouble kUnjamTime = Tunable.doubleValue("intake/kUnjamTime", 0.2);
+    private static final TunableDouble INTAKE_VOLTS = Tunable.doubleValue("intake/intakeVoltage", 6.0);
+    private static final TunableDouble BARF_VOLTS = Tunable.doubleValue("intake/barfVoltage", 7.0);
+    private static final TunableDouble SWALLOW_VOLTS = Tunable.doubleValue("intake/swallowVoltage", -6.0);
+    private static final TunableDouble CURRENT_THRESHOLD = Tunable.doubleValue("intake/currentThreshold", 24.0);
+    private static final TunableDouble UNJAM_TIME = Tunable.doubleValue("intake/unjamTime", 0.2);
 
     private final TalonFX motor;
     private final CANrange canRange;
@@ -44,8 +43,8 @@ public final class Intake extends GRRSubsystem {
     private boolean unjamming = false;
 
     public Intake() {
-        motor = new TalonFX(RioCAN.kIntakeMotor);
-        canRange = new CANrange(RioCAN.kIntakeCANrange);
+        motor = new TalonFX(RioCAN.INTAKE_MOTOR);
+        canRange = new CANrange(RioCAN.INTAKE_CANRANGE);
 
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
@@ -90,9 +89,7 @@ public final class Intake extends GRRSubsystem {
 
     @Override
     public void periodic() {
-        Profiler.start("Intake.periodic()");
         BaseStatusSignal.refreshAll(current, detected);
-        Profiler.end();
     }
 
     @NotLogged
@@ -118,14 +115,14 @@ public final class Intake extends GRRSubsystem {
                 unjamTimer.reset();
             })
             .onExecute(() -> {
-                if (debouncer.calculate(current.getValueAsDouble() > kCurrentThreshold.value())) {
+                if (debouncer.calculate(current.getValueAsDouble() > CURRENT_THRESHOLD.value())) {
                     unjamTimer.start();
                 }
 
-                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(kUnjamTime.value())) || swallow.getAsBoolean()) {
-                    motor.setControl(voltageControl.withOutput(kSwallowVoltage.value()));
+                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(UNJAM_TIME.value())) || swallow.getAsBoolean()) {
+                    motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.value()));
                 } else {
-                    motor.setControl(voltageControl.withOutput(kIntakeVoltage.value()));
+                    motor.setControl(voltageControl.withOutput(INTAKE_VOLTS.value()));
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }
@@ -143,7 +140,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command barf() {
         return commandBuilder("Intake.barf()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(kBarfVoltage.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(BARF_VOLTS.value())))
             .onEnd(motor::stopMotor);
     }
 
@@ -152,7 +149,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command swallow() {
         return commandBuilder("Intake.swallow()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(kSwallowVoltage.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.value())))
             .onEnd(motor::stopMotor);
     }
 }

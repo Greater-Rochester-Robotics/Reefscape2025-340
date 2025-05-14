@@ -1,7 +1,7 @@
 package org.team340.robot.commands;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
-import static org.team340.robot.util.Field.*;
+import static org.team340.robot.util.Field.FLIPPER;
 import static org.team340.robot.util.Field.ReefLocation.*;
 
 import edu.wpi.first.epilogue.Logged;
@@ -23,6 +23,7 @@ import org.team340.robot.subsystems.Intake;
 import org.team340.robot.subsystems.Lights;
 import org.team340.robot.subsystems.Swerve;
 import org.team340.robot.util.Field;
+import org.team340.robot.util.Field.ReefLocation;
 import org.team340.robot.util.ReefSelection;
 
 /**
@@ -33,10 +34,10 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble kIntakeSlowdown = Tunable.doubleValue("autos/kIntakeSlowdown", 8.7);
-    private static final TunableDouble kIntakeRotDelay = Tunable.doubleValue("autos/kIntakeRotDelay", 0.6);
-    private static final TunableDouble kAvoidSlowdown = Tunable.doubleValue("autos/kAvoidSlowdown", 8.9);
-    private static final TunableDouble kAvoidTolerance = Tunable.doubleValue("autos/kAvoidTolerance", 0.25);
+    private static final TunableDouble INTAKE_SLOWDOWN = Tunable.doubleValue("autos/intakeSlowdown", 8.7);
+    private static final TunableDouble INTAKE_ROT_DELAY = Tunable.doubleValue("autos/intakeRotDelay", 0.6);
+    private static final TunableDouble AVOID_SLOWDOWN = Tunable.doubleValue("autos/avoidSlowdown", 8.9);
+    private static final TunableDouble AVOID_TOLERANCE = Tunable.doubleValue("autos/avoidTolerance", 0.25);
 
     private final Robot robot;
 
@@ -65,6 +66,7 @@ public final class Autos {
 
         // Create the auto factory
         chooser = new AutoChooser("Autos");
+        chooser.bind(robot.scheduler);
 
         // Add autonomous modes to the dashboard
         chooser.add("For Piece Left", forPiece(true));
@@ -74,17 +76,6 @@ public final class Autos {
         chooser.add("Stinky One Left", stinkyOne(true));
         chooser.add("Stinky One Right", stinkyOne(false));
         chooser.add("Test 2", test2());
-    }
-
-    public void update() {
-        chooser.update();
-    }
-
-    /**
-     * Returns a command that when scheduled will run the currently selected auto.
-     */
-    public Command runSelectedAuto() {
-        return chooser.runSelected();
     }
 
     private Command forPiece(boolean left) {
@@ -141,10 +132,14 @@ public final class Autos {
                 .withDeadline(sequence(waitUntil(() -> !swerve.wildlifeConservationProgram()), waitSeconds(0.75)));
 
         Function<Boolean, Command> goIntake = left ->
-            swerve.apfDrive(flipped(Field.kStationBackwards, left), kIntakeSlowdown::value, kAvoidTolerance::value);
+            swerve.apfDrive(
+                FLIPPER.flipped(Field.STATION_BACKWARDS, left),
+                INTAKE_SLOWDOWN::value,
+                AVOID_TOLERANCE::value
+            );
 
         return sequence(
-            swerve.resetPose(flipped(new Pose2d(4.0, 2.0, Rotation2d.kZero))),
+            swerve.resetPose(FLIPPER.flipped(new Pose2d(4.0, 2.0, Rotation2d.kZero))),
             goReef.apply(ReefLocation.A),
             avoid(true),
             goReef.apply(ReefLocation.E),
@@ -173,14 +168,14 @@ public final class Autos {
     }
 
     private Command pickup(ReefLocation start, boolean left) {
-        Supplier<Pose2d> station = flipped(start.back ? Field.kStationBackwards : Field.kStationForwards);
+        Supplier<Pose2d> station = FLIPPER.flipped(start.back ? Field.STATION_BACKWARDS : Field.STATION_FORWARDS);
         Timer timer = new Timer();
 
         return swerve
             .apfDrive(
                 () -> {
                     Pose2d pose = station.get();
-                    if (!timer.hasElapsed(kIntakeRotDelay.value())) {
+                    if (!timer.hasElapsed(INTAKE_ROT_DELAY.value())) {
                         return new Pose2d(
                             pose.getX(),
                             pose.getY(),
@@ -190,13 +185,17 @@ public final class Autos {
                         return pose;
                     }
                 },
-                kIntakeSlowdown::value
+                INTAKE_SLOWDOWN::value
             )
             .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
             .beforeStarting(timer::restart);
     }
 
     private Command avoid(boolean left) {
-        return swerve.apfDrive(flipped(Field.kAvoidLocation, left), kAvoidSlowdown::value, kAvoidTolerance::value);
+        return swerve.apfDrive(
+            FLIPPER.flipped(Field.AVOID_LOCATION, left),
+            AVOID_SLOWDOWN::value,
+            AVOID_TOLERANCE::value
+        );
     }
 }
