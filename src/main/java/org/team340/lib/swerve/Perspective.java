@@ -13,20 +13,20 @@ public enum Perspective {
      * is on the blue alliance, X+ drives towards the red alliance. If the
      * robot is on the red alliance, X+ drives towards the blue alliance.
      */
-    kOperator {
+    OPERATOR {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return (Alliance.isBlue() ? kBlue : kRed).toRobotSpeeds(speeds, robotAngle);
+            return (Alliance.isBlue() ? BLUE : RED).toRobotSpeeds(speeds, robotAngle);
         }
 
         @Override
         public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return (Alliance.isBlue() ? kBlue : kRed).toPerspectiveSpeeds(speeds, robotAngle);
+            return (Alliance.isBlue() ? BLUE : RED).toPerspectiveSpeeds(speeds, robotAngle);
         }
 
         @Override
         public Rotation2d getTareRotation() {
-            return (Alliance.isBlue() ? kBlue : kRed).getTareRotation();
+            return (Alliance.isBlue() ? BLUE : RED).getTareRotation();
         }
     },
 
@@ -34,7 +34,7 @@ public enum Perspective {
      * The speeds are relative to the blue alliance perspective.
      * X+ drives towards the red alliance.
      */
-    kBlue {
+    BLUE {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle);
@@ -55,7 +55,7 @@ public enum Perspective {
      * The speeds are relative to the red alliance perspective.
      * X+ drives towards the blue alliance.
      */
-    kRed {
+    RED {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle.rotateBy(Rotation2d.kPi));
@@ -76,7 +76,7 @@ public enum Perspective {
      * The speeds are relative to the robot's perspective.
      * X+ drives forwards relative to the chassis.
      */
-    kRobot {
+    ROBOT {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
             return speeds;

@@ -10,6 +10,7 @@ import com.reduxrobotics.sensors.canandmag.Canandmag;
 import com.reduxrobotics.sensors.canandmag.CanandmagSettings;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.Map;
 
@@ -41,10 +42,11 @@ public final class ReduxUtil {
      * @return {@code true} if success, {@code false} otherwise.
      */
     public static boolean applySettings(Canandmag canandmag, CanandmagSettings settings, int maxTries) {
+        if (RobotBase.isSimulation()) return true;
+
         String results = "";
         for (int i = 0; i < maxTries; i++) {
-            boolean result = canandmag.setSettings(settings, 0.05);
-            if (!result) {
+            if (!canandmag.setSettings(settings, 0.05)) {
                 results += (results.isEmpty() ? "" : ", ") + "setSettings() Failure";
                 continue;
             }
@@ -88,10 +90,11 @@ public final class ReduxUtil {
      * @return {@code true} if success, {@code false} otherwise.
      */
     public static boolean applySettings(Canandgyro canandgyro, CanandgyroSettings settings, int maxTries) {
+        if (RobotBase.isSimulation()) return true;
+
         String results = "";
         for (int i = 0; i < maxTries; i++) {
-            boolean result = canandgyro.setSettings(settings, 0.05);
-            if (!result) {
+            if (!canandgyro.setSettings(settings, 0.05)) {
                 results += (results.isEmpty() ? "" : ", ") + "setSettings() Failure";
                 continue;
             }

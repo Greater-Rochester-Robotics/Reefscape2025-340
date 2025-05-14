@@ -13,19 +13,18 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import org.team340.lib.util.Profiler;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.UpperCAN;
+import org.team340.robot.Constants.RioCAN;
 
 @Logged
 public final class Climber extends GRRSubsystem {
 
     private static enum ClimberPosition {
-        kDeploy(90.0),
-        kClimb(412.0);
+        DEPLOY(90.0),
+        CLIMB(412.0);
 
         private final TunableDouble rotations;
 
@@ -38,8 +37,8 @@ public final class Climber extends GRRSubsystem {
         }
     }
 
-    private static final TunableDouble kVoltageOut = Tunable.doubleValue("climber/kVoltageOut", 12.0);
-    private static final TunableDouble kOverrideVoltage = Tunable.doubleValue("climber/kOverrideVoltage", 4.0);
+    private static final TunableDouble VOLTS = Tunable.doubleValue("climber/volts", 12.0);
+    private static final TunableDouble OVERRIDE_VOLTS = Tunable.doubleValue("climber/overrideVolts", 4.0);
 
     private final TalonFX motor;
 
@@ -49,7 +48,7 @@ public final class Climber extends GRRSubsystem {
     private final VoltageOut voltageControl;
 
     public Climber() {
-        motor = new TalonFX(UpperCAN.kClimberMotor);
+        motor = new TalonFX(RioCAN.CLIMBER_MOTOR);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -82,9 +81,7 @@ public final class Climber extends GRRSubsystem {
 
     @Override
     public void periodic() {
-        Profiler.start("Climber.periodic()");
         BaseStatusSignal.refreshAll(position, velocity);
-        Profiler.end();
     }
 
     // *************** Helper Functions ***************
@@ -102,7 +99,7 @@ public final class Climber extends GRRSubsystem {
      * @return True if the climber is deployed, false otherwise.
      */
     public boolean isDeployed() {
-        return getPosition() >= ClimberPosition.kDeploy.rotations();
+        return getPosition() >= ClimberPosition.DEPLOY.rotations();
     }
 
     /**
@@ -110,7 +107,7 @@ public final class Climber extends GRRSubsystem {
      * @return True if the climber has climbed, false otherwise.
      */
     public boolean isClimbed() {
-        return getPosition() >= ClimberPosition.kDeploy.rotations();
+        return getPosition() >= ClimberPosition.DEPLOY.rotations();
     }
 
     // *************** Commands ***************
@@ -119,14 +116,14 @@ public final class Climber extends GRRSubsystem {
      * Deploys the climber.
      */
     public Command deploy() {
-        return goTo(ClimberPosition.kDeploy).withName("Climber.deploy()");
+        return goTo(ClimberPosition.DEPLOY).withName("Climber.deploy()");
     }
 
     /**
      * Makes the climber go to the climb position.
      */
     public Command climb() {
-        return goTo(ClimberPosition.kClimb).onlyIf(this::isDeployed).withName("Climber.climb()");
+        return goTo(ClimberPosition.CLIMB).onlyIf(this::isDeployed).withName("Climber.climb()");
     }
 
     /**
@@ -134,7 +131,7 @@ public final class Climber extends GRRSubsystem {
      */
     public Command override() {
         return commandBuilder()
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(kOverrideVoltage.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(OVERRIDE_VOLTS.value())))
             .onEnd(motor::stopMotor)
             .onlyIf(this::isClimbed)
             .withName("Climber.override()");
@@ -146,7 +143,7 @@ public final class Climber extends GRRSubsystem {
      */
     private Command goTo(ClimberPosition position) {
         return commandBuilder("Climber.goTo(" + position.name() + ")")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(kVoltageOut.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(VOLTS.value())))
             .isFinished(() -> getPosition() >= position.rotations())
             .onEnd(motor::stopMotor);
     }

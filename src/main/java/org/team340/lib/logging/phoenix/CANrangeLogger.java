@@ -19,12 +19,12 @@ public class CANrangeLogger extends ClassSpecificLogger<CANrange> {
     }
 
     @Override
-    public void update(EpilogueBackend backend, CANrange canRange) {
+    public void update(EpilogueBackend backend, CANrange canrange) {
         cache
-            .computeIfAbsent(canRange, key -> {
-                var ambientSignal = canRange.getAmbientSignal(false);
-                var distance = canRange.getDistance(false);
-                var isDetected = canRange.getIsDetected(false);
+            .computeIfAbsent(canrange, key -> {
+                var ambientSignal = canrange.getAmbientSignal(false);
+                var distance = canrange.getDistance(false);
+                var isDetected = canrange.getIsDetected(false);
 
                 BaseStatusSignal[] signals = { ambientSignal, distance, isDetected };
 

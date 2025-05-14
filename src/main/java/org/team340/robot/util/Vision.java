@@ -6,54 +6,68 @@ import static org.photonvision.PhotonPoseEstimator.PoseStrategy.PNP_DISTANCE_TRI
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.photonvision.PhotonCamera;
+import org.photonvision.simulation.PhotonCameraSim;
+import org.photonvision.simulation.SimCameraProperties;
+import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
 import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.util.Alliance;
-import org.team340.robot.Constants.Cameras;
 import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 
 /**
  * Manages all of the robot's cameras.
  */
 @Logged
-public final class VisionManager {
+public final class Vision {
 
-    private static VisionManager instance = null;
+    public static final record CameraConfig(String name, Translation3d translation, Rotation3d rotation) {}
 
-    public static VisionManager getInstance() {
-        if (instance == null) instance = new VisionManager();
-        return instance;
-    }
+    // Set to true to enable simulation. Note that this may
+    // negatively impact performance on slower devices.
+    private static boolean ENABLE_SIM = false;
 
-    @NotLogged
     private final Camera[] cameras;
-
     private final AprilTagFieldLayout aprilTags;
+    private final VisionSystemSim sim;
 
+    // Variables for Epilogue logging.
     private final List<Pose2d> estimates = new ArrayList<>();
     private final List<Pose3d> targets = new ArrayList<>();
 
-    private VisionManager() {
+    /**
+     * Create the vision manager.
+     * @param cameras Configurations for the robot's cameras.
+     */
+    public Vision(CameraConfig[] cameras) {
         aprilTags = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
-        cameras = new Camera[] {
-            new Camera("middle", Cameras.kMiddle),
-            new Camera("left", Cameras.kLeft),
-            new Camera("right", Cameras.kRight)
-        };
+
+        if (RobotBase.isSimulation() && ENABLE_SIM) {
+            sim = new VisionSystemSim("simulation");
+            sim.addAprilTags(aprilTags);
+        } else {
+            sim = null;
+        }
+
+        cameras = RobotBase.isSimulation() && !ENABLE_SIM ? new CameraConfig[0] : cameras;
+        this.cameras = Arrays.stream(cameras).map(config -> new Camera(config)).toArray(Camera[]::new);
 
         // Hit the undocumented Photon Turbo Button™
         // https://github.com/PhotonVision/photonvision/pull/1662
@@ -71,13 +85,17 @@ public final class VisionManager {
     /**
      * Gets unread results from all cameras.
      * @param poseHistory Robot pose estimates from the last robot cycle.
+     * @param odometryPose The uncorrected odometry pose of the robot. Used for simulation.
      */
-    public VisionMeasurement[] getUnreadResults(List<TimestampedPose> poseHistory) {
-        List<VisionMeasurement> measurements = new ArrayList<>();
+    public VisionMeasurement[] getUnreadResults(List<TimestampedPose> poseHistory, Pose2d odometryPose) {
+        if (sim != null) {
+            sim.update(odometryPose);
+        }
 
         estimates.clear();
         targets.clear();
 
+        List<VisionMeasurement> measurements = new ArrayList<>();
         for (var camera : cameras) {
             camera.addReferencePoses(poseHistory);
             camera.refresh(measurements, targets);
@@ -99,10 +117,24 @@ public final class VisionManager {
          * @param cameraName The configured name of the camera.
          * @param robotToCamera The {@link Transform3d} from the robot's center to the camera.
          */
-        private Camera(String cameraName, Transform3d robotToCamera) {
-            camera = new PhotonCamera(cameraName);
+        private Camera(CameraConfig config) {
+            Transform3d robotToCamera = new Transform3d(config.translation(), config.rotation());
+
+            camera = new PhotonCamera(config.name());
             estimator = new PhotonPoseEstimator(aprilTags, PNP_DISTANCE_TRIG_SOLVE, robotToCamera);
             constrainedPnpParams = Optional.of(new ConstrainedSolvepnpParams(true, 0.0));
+
+            if (sim != null) {
+                // (Roughly) the properties of an OV9281
+                var props = new SimCameraProperties();
+                props.setCalibration(1280, 800, Rotation2d.fromDegrees(87.0));
+                props.setCalibError(0.4, 0.05);
+                props.setAvgLatencyMs(18.0);
+                props.setLatencyStdDevMs(10.0);
+                props.setFPS(60.0);
+
+                sim.addCamera(new PhotonCameraSim(camera, props), robotToCamera);
+            }
         }
 
         /**
@@ -180,6 +212,7 @@ public final class VisionManager {
          * @param id The ID of the AprilTag.
          */
         private boolean useTag(int id) {
+            // Only utilize the current alliance's reef tags.
             return Alliance.isBlue() ? (id >= 17 && id <= 22) : (id >= 6 && id <= 11);
         }
     }

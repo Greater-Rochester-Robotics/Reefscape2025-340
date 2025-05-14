@@ -1,6 +1,7 @@
 package org.team340.lib.swerve;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
@@ -18,6 +19,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.ArrayList;
@@ -26,9 +28,9 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import org.team340.lib.math.Math2;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU;
-import org.team340.lib.util.Math2;
 import org.team340.lib.util.Sleep;
 import org.team340.robot.Robot;
 
@@ -66,6 +68,8 @@ public class SwerveAPI implements AutoCloseable {
      */
     public SwerveAPI(SwerveConfig config) {
         this.config = config;
+
+        if (RobotBase.isSimulation()) config.phoenixCanBus = new CANBus();
 
         moduleCount = config.modules.length;
         modules = new SwerveModule[moduleCount];
@@ -120,6 +124,7 @@ public class SwerveAPI implements AutoCloseable {
             }
 
             state.pose = poseEstimator.getEstimatedPosition();
+            state.odometryPose = odometry.getPoseMeters();
 
             state.poseHistory.clear();
             state.poseHistory.addAll(odometryThread.poseHistory);
@@ -186,8 +191,8 @@ public class SwerveAPI implements AutoCloseable {
 
     /**
      * Tares the rotation of the robot. Useful for fixing an out of sync or drifting
-     * IMU. For most cases, a perspective of {@link Perspective#kOperator} is
-     * desirable. {@link Perspective#kRobot} will no-op.
+     * IMU. For most cases, a perspective of {@link Perspective#OPERATOR} is
+     * desirable. {@link Perspective#ROBOT} will no-op.
      * @param perspective The perspective to tare the rotation to.
      */
     public void tareRotation(Perspective perspective) {
@@ -327,57 +332,45 @@ public class SwerveAPI implements AutoCloseable {
         if (ratelimit) {
             double now = Timer.getFPGATimestamp();
 
-            if (now - lastRatelimit < config.period * 2.0) {
-                ChassisSpeeds lastSpeeds = perspective.toPerspectiveSpeeds(state.targetSpeeds, lastRobotAngle);
+            ChassisSpeeds lastSpeeds = now - lastRatelimit < config.period * 4.0
+                ? perspective.toPerspectiveSpeeds(state.targetSpeeds, lastRobotAngle)
+                : perspective.toPerspectiveSpeeds(state.speeds, state.rotation);
 
-                double vx_l = lastSpeeds.vxMetersPerSecond;
-                double vy_l = lastSpeeds.vyMetersPerSecond;
-                double v_l = Math.hypot(vx_l, vy_l);
-                double w_l = lastSpeeds.omegaRadiansPerSecond;
+            double vx_l = lastSpeeds.vxMetersPerSecond;
+            double vy_l = lastSpeeds.vyMetersPerSecond;
+            double v_l = Math.hypot(vx_l, vy_l);
+            double w_l = lastSpeeds.omegaRadiansPerSecond;
 
-                double dx = speeds.vxMetersPerSecond - vx_l;
-                double dy = speeds.vyMetersPerSecond - vy_l;
-                double a_slip = config.slipAccel * config.period;
-                if (dx * dx + dy * dy > a_slip * a_slip) {
-                    double k = a_slip / Math.hypot(dx, dy);
-                    speeds.vxMetersPerSecond = vx_l + (k * dx);
-                    speeds.vyMetersPerSecond = vy_l + (k * dy);
-                }
-
-                double v = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
-                double a_torque = (config.torqueAccel * config.period) * (1.0 - (v_l / config.velocity));
-                if (v - v_l > a_torque) {
-                    double k = (v_l + a_torque) / v;
-                    speeds.vxMetersPerSecond *= k;
-                    speeds.vyMetersPerSecond *= k;
-                }
-
-                double dw = speeds.omegaRadiansPerSecond - w_l;
-                double a_angular = config.angularAccel * config.period;
-                speeds.omegaRadiansPerSecond = w_l + (Math.min(a_angular / Math.abs(dw), 1.0) * dw);
+            double dx = speeds.vxMetersPerSecond - vx_l;
+            double dy = speeds.vyMetersPerSecond - vy_l;
+            double a_slip = config.slipAccel * config.period;
+            if (dx * dx + dy * dy > a_slip * a_slip) {
+                double k = a_slip / Math.hypot(dx, dy);
+                speeds.vxMetersPerSecond = vx_l + (k * dx);
+                speeds.vyMetersPerSecond = vy_l + (k * dy);
             }
+
+            double v = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+            double a_torque = (config.torqueAccel * config.period) * (1.0 - (v_l / config.velocity));
+            if (v - v_l > a_torque && v > 1e-6) {
+                double k = (v_l + a_torque) / v;
+                speeds.vxMetersPerSecond *= k;
+                speeds.vyMetersPerSecond *= k;
+            }
+
+            double dw = speeds.omegaRadiansPerSecond - w_l;
+            double a_angular = config.angularAccel * config.period;
+            speeds.omegaRadiansPerSecond = w_l + (Math.min(a_angular / Math.abs(dw), 1.0) * dw);
 
             lastRatelimit = now;
         }
 
         if (discretize) {
-            double dtheta = speeds.omegaRadiansPerSecond * config.discretizationPeriod;
-
-            double sin = -dtheta / 2.0;
-            double cos = Math2.epsilonEquals(Math.cos(dtheta) - 1.0, 0.0)
-                ? 1.0 - ((1.0 / 12.0) * dtheta * dtheta)
-                : (sin * Math.sin(dtheta)) / (Math.cos(dtheta) - 1.0);
-
-            double dt = config.period;
-            double dx = speeds.vxMetersPerSecond * dt;
-            double dy = speeds.vyMetersPerSecond * dt;
-
-            speeds.vxMetersPerSecond = ((dx * cos) - (dy * sin)) / dt;
-            speeds.vyMetersPerSecond = ((dx * sin) + (dy * cos)) / dt;
+            Math2.discretize(speeds, config.discretizationPeriod);
         }
 
-        lastRobotAngle = state.pose.getRotation();
-        Math2.copyInto(perspective.toRobotSpeeds(speeds, state.pose.getRotation()), state.targetSpeeds);
+        lastRobotAngle = state.rotation;
+        Math2.copyInto(perspective.toRobotSpeeds(speeds, state.rotation), state.targetSpeeds);
         applyStates(kinematics.toSwerveModuleStates(state.targetSpeeds));
     }
 
@@ -403,7 +396,10 @@ public class SwerveAPI implements AutoCloseable {
      */
     public void applyStop(boolean lock) {
         lastRatelimit = Timer.getFPGATimestamp();
-        Math2.zero(state.targetSpeeds);
+
+        state.targetSpeeds.vxMetersPerSecond = 0.0;
+        state.targetSpeeds.vyMetersPerSecond = 0.0;
+        state.targetSpeeds.omegaRadiansPerSecond = 0.0;
 
         for (int i = 0; i < moduleCount; i++) {
             SwerveModuleState state;

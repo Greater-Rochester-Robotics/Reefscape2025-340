@@ -30,7 +30,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
 
-    private static final TunableBoolean kAutoDrive = Tunable.booleanValue("routines/kAutoDrive", true);
+    private static final TunableBoolean AUTO_DRIVE = Tunable.booleanValue("routines/autoDrive", true);
 
     private final Robot robot;
 
@@ -59,7 +59,7 @@ public final class Routines {
      */
     public Command stow() {
         return parallel(
-            elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+            elevator.goTo(ElevatorPosition.DOWN, robot::safeForGoose),
             gooseNeck.stow(robot::safeForGoose)
         ).withName("Routines.stow()");
     }
@@ -98,26 +98,15 @@ public final class Routines {
             deadline(
                 waitUntil(elevator::safeForIntake),
                 gooseNeck.stow(robot::safeForGoose),
-                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
+                elevator.goTo(ElevatorPosition.INTAKE, robot::safeForGoose),
                 intake.swallow()
             ),
             deadline(
                 gooseNeck.intake(button, () -> chokingGoose.getAsBoolean() || intake.unjamming(), robot::safeForGoose),
-                elevator.goTo(ElevatorPosition.kIntake, robot::safeForGoose),
+                elevator.goTo(ElevatorPosition.INTAKE, robot::safeForGoose),
                 intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
             )
         ).withName("Routines.intake()");
-    }
-
-    /**
-     * Intakes from the coral station via the baby bird method.
-     * @param button If the intake button is still pressed.
-     */
-    public Command babyBird(BooleanSupplier button) {
-        return deadline(
-            gooseNeck.babyBird(button, robot::safeForGoose),
-            elevator.goTo(ElevatorPosition.kBabyBird, robot::safeForGoose)
-        ).withName("Routines.babyBird()");
     }
 
     /**
@@ -128,7 +117,7 @@ public final class Routines {
         return parallel(
             gooseNeck.barf(robot::safeForGoose),
             intake.barf(),
-            elevator.goTo(ElevatorPosition.kBarf, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
+            elevator.goTo(ElevatorPosition.BARF, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.barf()");
     }
 
@@ -140,7 +129,7 @@ public final class Routines {
         return parallel(
             intake.swallow(),
             gooseNeck.swallow(robot::safeForGoose).beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.1)),
-            elevator.goTo(ElevatorPosition.kSwallow, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
+            elevator.goTo(ElevatorPosition.SWALLOW, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.swallow()");
     }
 
@@ -154,7 +143,7 @@ public final class Routines {
         return sequence(
             deadline(
                 waitUntil(swerve::happyGoose),
-                elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose),
+                elevator.goTo(ElevatorPosition.DOWN, robot::safeForGoose),
                 gooseNeck.stow(robot::safeForGoose)
             ),
             deadline(
@@ -175,7 +164,7 @@ public final class Routines {
                     robot::safeForGoose
                 )
             ),
-            parallel(elevator.goTo(ElevatorPosition.kDown, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
+            parallel(elevator.goTo(ElevatorPosition.DOWN, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
         )
             .alongWith(selection.whileScoring())
             .withName("Routines.score()");
@@ -193,12 +182,10 @@ public final class Routines {
             either(
                 swerve.driveReef(robot::driverX, robot::driverY, robot::driverAngular, selection::isLeft),
                 sequence(
-                    swerve
-                        .repulsorDrive(selection::isLeft, robot::readyToScore, selection::isL4)
-                        .until(gooseNeck::noCoral),
+                    swerve.apfDrive(selection::isLeft, robot::readyToScore, selection::isL4).until(gooseNeck::noCoral),
                     swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
                 ),
-                () -> !kAutoDrive.value() || gooseNeck.noCoral()
+                () -> !AUTO_DRIVE.value() || gooseNeck.noCoral()
             )
         ).withName("Routines.assistedScore()");
     }

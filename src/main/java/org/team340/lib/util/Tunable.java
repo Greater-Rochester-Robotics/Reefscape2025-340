@@ -40,7 +40,7 @@ public final class Tunable {
         throw new AssertionError("This is a utility class!");
     }
 
-    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("Tunables");
+    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Tunables");
     private static final EventLoop pollChanges = new EventLoop();
 
     /**
