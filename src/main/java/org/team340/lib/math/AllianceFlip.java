@@ -23,7 +23,7 @@ public final class AllianceFlip {
      */
     public AllianceFlip(double fieldLength, double fieldWidth, FlipType flipType) {
         this.fieldLength = fieldLength;
-        this.fieldWidth = fieldLength;
+        this.fieldWidth = fieldWidth;
         this.flipType = flipType;
     }
 
