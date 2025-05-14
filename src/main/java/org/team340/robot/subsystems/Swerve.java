@@ -153,13 +153,11 @@ public final class Swerve extends GRRSubsystem {
         Translation2d reefCenter = Alliance.isBlue() ? Field.REEF_BLUE : Field.REEF_RED;
         Translation2d reefTranslation = state.translation.minus(reefCenter);
         Rotation2d reefAngle = new Rotation2d(
-            (Math.floor(
-                    reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math.PI / 6.0)).getRadians() /
-                    Math.PI /
-                    3.0
-                ) *
-                Math.PI) /
-            3.0
+            Math.floor(
+                reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math.PI / 6.0)).getRadians() /
+                (Math.PI / 3.0)
+            ) *
+            (Math.PI / 3.0)
         );
 
         // Save the current alliance's reef location, and the rotation
