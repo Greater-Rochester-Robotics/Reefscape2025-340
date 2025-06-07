@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 public final class RevUtil {
 
     private RevUtil() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**

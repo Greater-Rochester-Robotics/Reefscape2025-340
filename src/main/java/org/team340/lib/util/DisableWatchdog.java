@@ -10,7 +10,7 @@ import java.lang.reflect.Field;
 public final class DisableWatchdog {
 
     private DisableWatchdog() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**

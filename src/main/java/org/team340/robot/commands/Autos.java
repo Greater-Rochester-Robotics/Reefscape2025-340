@@ -1,7 +1,6 @@
 package org.team340.robot.commands;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
-import static org.team340.robot.util.Field.FLIPPER;
 import static org.team340.robot.util.Field.ReefLocation.*;
 
 import edu.wpi.first.epilogue.Logged;
@@ -10,12 +9,12 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.team340.lib.util.Alliance;
-import org.team340.lib.util.AutoChooser;
+import org.team340.lib.util.FieldFlip;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
+import org.team340.lib.util.command.AutoChooser;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.GooseNeck;
@@ -34,10 +33,10 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Autos {
 
-    private static final TunableDouble INTAKE_SLOWDOWN = Tunable.doubleValue("autos/intakeSlowdown", 8.7);
-    private static final TunableDouble INTAKE_ROT_DELAY = Tunable.doubleValue("autos/intakeRotDelay", 0.6);
-    private static final TunableDouble AVOID_SLOWDOWN = Tunable.doubleValue("autos/avoidSlowdown", 8.9);
-    private static final TunableDouble AVOID_TOLERANCE = Tunable.doubleValue("autos/avoidTolerance", 0.25);
+    private static final TunableDouble INTAKE_SLOWDOWN = Tunable.value("autos/intakeSlowdown", 8.7);
+    private static final TunableDouble INTAKE_ROT_DELAY = Tunable.value("autos/intakeRotDelay", 0.6);
+    private static final TunableDouble AVOID_SLOWDOWN = Tunable.value("autos/avoidSlowdown", 8.9);
+    private static final TunableDouble AVOID_TOLERANCE = Tunable.value("autos/avoidTolerance", 0.25);
 
     private final Robot robot;
 
@@ -64,9 +63,8 @@ public final class Autos {
         selection = robot.selection;
         routines = robot.routines;
 
-        // Create the auto factory
-        chooser = new AutoChooser("Autos");
-        chooser.bind(robot.scheduler);
+        // Create the auto chooser
+        chooser = new AutoChooser();
 
         // Add autonomous modes to the dashboard
         chooser.add("For Piece Left", forPiece(true));
@@ -75,31 +73,56 @@ public final class Autos {
         chooser.add("Sneaky Two Right", sneakyTwo(false));
         chooser.add("Stinky One Left", stinkyOne(true));
         chooser.add("Stinky One Right", stinkyOne(false));
-        chooser.add("Test 2", test2());
+        chooser.add("One Billion Points Left", oneBillionPoints(true));
+        chooser.add("One Billion Points Right", oneBillionPoints(false));
+        // chooser.add("Test 12 Left", test12(true));
+        // chooser.add("Test 12 Right", test12(false));
+
+        // Chooser bindings
+        chooser.newSelection().onTrue(lights.top.scored().andThen(lights.disabled()));
     }
 
     private Command forPiece(boolean left) {
         return parallel(
             sequence(
-                pickupCycle(left ? I : F, left),
-                pickupCycle(left ? J : E, left),
-                pickupCycle(left ? K : D, left),
-                pickupCycle(left ? L : C, left),
-                pickupCycle(left ? A : B, left)
+                parallel(setupL4(), pickupCycle(left ? I : F, true, left)),
+                pickupCycle(left ? K : D, true, left),
+                pickupCycle(left ? L : C, true, left),
+                pickupCycle(left ? A : B, true, left),
+                pickupCycle(left ? B : A, true, left)
             ),
             sequence(
                 routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
                 routines.intake()
             ).repeatedly()
-        ).beforeStarting(parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true)));
+        );
+    }
+
+    private Command oneBillionPoints(boolean left) {
+        return parallel(
+            sequence(
+                parallel(setupL4(), pickupCycle(left ? I : F, false, left)),
+                pickupCycle(left ? K : D, false, left),
+                pickupCycle(left ? L : C, false, left),
+                selection.selectLevel(3),
+                pickupCycle(left ? K : D, false, left),
+                pickupCycle(left ? L : C, false, left),
+                selection.selectLevel(4),
+                pickupCycle(left ? A : B, false, left)
+            ),
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
+        );
     }
 
     private Command sneakyTwo(boolean left) {
         return parallel(
             sequence(
-                score(left ? G : H, left),
+                parallel(setupL4(), score(left ? G : H, left)),
                 avoid(left),
-                pickup(G, left),
+                pickup(G, true, left),
                 avoid(left),
                 score(left ? H : G, left),
                 avoid(left),
@@ -109,12 +132,13 @@ public final class Autos {
                 routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
                 routines.intake()
             ).repeatedly()
-        ).beforeStarting(parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true)));
+        );
     }
 
     private Command stinkyOne(boolean left) {
         return sequence(
-            deadline(waitSeconds(3.0), swerve.stop(false), routines.stow()),
+            setupL4(),
+            deadline(waitSeconds(2.5), swerve.stop(false), routines.stow()),
             parallel(
                 sequence(score(left ? G : H, left), avoid(left), swerve.stop(false)),
                 sequence(
@@ -122,39 +146,38 @@ public final class Autos {
                     routines.stow()
                 )
             )
-        ).beforeStarting(parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true)));
-    }
-
-    private Command test2() {
-        Function<ReefLocation, Command> goReef = reefLocation ->
-            swerve
-                .apfDrive(reefLocation, robot::readyToScore, selection::isL4)
-                .withDeadline(sequence(waitUntil(() -> !swerve.wildlifeConservationProgram()), waitSeconds(0.75)));
-
-        Function<Boolean, Command> goIntake = left ->
-            swerve.apfDrive(
-                FLIPPER.flipped(Field.STATION_BACKWARDS, left),
-                INTAKE_SLOWDOWN::value,
-                AVOID_TOLERANCE::value
-            );
-
-        return sequence(
-            swerve.resetPose(FLIPPER.flipped(new Pose2d(4.0, 2.0, Rotation2d.kZero))),
-            goReef.apply(ReefLocation.A),
-            avoid(true),
-            goReef.apply(ReefLocation.E),
-            goIntake.apply(true),
-            goReef.apply(ReefLocation.B),
-            avoid(false),
-            goReef.apply(ReefLocation.K),
-            goIntake.apply(false),
-            goReef.apply(ReefLocation.B),
-            avoid(true)
         );
     }
 
-    private Command pickupCycle(ReefLocation reefLocation, boolean left) {
-        return sequence(score(reefLocation, left), pickup(reefLocation, left));
+    public Command test12(boolean left) {
+        return parallel(
+            sequence(
+                pickupCycle(left ? I : F, true, left),
+                pickupCycle(left ? C : L, true, left),
+                pickupCycle(left ? G : H, true, left),
+                pickupCycle(left ? L : C, true, left),
+                pickupCycle(left ? A : B, true, left),
+                pickupCycle(left ? D : K, true, left),
+                pickupCycle(left ? B : A, true, left),
+                pickupCycle(left ? E : J, true, left),
+                pickupCycle(left ? F : I, true, left),
+                pickupCycle(left ? H : G, true, left),
+                pickupCycle(left ? J : E, true, left),
+                pickupCycle(left ? K : D, true, left)
+            ),
+            sequence(
+                routines.score(() -> false, () -> true).until(() -> gooseNeck.noCoral() && robot.safeForGoose()),
+                routines.intake()
+            ).repeatedly()
+        ).beforeStarting(parallel(selection.selectLevel(3), gooseNeck.setHasCoral(true)));
+    }
+
+    private Command setupL4() {
+        return parallel(selection.selectLevel(4), gooseNeck.setHasCoral(true));
+    }
+
+    private Command pickupCycle(ReefLocation reefLocation, boolean sideLoad, boolean left) {
+        return sequence(score(reefLocation, left), pickup(reefLocation, sideLoad, left));
     }
 
     private Command score(ReefLocation reefLocation, boolean left) {
@@ -167,15 +190,18 @@ public final class Autos {
         );
     }
 
-    private Command pickup(ReefLocation start, boolean left) {
-        Supplier<Pose2d> station = FLIPPER.flipped(start.back ? Field.STATION_BACKWARDS : Field.STATION_FORWARDS);
+    private Command pickup(ReefLocation start, boolean sideLoad, boolean left) {
+        Pose2d direction = sideLoad
+            ? (start.back ? Field.STATION_BACKWARDS : Field.STATION_FORWARDS)
+            : Field.STATION_STRAIGHT;
+        Supplier<Pose2d> station = FieldFlip.allianceDiagonal(left ? FieldFlip.overWidth(direction) : direction);
         Timer timer = new Timer();
 
         return swerve
             .apfDrive(
                 () -> {
                     Pose2d pose = station.get();
-                    if (!timer.hasElapsed(INTAKE_ROT_DELAY.value())) {
+                    if (!timer.hasElapsed(INTAKE_ROT_DELAY.get())) {
                         return new Pose2d(
                             pose.getX(),
                             pose.getY(),
@@ -185,7 +211,7 @@ public final class Autos {
                         return pose;
                     }
                 },
-                INTAKE_SLOWDOWN::value
+                INTAKE_SLOWDOWN::get
             )
             .until(() -> intake.coralDetected() || gooseNeck.hasCoral())
             .beforeStarting(timer::restart);
@@ -193,9 +219,9 @@ public final class Autos {
 
     private Command avoid(boolean left) {
         return swerve.apfDrive(
-            FLIPPER.flipped(Field.AVOID_LOCATION, left),
-            AVOID_SLOWDOWN::value,
-            AVOID_TOLERANCE::value
+            FieldFlip.allianceDiagonal(left ? Field.AVOID_LEFT : Field.AVOID_RIGHT),
+            AVOID_SLOWDOWN::get,
+            AVOID_TOLERANCE::get
         );
     }
 }

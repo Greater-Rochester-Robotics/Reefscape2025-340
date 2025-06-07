@@ -75,6 +75,16 @@ public class SwerveModuleConfig {
      * Verifies the config.
      */
     public void verify() {
+        var missing = missing();
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("SwerveModuleConfig missing values: " + String.join(", ", missing));
+        }
+    }
+
+    /**
+     * Collects a list of missing elements.
+     */
+    List<String> missing() {
         List<String> missing = new ArrayList<>();
         if (name == null) missing.add("Name");
         if (location == null) missing.add("Position");
@@ -82,8 +92,6 @@ public class SwerveModuleConfig {
         if (turnMotor == null) missing.add("Turn Motor");
         if (encoder == null) missing.add("Encoder");
 
-        if (!missing.isEmpty()) {
-            throw new IllegalArgumentException("SwerveModuleConfig missing values: " + String.join(", ", missing));
-        }
+        return missing;
     }
 }

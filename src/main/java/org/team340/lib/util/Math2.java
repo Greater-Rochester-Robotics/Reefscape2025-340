@@ -1,4 +1,4 @@
-package org.team340.lib.math;
+package org.team340.lib.util;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -15,10 +15,25 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 public final class Math2 {
 
     private Math2() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
-    public static final double PI2 = 6.283185307179586;
+    /** {@code PI/6} (30deg) */
+    public static final double SIXTH_PI = 0.5235987755982989;
+    /** {@code PI/4} (45deg) */
+    public static final double QUARTER_PI = 0.7853981633974483;
+    /** {@code PI/3} (60deg) */
+    public static final double THIRD_PI = 1.0471975511965979;
+    /** {@code PI/2} (90deg) */
+    public static final double HALF_PI = 1.5707963267948966;
+    /** {@code 2PI/3} (120deg) */
+    public static final double TWO_THIRDS_PI = 2.0943951023931957;
+    /** {@code 3PI/4} (135deg) */
+    public static final double THREE_QUARTERS_PI = 2.356194490192345;
+    /** {@code 5PI/6} (150deg) */
+    public static final double FIVE_SIXTHS_PI = 2.6179938779914944;
+    /** {@code PI*2} (360deg) */
+    public static final double TWO_PI = 6.283185307179586;
 
     /**
      * Discretizes a continuous-time chassis speed in place.

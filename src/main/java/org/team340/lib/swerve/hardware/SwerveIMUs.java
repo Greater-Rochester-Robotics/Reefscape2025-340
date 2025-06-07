@@ -5,8 +5,6 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.reduxrobotics.sensors.canandgyro.Canandgyro;
 import com.reduxrobotics.sensors.canandgyro.CanandgyroSettings;
-import edu.wpi.first.epilogue.logging.EpilogueBackend;
-import edu.wpi.first.epilogue.logging.errors.ErrorHandler;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Angle;
@@ -19,9 +17,6 @@ import edu.wpi.first.wpilibj.SPI;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import org.team340.lib.logging.phoenix.Pigeon2Logger;
-import org.team340.lib.logging.reduxlib.CanandgyroLogger;
-import org.team340.lib.logging.wpilibj.ADIS16470Logger;
 import org.team340.lib.swerve.SwerveAPI;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU.IMUSimHook;
@@ -35,7 +30,7 @@ import org.team340.lib.util.vendors.ReduxUtil;
 public final class SwerveIMUs {
 
     private SwerveIMUs() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**
@@ -100,7 +95,6 @@ public final class SwerveIMUs {
         CalibrationTime calibrationTime
     ) {
         return config -> {
-            var deviceLogger = new ADIS16470Logger();
             ADIS16470_IMU adis16470 = new ADIS16470_IMU(yawAxis, pitchAxis, rollAxis, port, calibrationTime);
 
             return new SwerveIMU() {
@@ -125,11 +119,6 @@ public final class SwerveIMUs {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, adis16470, errorHandler);
-                }
-
-                @Override
                 public void close() {
                     adis16470.close();
                 }
@@ -143,7 +132,6 @@ public final class SwerveIMUs {
      */
     public static SwerveIMU.Ctor canandgyro(int id) {
         return config -> {
-            var deviceLogger = new CanandgyroLogger();
             Canandgyro canandgyro = new Canandgyro(id);
 
             var settings = new CanandgyroSettings()
@@ -190,11 +178,6 @@ public final class SwerveIMUs {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, canandgyro, errorHandler);
-                }
-
-                @Override
                 public void close() {
                     canandgyro.close();
                 }
@@ -208,7 +191,6 @@ public final class SwerveIMUs {
      */
     public static SwerveIMU.Ctor pigeon2(int id) {
         return config -> {
-            var deviceLogger = new Pigeon2Logger();
             Pigeon2 pigeon2 = new Pigeon2(id, config.phoenixCanBus);
 
             StatusSignal<Angle> yaw = pigeon2.getYaw().clone();
@@ -262,11 +244,6 @@ public final class SwerveIMUs {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, pigeon2, errorHandler);
-                }
-
-                @Override
                 public List<BaseStatusSignal> getSignals() {
                     return List.of(yaw, yawVelocity);
                 }
@@ -310,15 +287,6 @@ public final class SwerveIMUs {
             @Override
             public Object getAPI() {
                 return imu.getAPI();
-            }
-
-            @Override
-            public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                imu.log(backend, errorHandler);
-                var sim = backend.getNested(".sim");
-                sim.log("yaw", getYaw(), Rotation2d.struct);
-                sim.log("pitch", getPitch(), Rotation2d.struct);
-                sim.log("roll", getRoll(), Rotation2d.struct);
             }
 
             @Override

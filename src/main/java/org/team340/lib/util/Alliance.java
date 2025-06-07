@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 public final class Alliance {
 
     private Alliance() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**

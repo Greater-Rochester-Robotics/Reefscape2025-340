@@ -26,11 +26,11 @@ import org.team340.robot.Constants.RioCAN;
 @Logged
 public final class Intake extends GRRSubsystem {
 
-    private static final TunableDouble INTAKE_VOLTS = Tunable.doubleValue("intake/intakeVoltage", 6.0);
-    private static final TunableDouble BARF_VOLTS = Tunable.doubleValue("intake/barfVoltage", 7.0);
-    private static final TunableDouble SWALLOW_VOLTS = Tunable.doubleValue("intake/swallowVoltage", -6.0);
-    private static final TunableDouble CURRENT_THRESHOLD = Tunable.doubleValue("intake/currentThreshold", 24.0);
-    private static final TunableDouble UNJAM_TIME = Tunable.doubleValue("intake/unjamTime", 0.2);
+    private static final TunableDouble INTAKE_VOLTS = Tunable.value("intake/intakeVoltage", 6.0);
+    private static final TunableDouble BARF_VOLTS = Tunable.value("intake/barfVoltage", 7.0);
+    private static final TunableDouble SWALLOW_VOLTS = Tunable.value("intake/swallowVoltage", -6.0);
+    private static final TunableDouble CURRENT_THRESHOLD = Tunable.value("intake/currentThreshold", 30.0);
+    private static final TunableDouble UNJAM_TIME = Tunable.value("intake/unjamTime", 0.2);
 
     private final TalonFX motor;
     private final CANrange canRange;
@@ -55,12 +55,12 @@ public final class Intake extends GRRSubsystem {
 
         CANrangeConfiguration canRangeConfig = new CANrangeConfiguration();
 
-        canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 15000.0;
-        canRangeConfig.ProximityParams.ProximityThreshold = 0.08;
+        canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 5000.0;
+        canRangeConfig.ProximityParams.ProximityThreshold = 3.5;
         canRangeConfig.ProximityParams.ProximityHysteresis = 0.02;
 
-        canRangeConfig.FovParams.FOVRangeX = 6.75;
-        canRangeConfig.FovParams.FOVRangeY = 6.75;
+        canRangeConfig.FovParams.FOVRangeX = 10.0;
+        canRangeConfig.FovParams.FOVRangeY = 10.0;
 
         canRangeConfig.ToFParams.UpdateMode = UpdateModeValue.ShortRangeUserFreq;
         canRangeConfig.ToFParams.UpdateFrequency = 50.0;
@@ -115,14 +115,14 @@ public final class Intake extends GRRSubsystem {
                 unjamTimer.reset();
             })
             .onExecute(() -> {
-                if (debouncer.calculate(current.getValueAsDouble() > CURRENT_THRESHOLD.value())) {
+                if (debouncer.calculate(current.getValueAsDouble() > CURRENT_THRESHOLD.get())) {
                     unjamTimer.start();
                 }
 
-                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(UNJAM_TIME.value())) || swallow.getAsBoolean()) {
-                    motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.value()));
+                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(UNJAM_TIME.get())) || swallow.getAsBoolean()) {
+                    motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.get()));
                 } else {
-                    motor.setControl(voltageControl.withOutput(INTAKE_VOLTS.value()));
+                    motor.setControl(voltageControl.withOutput(INTAKE_VOLTS.get()));
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }
@@ -140,7 +140,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command barf() {
         return commandBuilder("Intake.barf()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(BARF_VOLTS.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(BARF_VOLTS.get())))
             .onEnd(motor::stopMotor);
     }
 
@@ -149,7 +149,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command swallow() {
         return commandBuilder("Intake.swallow()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.get())))
             .onEnd(motor::stopMotor);
     }
 }

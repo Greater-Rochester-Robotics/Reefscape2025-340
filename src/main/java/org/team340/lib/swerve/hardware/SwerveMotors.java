@@ -22,16 +22,11 @@ import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import edu.wpi.first.epilogue.logging.EpilogueBackend;
-import edu.wpi.first.epilogue.logging.errors.ErrorHandler;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.RobotBase;
 import java.util.List;
 import java.util.function.BiFunction;
-import org.team340.lib.logging.phoenix.TalonFXLogger;
-import org.team340.lib.logging.revlib.SparkFlexLogger;
-import org.team340.lib.logging.revlib.SparkMaxLogger;
 import org.team340.lib.swerve.SwerveAPI;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.util.vendors.PhoenixUtil;
@@ -43,7 +38,7 @@ import org.team340.lib.util.vendors.RevUtil;
 public final class SwerveMotors {
 
     private SwerveMotors() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**
@@ -112,7 +107,6 @@ public final class SwerveMotors {
      */
     public static SwerveMotor.Ctor sparkMax(int id, boolean inverted) {
         return (config, isMoveMotor) -> {
-            var deviceLogger = new SparkMaxLogger();
             SparkMax sparkMax = new SparkMax(id, MotorType.kBrushless);
             RelativeEncoder relativeEncoder = sparkMax.getEncoder();
             SparkClosedLoopController pid = sparkMax.getClosedLoopController();
@@ -203,11 +197,6 @@ public final class SwerveMotors {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, sparkMax, errorHandler);
-                }
-
-                @Override
                 public boolean readError() {
                     return !sparkMax.getLastError().equals(REVLibError.kOk);
                 }
@@ -227,7 +216,6 @@ public final class SwerveMotors {
      */
     public static SwerveMotor.Ctor sparkFlex(int id, boolean inverted) {
         return (config, isMoveMotor) -> {
-            var deviceLogger = new SparkFlexLogger();
             SparkFlex sparkFlex = new SparkFlex(id, MotorType.kBrushless);
             RelativeEncoder relativeEncoder = sparkFlex.getEncoder();
             SparkClosedLoopController pid = sparkFlex.getClosedLoopController();
@@ -322,11 +310,6 @@ public final class SwerveMotors {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, sparkFlex, errorHandler);
-                }
-
-                @Override
                 public boolean readError() {
                     return !sparkFlex.getLastError().equals(REVLibError.kOk);
                 }
@@ -346,7 +329,6 @@ public final class SwerveMotors {
      */
     public static SwerveMotor.Ctor talonFX(int id, boolean inverted) {
         return (config, isMoveMotor) -> {
-            var deviceLogger = new TalonFXLogger();
             TalonFX talonFX = new TalonFX(id, config.phoenixCanBus);
 
             StatusSignal<Angle> position = talonFX.getPosition().clone();
@@ -449,11 +431,6 @@ public final class SwerveMotors {
                 }
 
                 @Override
-                public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                    deviceLogger.tryUpdate(backend, talonFX, errorHandler);
-                }
-
-                @Override
                 public List<BaseStatusSignal> getSignals() {
                     return List.of(position, velocity);
                 }
@@ -517,14 +494,6 @@ public final class SwerveMotors {
             @Override
             public Object getAPI() {
                 return motor.getAPI();
-            }
-
-            @Override
-            public void log(EpilogueBackend backend, ErrorHandler errorHandler) {
-                motor.log(backend, errorHandler);
-                var sim = backend.getNested(".sim");
-                sim.log("position", getPosition());
-                sim.log("velocity", getVelocity());
             }
 
             @Override

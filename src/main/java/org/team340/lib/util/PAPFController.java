@@ -1,4 +1,4 @@
-package org.team340.lib.math;
+package org.team340.lib.util;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.Logged.Strategy;
@@ -10,7 +10,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.team340.lib.util.Tunable;
 
 /**
  * Implements a predictive artificial potential field (P-APF),
@@ -27,6 +26,7 @@ public final class PAPFController {
     private final Obstacle[] obstacles;
     private double resolution;
     private double horizon;
+    private double tolerance;
     private boolean savePrediction;
 
     // spotless:off
@@ -47,13 +47,21 @@ public final class PAPFController {
      * @param resolution The resolution at which to sample the horizon in meters. Higher
      *                   resolutions (i.e. smaller values) will increase accuracy of
      *                   predicted motion, however are more computationally expensive.
+     * @param tolerance The distance from the goal in meters at which to return a velocity output of 0.
      * @param savePrediction If the robot's predicted motion should be saved. Useful
      *                       for debugging, however does increase GC pressure.
      * @param obstacles The field's obstacles.
      */
-    public PAPFController(double horizon, double resolution, boolean savePrediction, Obstacle[] obstacles) {
+    public PAPFController(
+        double horizon,
+        double resolution,
+        double tolerance,
+        boolean savePrediction,
+        Obstacle[] obstacles
+    ) {
         this.horizon = horizon;
         this.resolution = resolution;
+        this.tolerance = tolerance;
         this.savePrediction = savePrediction;
         this.obstacles = obstacles;
 
@@ -97,6 +105,7 @@ public final class PAPFController {
      * @param goal The desired position of the robot.
      * @param maxVelocity The desired cruise velocity of the robot, in m/s.
      * @param maxDeceleration The desired deceleration rate of the robot, in m/s/s.
+     *
      */
     public ChassisSpeeds calculate(Pose2d currentPose, Translation2d goal, double maxVelocity, double maxDeceleration) {
         this.goal = new Pose2d(goal, currentPose.getRotation());
@@ -108,7 +117,7 @@ public final class PAPFController {
         double e_y = goal.getY() - currentPose.getY();
         double error = Math.hypot(e_x, e_y);
 
-        if (error < 1e-6) {
+        if (error <= tolerance) {
             setpoint = this.goal;
             return new ChassisSpeeds();
         }
@@ -197,9 +206,10 @@ public final class PAPFController {
      * @param name The parent name for the tunables in NetworkTables.
      */
     public void enableTunables(String name) {
-        Tunable.doubleValue(name + "/horizon", horizon, v -> horizon = v);
-        Tunable.doubleValue(name + "/resolution", resolution, v -> resolution = v);
-        Tunable.booleanValue(name + "/savePrediction", savePrediction, v -> savePrediction = v);
+        Tunable.value(name + "/horizon", horizon, v -> horizon = v);
+        Tunable.value(name + "/resolution", resolution, v -> resolution = v);
+        Tunable.value(name + "/tolerance", tolerance, v -> tolerance = v);
+        Tunable.value(name + "/savePrediction", savePrediction, v -> savePrediction = v);
     }
 
     /**

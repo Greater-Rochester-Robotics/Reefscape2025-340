@@ -10,14 +10,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import org.team340.lib.math.Math2;
-import org.team340.lib.math.PAPFController;
+import org.team340.lib.logging.LoggedRobot;
 import org.team340.lib.swerve.Perspective;
 import org.team340.lib.swerve.SwerveAPI;
 import org.team340.lib.swerve.SwerveState;
@@ -27,7 +25,10 @@ import org.team340.lib.swerve.hardware.SwerveEncoders;
 import org.team340.lib.swerve.hardware.SwerveIMUs;
 import org.team340.lib.swerve.hardware.SwerveMotors;
 import org.team340.lib.util.Alliance;
+import org.team340.lib.util.FieldInfo;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Mutable;
+import org.team340.lib.util.PAPFController;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -44,30 +45,30 @@ import org.team340.robot.util.Vision;
 @Logged
 public final class Swerve extends GRRSubsystem {
 
-    private static final TunableDouble TURBO_SPIN = Tunable.doubleValue("swerve/turboSpin", 8.0);
-    private static final TunableDouble IN_LINE_TOLERANCE = Tunable.doubleValue("swerve/inLineTolerance", 0.35);
+    private static final TunableDouble TURBO_SPIN = Tunable.value("swerve/turboSpin", 8.0);
 
-    private static final TunableDouble BEACH_SPEED = Tunable.doubleValue("swerve/beach/speed", 3.0);
-    private static final TunableDouble BEACH_TOLERANCE = Tunable.doubleValue("swerve/beach/tolerance", 0.15);
+    private static final TunableDouble BEACH_SPEED = Tunable.value("swerve/beach/speed", 3.0);
+    private static final TunableDouble BEACH_TOLERANCE = Tunable.value("swerve/beach/tolerance", 0.15);
 
-    private static final TunableDouble APF_X = Tunable.doubleValue("swerve/apf/x", 1.05);
-    private static final TunableDouble APF_VEL = Tunable.doubleValue("swerve/apf/velocity", 4.5);
-    private static final TunableDouble APF_LEAD = Tunable.doubleValue("swerve/apf/lead", 0.78);
-    private static final TunableDouble APF_LEAD_MULT = Tunable.doubleValue("swerve/apf/leadMult", 0.35);
-    private static final TunableDouble APF_LEAD_ACCEL = Tunable.doubleValue("swerve/apf/leadAccel", 7.7);
-    private static final TunableDouble APF_LEAD_ACCEL_L4 = Tunable.doubleValue("swerve/apf/leadAccelL4", 5.78);
-    private static final TunableDouble APF_SCORE_ACCEL = Tunable.doubleValue("swerve/apf/scoreAccel", 4.8);
-    private static final TunableDouble APF_TOLERANCE = Tunable.doubleValue("swerve/apf/tolerance", 0.2);
-    private static final TunableDouble APF_ANG_TOLERANCE = Tunable.doubleValue("swerve/apf/angTolerance", 0.4);
+    private static final TunableDouble APF_X = Tunable.value("swerve/apf/x", 1.28);
+    private static final TunableDouble APF_VEL = Tunable.value("swerve/apf/velocity", 4.5);
+    private static final TunableDouble APF_LEAD = Tunable.value("swerve/apf/lead", 0.35);
+    private static final TunableDouble APF_LEAD_MULT = Tunable.value("swerve/apf/leadMult", 0.18);
+    private static final TunableDouble APF_LEAD_ACCEL = Tunable.value("swerve/apf/leadAccel", 7.7);
+    private static final TunableDouble APF_LEAD_ACCEL_L4 = Tunable.value("swerve/apf/leadAccelL4", 5.78);
+    private static final TunableDouble APF_SCORE_ACCEL = Tunable.value("swerve/apf/scoreAccel", 6.0);
+    private static final TunableDouble APF_SCORE_ACCEL_L4 = Tunable.value("swerve/apf/scoreAccelL4", 3.25);
+    private static final TunableDouble APF_ANG_TOLERANCE = Tunable.value("swerve/apf/angTolerance", 0.4);
+    private static final TunableDouble APF_SAFE_TOLERANCE = Tunable.value("swerve/apf/safeTolerance", 0.2);
 
-    private static final TunableDouble REEF_ASSIST_X = Tunable.doubleValue("swerve/reefAssist/x", 0.681);
-    private static final TunableDouble REEF_ASSIST_KP = Tunable.doubleValue("swerve/reefAssist/kP", 20.0);
-    private static final TunableDouble REEF_ASSIST_TOLERANCE = Tunable.doubleValue("swerve/reefAssist/tolerance", 1.75);
+    private static final TunableDouble REEF_ASSIST_X = Tunable.value("swerve/reefAssist/x", 0.681);
+    private static final TunableDouble REEF_ASSIST_KP = Tunable.value("swerve/reefAssist/kP", 20.0);
+    private static final TunableDouble REEF_ASSIST_TOLERANCE = Tunable.value("swerve/reefAssist/tolerance", 1.75);
 
-    private static final TunableDouble FACING_REEF_TOLERANCE = Tunable.doubleValue("swerve/kFacingReefTolerance", 1.0);
-    private static final TunableDouble DANGER_DISTANCE = Tunable.doubleValue("swerve/dangerDistance", 0.7);
-    private static final TunableDouble HAPPY_DISTANCE = Tunable.doubleValue("swerve/happyDistance", 3.25);
-    private static final TunableDouble GOOSING_DISTANCE = Tunable.doubleValue("swerve/goosingDistance", 0.95);
+    private static final TunableDouble FACING_REEF_TOLERANCE = Tunable.value("swerve/kFacingReefTolerance", 1.0);
+    private static final TunableDouble DANGER_DISTANCE = Tunable.value("swerve/dangerDistance", 0.75);
+    private static final TunableDouble HAPPY_DISTANCE = Tunable.value("swerve/happyDistance", 3.25);
+    private static final TunableDouble GOOSING_DISTANCE = Tunable.value("swerve/goosingDistance", 0.95);
 
     private static final double OFFSET = Units.inchesToMeters(12.5);
 
@@ -100,12 +101,12 @@ public final class Swerve extends GRRSubsystem {
         .setEncoder(SwerveEncoders.cancoder(LowerCAN.BR_ENCODER, -0.079, false));
 
     private final SwerveConfig config = new SwerveConfig()
-        .setTimings(TimedRobot.kDefaultPeriod, 0.004, 0.02, 0.01)
+        .setTimings(LoggedRobot.DEFAULT_PERIOD, 0.004, 0.02, 0.01)
         .setMovePID(0.3, 0.0, 0.0)
-        .setMoveFF(0.15, 0.128)
+        .setMoveFF(0.0, 0.128)
         .setTurnPID(100.0, 0.0, 0.2)
         .setBrakeMode(false, true)
-        .setLimits(4.5, 0.05, 16.5, 11.5, 28.0)
+        .setLimits(4.5, 0.05, 17.0, 12.5, 28.0)
         .setDriverProfile(4.5, 1.5, 0.15, 4.7, 2.0, 0.05)
         .setPowerProperties(Constants.VOLTAGE, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(243.0 / 38.0, 12.1, 0.0, Units.inchesToMeters(4.0))
@@ -124,6 +125,7 @@ public final class Swerve extends GRRSubsystem {
     private final ReefAssistData reefAssist = new ReefAssistData();
 
     private Pose2d reefReference = Pose2d.kZero;
+    private boolean changedReference = false;
     private boolean facingReef = false;
     private double wallDistance = 0.0;
 
@@ -131,9 +133,9 @@ public final class Swerve extends GRRSubsystem {
         api = new SwerveAPI(config);
         vision = new Vision(Constants.CAMERAS);
         state = api.state;
-        apf = new PAPFController(4.0, 0.5, true, Field.OBSTACLES);
+        apf = new PAPFController(4.0, 0.5, 0.025, true, Field.OBSTACLES);
 
-        angularPID = new ProfiledPIDController(10.0, 0.0, 0.0, new Constraints(10.0, 24.0));
+        angularPID = new ProfiledPIDController(6.0, 0.0, 0.0, new Constraints(10.0, 24.0));
         angularPID.enableContinuousInput(-Math.PI, Math.PI);
 
         api.enableTunables("swerve/api");
@@ -154,18 +156,21 @@ public final class Swerve extends GRRSubsystem {
         Translation2d reefTranslation = state.translation.minus(reefCenter);
         Rotation2d reefAngle = new Rotation2d(
             Math.floor(
-                reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math.PI / 6.0)).getRadians() /
-                (Math.PI / 3.0)
+                reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math2.SIXTH_PI)).getRadians() /
+                Math2.THIRD_PI
             ) *
-            (Math.PI / 3.0)
+            Math2.THIRD_PI
         );
+
+        // Save if the reef angle has changed.
+        changedReference = !Math2.isNear(reefReference.getRotation(), reefAngle, 1e-6);
 
         // Save the current alliance's reef location, and the rotation
         // to the reef wall relevant to the robot's position.
         reefReference = new Pose2d(reefCenter, reefAngle);
 
         // If the robot is rotated to face the reef, within an arbitrary tolerance.
-        facingReef = Math2.isNear(reefAngle, state.rotation, FACING_REEF_TOLERANCE.value());
+        facingReef = Math2.isNear(reefAngle, state.rotation, FACING_REEF_TOLERANCE.get());
 
         // Calculate the distance from the robot's center to the nearest reef wall face.
         wallDistance = Math.max(
@@ -194,9 +199,17 @@ public final class Swerve extends GRRSubsystem {
     /**
      * Remove @NotLogged for debugging
      */
-    // @NotLogged
+    @NotLogged
     public List<Pose2d> apfVisualization() {
-        return apf.visualizeField(30, 1.0, Field.LENGTH, Field.WIDTH);
+        return apf.visualizeField(30, 1.0, FieldInfo.length(), FieldInfo.width());
+    }
+
+    /**
+     * Returns true if the reef angle has changed.
+     */
+    @NotLogged
+    public boolean changedReference() {
+        return changedReference;
     }
 
     /**
@@ -204,11 +217,7 @@ public final class Swerve extends GRRSubsystem {
      * (Robot is facing the reef and within the happy distance).
      */
     public boolean happyGoose() {
-        return (
-            facingReef &&
-            wallDistance < HAPPY_DISTANCE.value() &&
-            Math.abs(reefAssist.error) < IN_LINE_TOLERANCE.value()
-        );
+        return facingReef && wallDistance < HAPPY_DISTANCE.get();
     }
 
     /**
@@ -216,11 +225,14 @@ public final class Swerve extends GRRSubsystem {
      * to move, based on the robot's position on the field.
      */
     public boolean wildlifeConservationProgram() {
-        return wallDistance > DANGER_DISTANCE.value();
+        return wallDistance > DANGER_DISTANCE.get();
     }
 
+    /**
+     * Returns true if it's time to goose around.
+     */
     public boolean goosingTime() {
-        return wallDistance < GOOSING_DISTANCE.value();
+        return wallDistance < GOOSING_DISTANCE.get();
     }
 
     /**
@@ -265,8 +277,8 @@ public final class Swerve extends GRRSubsystem {
 
             var antiBeach = Perspective.OPERATOR.toPerspectiveSpeeds(
                 new ChassisSpeeds(
-                    Math.abs(pitch) > BEACH_TOLERANCE.value() ? Math.copySign(BEACH_SPEED.value(), pitch) : 0.0,
-                    Math.abs(roll) > BEACH_TOLERANCE.value() ? Math.copySign(BEACH_SPEED.value(), -roll) : 0.0,
+                    Math.abs(pitch) > BEACH_TOLERANCE.get() ? Math.copySign(BEACH_SPEED.get(), pitch) : 0.0,
+                    Math.abs(roll) > BEACH_TOLERANCE.get() ? Math.copySign(BEACH_SPEED.get(), -roll) : 0.0,
                     0.0
                 ),
                 state.rotation
@@ -295,7 +307,7 @@ public final class Swerve extends GRRSubsystem {
         return drive(x, y, angular)
             .beforeStarting(() -> {
                 configured.value = api.config.driverAngularVel;
-                api.config.driverAngularVel = TURBO_SPIN.value();
+                api.config.driverAngularVel = TURBO_SPIN.get();
             })
             .finallyDo(() -> api.config.driverAngularVel = configured.value);
     }
@@ -325,7 +337,7 @@ public final class Swerve extends GRRSubsystem {
                 boolean inDeadband = norm < api.config.driverVelDeadband;
 
                 reefAssist.targetPipe = generateReefLocation(
-                    REEF_ASSIST_X.value(),
+                    REEF_ASSIST_X.get(),
                     reefReference.getRotation(),
                     left.getAsBoolean()
                 );
@@ -341,12 +353,12 @@ public final class Swerve extends GRRSubsystem {
                 );
 
                 reefAssist.running =
-                    Math.abs(stickDistance) < REEF_ASSIST_TOLERANCE.value() &&
-                    Math2.isNear(robotAngle, xyAngle, Math.PI / 2.0) &&
+                    Math.abs(stickDistance) < REEF_ASSIST_TOLERANCE.get() &&
+                    Math2.isNear(robotAngle, xyAngle, Math2.HALF_PI) &&
                     !inDeadband;
 
                 reefAssist.error = robotAngle.minus(reefReference.getRotation()).getRadians();
-                reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * REEF_ASSIST_KP.value() : 0.0;
+                reefAssist.output = reefAssist.running ? reefAssist.error * norm * norm * REEF_ASSIST_KP.get() : 0.0;
 
                 var assist = Perspective.OPERATOR.toPerspectiveSpeeds(
                     new ChassisSpeeds(
@@ -415,7 +427,7 @@ public final class Swerve extends GRRSubsystem {
         return apfDrive(
             () -> {
                 Pose2d target =
-                    reefAssist.targetPipe = generateReefLocation(APF_X.value(), side.get(), left.getAsBoolean());
+                    reefAssist.targetPipe = generateReefLocation(APF_X.get(), side.get(), left.getAsBoolean());
 
                 Translation2d error = target.getTranslation().minus(state.translation);
                 Rotation2d robotAngle = error.getAngle();
@@ -426,9 +438,7 @@ public final class Swerve extends GRRSubsystem {
 
                 if (!nowSafe.value) {
                     target = generateReefLocation(
-                        APF_X.value() +
-                        APF_LEAD.value() +
-                        (APF_LEAD_MULT.value() * (error.getNorm() - APF_LEAD.value())),
+                        APF_X.get() + APF_LEAD.get() + (APF_LEAD_MULT.get() * (error.getNorm() - APF_LEAD.get())),
                         side.get(),
                         left.getAsBoolean()
                     );
@@ -437,8 +447,8 @@ public final class Swerve extends GRRSubsystem {
                         ready.getAsBoolean() &&
                         state.translation.getDistance(target.getTranslation()) *
                         (Math.abs(reefAssist.error) / Math.PI) <=
-                        APF_TOLERANCE.value() &&
-                        Math.abs(state.rotation.minus(target.getRotation()).getRadians()) <= APF_ANG_TOLERANCE.value()
+                        APF_SAFE_TOLERANCE.get() &&
+                        Math.abs(state.rotation.minus(target.getRotation()).getRadians()) <= APF_ANG_TOLERANCE.get()
                     ) {
                         nowSafe.value = true;
                     }
@@ -448,8 +458,8 @@ public final class Swerve extends GRRSubsystem {
             },
             () ->
                 !nowSafe.value
-                    ? (l4.getAsBoolean() ? APF_LEAD_ACCEL_L4.value() : APF_LEAD_ACCEL.value())
-                    : APF_SCORE_ACCEL.value()
+                    ? (l4.getAsBoolean() ? APF_LEAD_ACCEL_L4.get() : APF_LEAD_ACCEL.get())
+                    : (l4.getAsBoolean() ? APF_SCORE_ACCEL_L4.get() : APF_SCORE_ACCEL.get())
         ).beforeStarting(() -> {
             lastTarget.value = Pose2d.kZero;
             nowSafe.value = false;
@@ -482,7 +492,7 @@ public final class Swerve extends GRRSubsystem {
                 var speeds = apf.calculate(
                     state.pose,
                     goal.getTranslation(),
-                    APF_VEL.value(),
+                    APF_VEL.get(),
                     deceleration.getAsDouble()
                 );
 

@@ -29,16 +29,16 @@ public final class Climber extends GRRSubsystem {
         private final TunableDouble rotations;
 
         private ClimberPosition(double rotations) {
-            this.rotations = Tunable.doubleValue("climber/positions/" + name(), rotations);
+            this.rotations = Tunable.value("climber/positions/" + name(), rotations);
         }
 
         private double rotations() {
-            return rotations.value();
+            return rotations.get();
         }
     }
 
-    private static final TunableDouble VOLTS = Tunable.doubleValue("climber/volts", 12.0);
-    private static final TunableDouble OVERRIDE_VOLTS = Tunable.doubleValue("climber/overrideVolts", 4.0);
+    private static final TunableDouble VOLTS = Tunable.value("climber/volts", 12.0);
+    private static final TunableDouble OVERRIDE_VOLTS = Tunable.value("climber/overrideVolts", 4.0);
 
     private final TalonFX motor;
 
@@ -131,7 +131,7 @@ public final class Climber extends GRRSubsystem {
      */
     public Command override() {
         return commandBuilder()
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(OVERRIDE_VOLTS.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(OVERRIDE_VOLTS.get())))
             .onEnd(motor::stopMotor)
             .onlyIf(this::isClimbed)
             .withName("Climber.override()");
@@ -143,7 +143,7 @@ public final class Climber extends GRRSubsystem {
      */
     private Command goTo(ClimberPosition position) {
         return commandBuilder("Climber.goTo(" + position.name() + ")")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(VOLTS.value())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(VOLTS.get())))
             .isFinished(() -> getPosition() >= position.rotations())
             .onEnd(motor::stopMotor);
     }

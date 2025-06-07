@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
+import org.team340.lib.util.Mutable;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableBoolean;
 import org.team340.robot.Robot;
@@ -30,7 +31,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
 
-    private static final TunableBoolean AUTO_DRIVE = Tunable.booleanValue("routines/autoDrive", true);
+    private static final TunableBoolean AUTO_DRIVE = Tunable.value("routines/autoDrive", true);
 
     private final Robot robot;
 
@@ -104,7 +105,7 @@ public final class Routines {
             deadline(
                 gooseNeck.intake(button, () -> chokingGoose.getAsBoolean() || intake.unjamming(), robot::safeForGoose),
                 elevator.goTo(ElevatorPosition.INTAKE, robot::safeForGoose),
-                intake.intake(chokingGoose).beforeStarting(waitSeconds(0.1))
+                intake.intake(chokingGoose)
             )
         ).withName("Routines.intake()");
     }
@@ -128,7 +129,9 @@ public final class Routines {
     public Command swallow() {
         return parallel(
             intake.swallow(),
-            gooseNeck.swallow(robot::safeForGoose).beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.1)),
+            gooseNeck
+                .swallow(robot::safeForGoose)
+                .beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.05)),
             elevator.goTo(ElevatorPosition.SWALLOW, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.swallow()");
     }
@@ -140,6 +143,8 @@ public final class Routines {
      * @param allowGoosing If the goose neck is allowed to goose around.
      */
     public Command score(BooleanSupplier runManual, BooleanSupplier allowGoosing) {
+        Mutable<Boolean> hadCoral = new Mutable<>(false);
+
         return sequence(
             deadline(
                 waitUntil(swerve::happyGoose),
@@ -147,14 +152,16 @@ public final class Routines {
                 gooseNeck.stow(robot::safeForGoose)
             ),
             deadline(
-                either(
-                    waitUntil(() -> gooseNeck.noCoral() && robot.safeForGoose() && allowGoosing.getAsBoolean()),
-                    idle(),
-                    gooseNeck::hasCoral
+                waitUntil(
+                    () -> hadCoral.value && gooseNeck.noCoral() && robot.safeForGoose() && allowGoosing.getAsBoolean()
                 ),
                 elevator.score(
                     selection,
-                    () -> gooseNeck.beamBroken() && !runManual.getAsBoolean() && swerve.getVelocity() > 0.5,
+                    () ->
+                        hadCoral.value &&
+                        gooseNeck.beamBroken() &&
+                        !runManual.getAsBoolean() &&
+                        swerve.getVelocity() > 0.25,
                     robot::safeForGoose
                 ),
                 gooseNeck.score(
@@ -167,6 +174,7 @@ public final class Routines {
             parallel(elevator.goTo(ElevatorPosition.DOWN, robot::safeForGoose), gooseNeck.stow(robot::safeForGoose))
         )
             .alongWith(selection.whileScoring())
+            .beforeStarting(() -> hadCoral.value = gooseNeck.hasCoral())
             .withName("Routines.score()");
     }
 
@@ -185,7 +193,7 @@ public final class Routines {
                     swerve.apfDrive(selection::isLeft, robot::readyToScore, selection::isL4).until(gooseNeck::noCoral),
                     swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
                 ),
-                () -> !AUTO_DRIVE.value() || gooseNeck.noCoral()
+                () -> !AUTO_DRIVE.get() || gooseNeck.noCoral()
             )
         ).withName("Routines.assistedScore()");
     }

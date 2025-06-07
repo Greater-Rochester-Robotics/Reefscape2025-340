@@ -10,7 +10,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
-import org.team340.lib.math.Math2;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Tunable;
 import org.team340.lib.util.Tunable.TunableInteger;
 import org.team340.lib.util.command.GRRSubsystem;
@@ -37,21 +37,21 @@ public final class Lights {
         private final TunableInteger b;
 
         private Color(int r, int g, int b) {
-            this.r = Tunable.intValue("lights/colors/" + name() + "/r", r);
-            this.g = Tunable.intValue("lights/colors/" + name() + "/g", g);
-            this.b = Tunable.intValue("lights/colors/" + name() + "/b", b);
+            this.r = Tunable.value("lights/colors/" + name() + "/r", r);
+            this.g = Tunable.value("lights/colors/" + name() + "/g", g);
+            this.b = Tunable.value("lights/colors/" + name() + "/b", b);
         }
 
         private int r() {
-            return r.value();
+            return r.get();
         }
 
         private int g() {
-            return g.value();
+            return g.get();
         }
 
         private int b() {
-            return b.value();
+            return b.get();
         }
     }
 
@@ -291,7 +291,7 @@ public final class Lights {
 
             return commandBuilder()
                 .onInitialize(() -> timer.restart())
-                .onExecute(() -> set(timer.get() % 0.2 > 0.1 ? Color.SCORED : Color.OFF))
+                .onExecute(() -> set(timer.get() % 0.15 > 0.75 ? Color.SCORED : Color.OFF))
                 .onEnd(() -> set(Color.OFF))
                 .withTimeout(1.5)
                 .ignoringDisable(true)

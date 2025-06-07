@@ -16,6 +16,8 @@ import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorArrangementValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.ReverseLimitSourceValue;
+import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.MathUtil;
@@ -58,16 +60,16 @@ public final class GooseNeck extends GRRSubsystem {
         private TunableDouble rotations;
 
         private GoosePosition(double rotations) {
-            this.rotations = Tunable.doubleValue("gooseNeck/positions/" + name(), rotations);
+            this.rotations = Tunable.value("gooseNeck/positions/" + name(), rotations);
         }
 
         private double rotations() {
-            return rotations.value();
+            return rotations.get();
         }
 
         public static GoosePosition closeTo(double position) {
             for (GoosePosition option : values()) {
-                if (Math.abs(option.rotations() - position) < CLOSE_TO_TOLERANCE.value()) {
+                if (Math.abs(option.rotations() - position) < CLOSE_TO_TOLERANCE.get()) {
                     return option;
                 }
             }
@@ -77,8 +79,8 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        INTAKE(-4.0),
-        SEAT(-1.8),
+        INTAKE(-6.0),
+        SEAT(-5.0),
         L1(4.0),
         L2_L3(12.0),
         L4(9.0),
@@ -88,23 +90,18 @@ public final class GooseNeck extends GRRSubsystem {
         private TunableDouble voltage;
 
         private GooseSpeed(double voltage) {
-            this.voltage = Tunable.doubleValue("gooseNeck/speeds/" + name(), voltage);
+            this.voltage = Tunable.value("gooseNeck/speeds/" + name(), voltage);
         }
 
         private double voltage() {
-            return voltage.value();
+            return voltage.get();
         }
     }
 
-    private static final TunableDouble CLOSE_TO_TOLERANCE = Tunable.doubleValue("gooseNeck/kCloseToTolerance", 0.08);
-    private static final TunableDouble AT_POSITION_TOLERANCE = Tunable.doubleValue(
-        "gooseNeck/atPositionTolerance",
-        0.01
-    );
-    private static final TunableDouble FIND_EDGE_DELAY = Tunable.doubleValue("gooseNeck/findEdgeDelay", 0.16);
-    private static final TunableDouble SEAT_DELAY = Tunable.doubleValue("gooseNeck/seatDelay", 0.09);
-    private static final TunableDouble TORQUE_DELAY = Tunable.doubleValue("gooseNeck/torqueDelay", 0.2);
-    private static final TunableDouble TORQUE_MAX = Tunable.doubleValue("gooseNeck/torqueMax", 12.0);
+    private static final TunableDouble CLOSE_TO_TOLERANCE = Tunable.value("gooseNeck/kCloseToTolerance", 0.08);
+    private static final TunableDouble AT_POSITION_TOLERANCE = Tunable.value("gooseNeck/atPositionTolerance", 0.01);
+    private static final TunableDouble TORQUE_DELAY = Tunable.value("gooseNeck/torqueDelay", 0.2);
+    private static final TunableDouble TORQUE_MAX = Tunable.value("gooseNeck/torqueMax", 12.0);
 
     private final TalonFX pivotMotor;
     private final TalonFXS beakMotor;
@@ -118,6 +115,7 @@ public final class GooseNeck extends GRRSubsystem {
     private final MotionMagicVoltage positionControl;
     private final TorqueCurrentFOC torqueControl;
     private final VoltageOut beakVoltageControl;
+    private final VoltageOut beakSensorVoltageControl;
 
     private final PIDController torquePID = new PIDController(185.0, 0.0, 18.0);
     private final AtomicBoolean hasCoral = new AtomicBoolean(false);
@@ -130,8 +128,8 @@ public final class GooseNeck extends GRRSubsystem {
 
         TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
 
-        pivotConfig.CurrentLimits.StatorCurrentLimit = 60.0;
-        pivotConfig.CurrentLimits.SupplyCurrentLimit = 40.0;
+        pivotConfig.CurrentLimits.StatorCurrentLimit = 50.0;
+        pivotConfig.CurrentLimits.SupplyCurrentLimit = 30.0;
 
         pivotConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         pivotConfig.Feedback.SensorToMechanismRatio = (50.0 / 10.0) * (72.0 / 14.0);
@@ -163,8 +161,13 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
+        beakConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RioCAN.GOOSE_CANDI;
+        beakConfig.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
+        beakConfig.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+        beakConfig.HardwareLimitSwitch.ReverseLimitEnable = true;
+
         CANdiConfiguration candiConfig = new CANdiConfiguration();
-        candiConfig.PWM2.AbsoluteSensorOffset = 0.923;
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.927;
         candiConfig.PWM2.SensorDirection = true;
 
         PhoenixUtil.run("Clear Goose Neck Pivot Sticky Faults", () -> pivotMotor.clearStickyFaults());
@@ -191,7 +194,7 @@ public final class GooseNeck extends GRRSubsystem {
             )
         );
         PhoenixUtil.run("Set Goose Neck Fast Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(250, beamBreak, beamBreakVolatile)
+            BaseStatusSignal.setUpdateFrequencyForAll(300, beamBreak, beamBreakVolatile)
         );
         PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
             ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi)
@@ -200,8 +203,12 @@ public final class GooseNeck extends GRRSubsystem {
         positionControl = new MotionMagicVoltage(0.0);
         torqueControl = new TorqueCurrentFOC(0.0);
         beakVoltageControl = new VoltageOut(0.0);
-        beakVoltageControl.EnableFOC = false;
+        beakSensorVoltageControl = new VoltageOut(0.0);
+
         beakVoltageControl.UpdateFreqHz = 0.0;
+        beakVoltageControl.IgnoreHardwareLimits = true;
+
+        beakSensorVoltageControl.UpdateFreqHz = 0.0;
 
         Tunable.pidController("gooseNeck/pid", pivotMotor);
         Tunable.motionProfile("gooseNeck/motion", pivotMotor);
@@ -256,7 +263,7 @@ public final class GooseNeck extends GRRSubsystem {
     // *************** Commands ***************
 
     public Command setHasCoral(boolean hasCoral) {
-        return runOnce(() -> this.hasCoral.set(hasCoral))
+        return Commands.runOnce(() -> this.hasCoral.set(hasCoral))
             .ignoringDisable(true)
             .withName("Intake.setHasCoral(" + hasCoral + ")");
     }
@@ -268,9 +275,7 @@ public final class GooseNeck extends GRRSubsystem {
     public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
         enum State {
             INIT,
-            SAW_CORAL,
-            FINDING_FALLING_EDGE,
-            SEATING,
+            SEAT,
             DONE
         }
 
@@ -284,7 +289,7 @@ public final class GooseNeck extends GRRSubsystem {
             .withDeadline(
                 new NotifierCommand(
                     () -> {
-                        boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.006).getValue());
+                        boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.01).getValue());
 
                         if (swallowAtomic.get()) {
                             beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.SWALLOW.voltage()));
@@ -301,37 +306,19 @@ public final class GooseNeck extends GRRSubsystem {
                                 }
 
                                 delay.restart();
-                                state.value = State.SAW_CORAL;
-                            // Fall-through
 
-                            case SAW_CORAL:
-                                if (!delay.hasElapsed(FIND_EDGE_DELAY.value()) && beamBroken) {
-                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.INTAKE.voltage()));
-                                    break;
-                                }
-
-                                state.value = State.FINDING_FALLING_EDGE;
-                            // Fall-through
-
-                            case FINDING_FALLING_EDGE:
+                                // Fall-through
+                                state.value = State.SEAT;
+                            case SEAT:
                                 if (beamBroken) {
-                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.SEAT.voltage()));
+                                    beakMotor.setControl(
+                                        beakSensorVoltageControl.withOutput(GooseSpeed.SEAT.voltage())
+                                    );
                                     break;
                                 }
 
-                                state.value = State.SEATING;
-                                delay.restart();
-                            // Fall-through
-
-                            case SEATING:
-                                if (!delay.hasElapsed(SEAT_DELAY.value())) {
-                                    beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.SEAT.voltage()));
-                                    break;
-                                }
-
+                                // Fall-through
                                 state.value = State.DONE;
-                            // Fall-through
-
                             case DONE:
                                 hasCoral.set(true);
                                 beakMotor.stopMotor();
@@ -435,10 +422,10 @@ public final class GooseNeck extends GRRSubsystem {
                 lastTarget.value = target;
 
                 if (allowGoosing.getAsBoolean()) {
-                    boolean atPosition = Math.abs(currentPosition - target) < AT_POSITION_TOLERANCE.value();
+                    boolean atPosition = Math.abs(currentPosition - target) < AT_POSITION_TOLERANCE.get();
                     goosing = true;
 
-                    if (timer.hasElapsed(TORQUE_DELAY.value())) {
+                    if (timer.hasElapsed(TORQUE_DELAY.get())) {
                         if (atPosition) {
                             pivotMotor.stopMotor();
                         } else {
@@ -446,8 +433,8 @@ public final class GooseNeck extends GRRSubsystem {
                                 torqueControl.withOutput(
                                     MathUtil.clamp(
                                         torquePID.calculate(currentPosition, target),
-                                        -TORQUE_MAX.value(),
-                                        TORQUE_MAX.value()
+                                        -TORQUE_MAX.get(),
+                                        TORQUE_MAX.get()
                                     )
                                 )
                             );

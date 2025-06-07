@@ -297,6 +297,16 @@ public class SwerveConfig {
      * Throws an error if an issue is found.
      */
     public void verify() {
+        var missing = missing();
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("SwerveConfig missing values: " + String.join(", ", missing));
+        }
+    }
+
+    /**
+     * Collects a list of missing elements.
+     */
+    private List<String> missing() {
         List<String> missing = new ArrayList<>();
         if (period == -1.0) missing.add("Period");
         if (odometryPeriod == -1.0) missing.add("Odometry Period");
@@ -327,14 +337,16 @@ public class SwerveConfig {
         if (wheelDiameter == -1.0) missing.add("Wheel Diameter");
         if (odometryStdDevs == null) missing.add("Odometry Standard Deviations");
         if (imu == null) missing.add("IMU");
-        if (modules == null) missing.add("Modules");
 
-        if (!missing.isEmpty()) {
-            throw new IllegalArgumentException("SwerveConfig missing values: " + String.join(", ", missing));
+        if (modules == null || modules.length == 0) {
+            missing.add("Modules");
+        } else {
+            for (int i = 0; i < modules.length; i++) {
+                String name = modules[i].name == null ? "Module " + i : modules[i].name;
+                missing.addAll(modules[i].missing().stream().map(s -> name + ": " + s).toList());
+            }
         }
 
-        for (SwerveModuleConfig module : modules) {
-            module.verify();
-        }
+        return missing;
     }
 }

@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-import org.team340.lib.math.Math2;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU;
+import org.team340.lib.util.Math2;
 import org.team340.lib.util.Sleep;
 import org.team340.robot.Robot;
 

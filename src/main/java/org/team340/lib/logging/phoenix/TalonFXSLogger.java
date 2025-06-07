@@ -27,6 +27,7 @@ public class TalonFXSLogger extends ClassSpecificLogger<TalonFXS> {
                 var motorVoltage = talonFXS.getMotorVoltage(false);
                 var position = talonFXS.getPosition(false);
                 var statorCurrent = talonFXS.getStatorCurrent(false);
+                var supplyCurrent = talonFXS.getSupplyCurrent(false);
                 var velocity = talonFXS.getVelocity(false);
 
                 BaseStatusSignal[] signals = {
@@ -35,6 +36,7 @@ public class TalonFXSLogger extends ClassSpecificLogger<TalonFXS> {
                     motorVoltage,
                     position,
                     statorCurrent,
+                    supplyCurrent,
                     velocity
                 };
 
@@ -45,6 +47,7 @@ public class TalonFXSLogger extends ClassSpecificLogger<TalonFXS> {
                     b.log("motorVoltage", motorVoltage.getValueAsDouble());
                     b.log("position", position.getValueAsDouble());
                     b.log("statorCurrent", statorCurrent.getValueAsDouble());
+                    b.log("supplyCurrent", supplyCurrent.getValueAsDouble());
                     b.log("velocity", velocity.getValueAsDouble());
                 };
             })

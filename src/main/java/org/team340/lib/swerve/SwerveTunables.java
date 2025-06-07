@@ -9,7 +9,7 @@ import org.team340.lib.util.Tunable;
 final class SwerveTunables {
 
     private SwerveTunables() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**
@@ -21,68 +21,64 @@ final class SwerveTunables {
         SwerveConfig config = api.config;
 
         // setTimings()
-        Tunable.doubleValue(name + "/timings/discretization", config.discretizationPeriod, v ->
+        Tunable.value(name + "/timings/discretization", config.discretizationPeriod, v ->
             config.discretizationPeriod = v
         );
 
         // setMovePID()
-        Tunable.doubleValue(name + "/movePID/kP", config.movePID[0], v -> {
+        Tunable.value(name + "/movePID/kP", config.movePID[0], v -> {
             config.movePID[0] = v;
             reapplyGains(true, api);
         });
-        Tunable.doubleValue(name + "/movePID/kI", config.movePID[1], v -> {
+        Tunable.value(name + "/movePID/kI", config.movePID[1], v -> {
             config.movePID[1] = v;
             reapplyGains(true, api);
         });
-        Tunable.doubleValue(name + "/movePID/kD", config.movePID[2], v -> {
+        Tunable.value(name + "/movePID/kD", config.movePID[2], v -> {
             config.movePID[2] = v;
             reapplyGains(true, api);
         });
 
         // setMoveFF()
-        Tunable.doubleValue(name + "/moveFF/kS", config.moveFF[0], v -> {
+        Tunable.value(name + "/moveFF/kS", config.moveFF[0], v -> {
             config.moveFF[0] = v;
             reapplyGains(true, api);
         });
-        Tunable.doubleValue(name + "/moveFF/kV", config.moveFF[1], v -> {
+        Tunable.value(name + "/moveFF/kV", config.moveFF[1], v -> {
             config.moveFF[1] = v;
             reapplyGains(true, api);
         });
 
         // setTurnPID()
-        Tunable.doubleValue(name + "/turnPID/kP", config.turnPID[0], v -> {
+        Tunable.value(name + "/turnPID/kP", config.turnPID[0], v -> {
             config.turnPID[0] = v;
             reapplyGains(false, api);
         });
-        Tunable.doubleValue(name + "/turnPID/kI", config.turnPID[1], v -> {
+        Tunable.value(name + "/turnPID/kI", config.turnPID[1], v -> {
             config.turnPID[1] = v;
             reapplyGains(false, api);
         });
-        Tunable.doubleValue(name + "/turnPID/kD", config.turnPID[2], v -> {
+        Tunable.value(name + "/turnPID/kD", config.turnPID[2], v -> {
             config.turnPID[2] = v;
             reapplyGains(false, api);
         });
 
         // setLimits()
-        Tunable.doubleValue(name + "/limits/velocity", config.velocity, v -> config.velocity = v);
-        Tunable.doubleValue(name + "/limits/velDeadband", config.velDeadband, v -> config.velDeadband = v);
-        Tunable.doubleValue(name + "/limits/slipAccel", config.slipAccel, v -> config.slipAccel = v);
-        Tunable.doubleValue(name + "/limits/torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
-        Tunable.doubleValue(name + "/limits/angularAccel", config.angularAccel, v -> config.angularAccel = v);
+        Tunable.value(name + "/limits/velocity", config.velocity, v -> config.velocity = v);
+        Tunable.value(name + "/limits/velDeadband", config.velDeadband, v -> config.velDeadband = v);
+        Tunable.value(name + "/limits/slipAccel", config.slipAccel, v -> config.slipAccel = v);
+        Tunable.value(name + "/limits/torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
+        Tunable.value(name + "/limits/angularAccel", config.angularAccel, v -> config.angularAccel = v);
 
         // setDriverProfile()
-        Tunable.doubleValue(name + "/driverProfile/vel", config.driverVel, v -> config.driverVel = v);
-        Tunable.doubleValue(name + "/driverProfile/velExp", config.driverVelExp, v -> config.driverVelExp = v);
-        Tunable.doubleValue(name + "/driverProfile/velDeadband", config.driverVelDeadband, v ->
-            config.driverVelDeadband = v
-        );
-        Tunable.doubleValue(name + "/driverProfile/angularVel", config.driverAngularVel, v ->
-            config.driverAngularVel = v
-        );
-        Tunable.doubleValue(name + "/driverProfile/angularVelExp", config.driverAngularVelExp, v ->
+        Tunable.value(name + "/driverProfile/vel", config.driverVel, v -> config.driverVel = v);
+        Tunable.value(name + "/driverProfile/velExp", config.driverVelExp, v -> config.driverVelExp = v);
+        Tunable.value(name + "/driverProfile/velDeadband", config.driverVelDeadband, v -> config.driverVelDeadband = v);
+        Tunable.value(name + "/driverProfile/angularVel", config.driverAngularVel, v -> config.driverAngularVel = v);
+        Tunable.value(name + "/driverProfile/angularVelExp", config.driverAngularVelExp, v ->
             config.driverAngularVelExp = v
         );
-        Tunable.doubleValue(name + "/driverProfile/angularVelDeadband", config.driverAngularVelDeadband, v ->
+        Tunable.value(name + "/driverProfile/angularVelDeadband", config.driverAngularVelDeadband, v ->
             config.driverAngularVelDeadband = v
         );
     }

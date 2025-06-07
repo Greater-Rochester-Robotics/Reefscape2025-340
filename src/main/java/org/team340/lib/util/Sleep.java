@@ -12,7 +12,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 public final class Sleep {
 
     private Sleep() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**

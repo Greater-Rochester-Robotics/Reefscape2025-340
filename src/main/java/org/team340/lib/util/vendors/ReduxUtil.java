@@ -20,7 +20,7 @@ import java.util.Map;
 public final class ReduxUtil {
 
     private ReduxUtil() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     /**

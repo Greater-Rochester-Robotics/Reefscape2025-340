@@ -3,22 +3,18 @@ package org.team340.robot;
 import static edu.wpi.first.wpilibj.XboxController.Axis.*;
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
-import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Threads;
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import org.team340.lib.logging.LoggedRobot;
+import org.team340.lib.logging.Profiler;
 import org.team340.lib.util.DisableWatchdog;
-import org.team340.lib.util.Tunable;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
 import org.team340.robot.subsystems.Climber;
@@ -31,7 +27,7 @@ import org.team340.robot.subsystems.Swerve;
 import org.team340.robot.util.ReefSelection;
 
 @Logged
-public final class Robot extends TimedRobot {
+public final class Robot extends LoggedRobot {
 
     public final CommandScheduler scheduler = CommandScheduler.getInstance();
 
@@ -51,16 +47,6 @@ public final class Robot extends TimedRobot {
     private final CommandXboxController coDriver;
 
     public Robot() {
-        DriverStation.silenceJoystickConnectionWarning(true);
-        DisableWatchdog.in(scheduler, "m_watchdog");
-        DisableWatchdog.in(this, "m_watchdog");
-
-        // Configure logging
-        DataLogManager.start();
-        DriverStation.startDataLog(DataLogManager.getLog());
-        SignalLogger.enableAutoLogging(false);
-        Epilogue.getConfig().root = "/Telemetry";
-
         // Initialize subsystems
         climber = new Climber();
         elevator = new Elevator();
@@ -80,9 +66,6 @@ public final class Robot extends TimedRobot {
         driver = new CommandXboxController(Constants.DRIVER);
         coDriver = new CommandXboxController(Constants.CO_DRIVER);
 
-        // Create triggers
-        Trigger gooseAround = driver.x().negate().and(coDriver.a().negate());
-
         // Setup lights
         lights.disabled().until(this::isEnabled).schedule();
         RobotModeTriggers.disabled().whileTrue(lights.disabled());
@@ -93,6 +76,10 @@ public final class Robot extends TimedRobot {
             .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
             .onFalse(lights.top.scored().onlyIf(this::isEnabled));
 
+        // Create triggers
+        Trigger allowGoosing = coDriver.a().negate();
+        Trigger changedReference = new Trigger(swerve::changedReference);
+
         // Set default commands
         elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.DOWN, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
@@ -101,7 +88,7 @@ public final class Robot extends TimedRobot {
         // Driver bindings
         driver.a().onTrue(routines.intake(driver.a()));
         driver.b().whileTrue(routines.swallow());
-        driver.x().onTrue(none()); // Reserved (No goosing around)
+        driver.x().whileTrue(routines.barf());
         driver.y().onTrue(none()); // Reserved (Force goose spit)
 
         driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
@@ -112,8 +99,10 @@ public final class Robot extends TimedRobot {
         driver.povDown().whileTrue(routines.swallow());
         driver.povLeft().onTrue(swerve.tareRotation());
 
-        driver.leftBumper().onTrue(selection.setLeft()).whileTrue(routines.assistedScore(driver.y(), gooseAround));
-        driver.rightBumper().onTrue(selection.setRight()).whileTrue(routines.assistedScore(driver.y(), gooseAround));
+        driver.leftBumper().onTrue(selection.setLeft()).whileTrue(routines.assistedScore(driver.y(), allowGoosing));
+        driver.rightBumper().onTrue(selection.setRight()).whileTrue(routines.assistedScore(driver.y(), allowGoosing));
+
+        changedReference.and(RobotModeTriggers.teleop()).onTrue(setDriverRumble(1.0).withTimeout(0.15));
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
@@ -128,14 +117,9 @@ public final class Robot extends TimedRobot {
 
         coDriver.leftBumper().and(coDriver.rightBumper()).toggleOnTrue(routines.killTheGoose());
 
-        // Set thread priority
-        waitSeconds(5.0)
-            .until(DriverStation::isEnabled)
-            .andThen(() -> {
-                Threads.setCurrentThreadPriority(true, 10);
-                SmartDashboard.setNetworkTableInstance(NetworkTableInstance.getDefault());
-            })
-            .schedule();
+        // Disable loop overrun warnings from the command
+        // scheduler, since we already log loop timings
+        DisableWatchdog.in(scheduler, "m_watchdog");
     }
 
     /**
@@ -177,26 +161,20 @@ public final class Robot extends TimedRobot {
         return driver.getLeftTriggerAxis() - driver.getRightTriggerAxis();
     }
 
-    @Override
-    public void robotPeriodic() {
-        scheduler.run();
-        lights.update();
-        Epilogue.update(this);
-        Tunable.update();
+    /**
+     * Returns a command that sets the rumble output of the driver's controller.
+     * @param value The normalized value (0 to 1) to set the rumble to.
+     */
+    private Command setDriverRumble(double value) {
+        return run(() -> driver.setRumble(RumbleType.kBothRumble, value))
+            .finallyDo(() -> driver.setRumble(RumbleType.kBothRumble, 0.0))
+            .ignoringDisable(true)
+            .withName("Robot.setDriverRumble(" + value + ")");
     }
 
     @Override
-    public void simulationPeriodic() {}
-
-    @Override
-    public void disabledPeriodic() {}
-
-    @Override
-    public void autonomousPeriodic() {}
-
-    @Override
-    public void teleopPeriodic() {}
-
-    @Override
-    public void testPeriodic() {}
+    public void robotPeriodic() {
+        Profiler.run("scheduler", scheduler::run);
+        Profiler.run("lights", lights::update);
+    }
 }

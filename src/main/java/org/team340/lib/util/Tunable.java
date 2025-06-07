@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
+import org.team340.lib.logging.LoggedRobot;
 import org.team340.lib.util.vendors.RevUtil;
 
 /**
@@ -37,15 +38,15 @@ import org.team340.lib.util.vendors.RevUtil;
 public final class Tunable {
 
     private Tunable() {
-        throw new AssertionError("This is a utility class!");
+        throw new UnsupportedOperationException("This is a utility class!");
     }
 
     private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Tunables");
     private static final EventLoop pollChanges = new EventLoop();
 
     /**
-     * Polls changes from NetworkTables. Must be called
-     * periodically in order for this class to function.
+     * Polls changes from NetworkTables. Must be called periodically in order for
+     * this class to function (this is already done if utilizing {@link LoggedRobot}).
      */
     public static void update() {
         pollChanges.poll();
@@ -56,8 +57,8 @@ public final class Tunable {
      * @param name The name for the tunable. Must be unique.
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      */
-    public static TunableBoolean booleanValue(String name, boolean defaultValue) {
-        return booleanValue(name, defaultValue, null);
+    public static TunableBoolean value(String name, boolean defaultValue) {
+        return value(name, defaultValue, null);
     }
 
     /**
@@ -66,7 +67,7 @@ public final class Tunable {
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
-    public static TunableBoolean booleanValue(String name, boolean defaultValue, BooleanConsumer onChange) {
+    public static TunableBoolean value(String name, boolean defaultValue, BooleanConsumer onChange) {
         return new TunableBoolean(name, defaultValue, onChange);
     }
 
@@ -96,7 +97,7 @@ public final class Tunable {
         /**
          * Returns the value of the tunable.
          */
-        public boolean value() {
+        public boolean get() {
             return value;
         }
 
@@ -120,8 +121,8 @@ public final class Tunable {
      * @param name The name for the tunable. Must be unique.
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      */
-    public static TunableInteger intValue(String name, int defaultValue) {
-        return intValue(name, defaultValue, null);
+    public static TunableInteger value(String name, int defaultValue) {
+        return value(name, defaultValue, (IntConsumer) null);
     }
 
     /**
@@ -130,7 +131,7 @@ public final class Tunable {
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
-    public static TunableInteger intValue(String name, int defaultValue, IntConsumer onChange) {
+    public static TunableInteger value(String name, int defaultValue, IntConsumer onChange) {
         return new TunableInteger(name, defaultValue, onChange);
     }
 
@@ -160,7 +161,7 @@ public final class Tunable {
         /**
          * Returns the value of the tunable.
          */
-        public int value() {
+        public int get() {
             return value;
         }
 
@@ -184,8 +185,8 @@ public final class Tunable {
      * @param name The name for the tunable. Must be unique.
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      */
-    public static TunableFloat floatValue(String name, float defaultValue) {
-        return floatValue(name, defaultValue, null);
+    public static TunableFloat value(String name, float defaultValue) {
+        return value(name, defaultValue, (FloatConsumer) null);
     }
 
     /**
@@ -194,7 +195,7 @@ public final class Tunable {
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
-    public static TunableFloat floatValue(String name, float defaultValue, FloatConsumer onChange) {
+    public static TunableFloat value(String name, float defaultValue, FloatConsumer onChange) {
         return new TunableFloat(name, defaultValue, onChange);
     }
 
@@ -224,7 +225,7 @@ public final class Tunable {
         /**
          * Returns the value of the tunable.
          */
-        public float value() {
+        public float get() {
             return value;
         }
 
@@ -248,8 +249,8 @@ public final class Tunable {
      * @param name The name for the tunable. Must be unique.
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      */
-    public static TunableDouble doubleValue(String name, double defaultValue) {
-        return doubleValue(name, defaultValue, null);
+    public static TunableDouble value(String name, double defaultValue) {
+        return value(name, defaultValue, (DoubleConsumer) null);
     }
 
     /**
@@ -258,7 +259,7 @@ public final class Tunable {
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
-    public static TunableDouble doubleValue(String name, double defaultValue, DoubleConsumer onChange) {
+    public static TunableDouble value(String name, double defaultValue, DoubleConsumer onChange) {
         return new TunableDouble(name, defaultValue, onChange);
     }
 
@@ -288,7 +289,7 @@ public final class Tunable {
         /**
          * Returns the value of the tunable.
          */
-        public double value() {
+        public double get() {
             return value;
         }
 
@@ -312,8 +313,8 @@ public final class Tunable {
      * @param name The name for the tunable. Must be unique.
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      */
-    public static TunableString stringValue(String name, String defaultValue) {
-        return stringValue(name, defaultValue, null);
+    public static TunableString value(String name, String defaultValue) {
+        return value(name, defaultValue, null);
     }
 
     /**
@@ -322,7 +323,7 @@ public final class Tunable {
      * @param defaultValue The default value of the tunable (e.g. a programmed constant).
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
-    public static TunableString stringValue(String name, String defaultValue, Consumer<String> onChange) {
+    public static TunableString value(String name, String defaultValue, Consumer<String> onChange) {
         return new TunableString(name, defaultValue, onChange);
     }
 
@@ -352,7 +353,7 @@ public final class Tunable {
         /**
          * Returns the value of the tunable.
          */
-        public String value() {
+        public String get() {
             return value;
         }
 
@@ -377,10 +378,10 @@ public final class Tunable {
      * @param controller The PID controller.
      */
     public static void pidController(String name, PIDController controller) {
-        doubleValue(name + "/kP", controller.getP(), controller::setP);
-        doubleValue(name + "/kI", controller.getI(), controller::setI);
-        doubleValue(name + "/kD", controller.getD(), controller::setD);
-        doubleValue(name + "/iZone", controller.getIZone(), controller::setIZone);
+        value(name + "/kP", controller.getP(), controller::setP);
+        value(name + "/kI", controller.getI(), controller::setI);
+        value(name + "/kD", controller.getD(), controller::setD);
+        value(name + "/iZone", controller.getIZone(), controller::setIZone);
     }
 
     /**
@@ -389,14 +390,14 @@ public final class Tunable {
      * @param controller The PID controller.
      */
     public static void pidController(String name, ProfiledPIDController controller) {
-        doubleValue(name + "/kP", controller.getP(), controller::setP);
-        doubleValue(name + "/kI", controller.getI(), controller::setI);
-        doubleValue(name + "/kD", controller.getD(), controller::setD);
-        doubleValue(name + "/iZone", controller.getIZone(), controller::setIZone);
-        doubleValue(name + "/maxVelocity", controller.getConstraints().maxVelocity, v ->
+        value(name + "/kP", controller.getP(), controller::setP);
+        value(name + "/kI", controller.getI(), controller::setI);
+        value(name + "/kD", controller.getD(), controller::setD);
+        value(name + "/iZone", controller.getIZone(), controller::setIZone);
+        value(name + "/maxVelocity", controller.getConstraints().maxVelocity, v ->
             controller.setConstraints(new TrapezoidProfile.Constraints(v, controller.getConstraints().maxAcceleration))
         );
-        doubleValue(name + "/maxAcceleration", controller.getConstraints().maxAcceleration, v ->
+        value(name + "/maxAcceleration", controller.getConstraints().maxAcceleration, v ->
             controller.setConstraints(new TrapezoidProfile.Constraints(controller.getConstraints().maxVelocity, v))
         );
     }
@@ -419,42 +420,42 @@ public final class Tunable {
     public static void pidController(String name, SparkMax spark, ClosedLoopSlot slot) {
         var config = spark.configAccessor.closedLoop;
 
-        doubleValue(name + "/kP", config.getP(slot), v -> {
+        value(name + "/kP", config.getP(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.p(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kI", config.getI(slot), v -> {
+        value(name + "/kI", config.getI(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.i(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kD", config.getD(slot), v -> {
+        value(name + "/kD", config.getD(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.d(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kV", config.getFF(slot), v -> {
+        value(name + "/kV", config.getFF(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.velocityFF(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/iZone", config.getIZone(slot), v -> {
+        value(name + "/iZone", config.getIZone(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.iZone(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/dFilter", config.getDFilter(slot), v -> {
+        value(name + "/dFilter", config.getDFilter(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.dFilter(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/minOutput", config.getMinOutput(slot), v -> {
+        value(name + "/minOutput", config.getMinOutput(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.minOutput(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/maxOutput", config.getMaxOutput(slot), v -> {
+        value(name + "/maxOutput", config.getMaxOutput(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.maxOutput(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
@@ -479,42 +480,42 @@ public final class Tunable {
     public static void pidController(String name, SparkFlex spark, ClosedLoopSlot slot) {
         var config = spark.configAccessor.closedLoop;
 
-        doubleValue(name + "/kP", config.getP(slot), v -> {
+        value(name + "/kP", config.getP(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.p(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kI", config.getI(slot), v -> {
+        value(name + "/kI", config.getI(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.i(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kD", config.getD(slot), v -> {
+        value(name + "/kD", config.getD(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.d(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/kV", config.getFF(slot), v -> {
+        value(name + "/kV", config.getFF(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.velocityFF(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/iZone", config.getIZone(slot), v -> {
+        value(name + "/iZone", config.getIZone(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.iZone(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/dFilter", config.getDFilter(slot), v -> {
+        value(name + "/dFilter", config.getDFilter(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.dFilter(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/minOutput", config.getMinOutput(slot), v -> {
+        value(name + "/minOutput", config.getMinOutput(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.minOutput(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/maxOutput", config.getMaxOutput(slot), v -> {
+        value(name + "/maxOutput", config.getMaxOutput(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.maxOutput(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
@@ -531,37 +532,37 @@ public final class Tunable {
         Slot0Configs config = new Slot0Configs();
         talonFX.getConfigurator().refresh(config);
 
-        doubleValue(name + "/kP", config.kP, v -> {
+        value(name + "/kP", config.kP, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kP = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kI", config.kI, v -> {
+        value(name + "/kI", config.kI, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kI = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kD", config.kD, v -> {
+        value(name + "/kD", config.kD, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kD = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kS", config.kS, v -> {
+        value(name + "/kS", config.kS, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kS = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kV", config.kV, v -> {
+        value(name + "/kV", config.kV, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kV = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kA", config.kA, v -> {
+        value(name + "/kA", config.kA, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kA = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/kG", config.kG, v -> {
+        value(name + "/kG", config.kG, v -> {
             talonFX.getConfigurator().refresh(config);
             config.kG = v;
             talonFX.getConfigurator().apply(config);
@@ -586,17 +587,17 @@ public final class Tunable {
     public static void motionProfile(String name, SparkMax spark, ClosedLoopSlot slot) {
         var config = spark.configAccessor.closedLoop.maxMotion;
 
-        doubleValue(name + "/velocity", config.getMaxVelocity(slot), v -> {
+        value(name + "/velocity", config.getMaxVelocity(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.maxMotion.maxVelocity(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/acceleration", config.getMaxAcceleration(slot), v -> {
+        value(name + "/acceleration", config.getMaxAcceleration(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.maxMotion.maxAcceleration(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/allowedClosedLoopError", config.getAllowedClosedLoopError(slot), v -> {
+        value(name + "/allowedClosedLoopError", config.getAllowedClosedLoopError(slot), v -> {
             var newConfig = new SparkMaxConfig();
             newConfig.closedLoop.maxMotion.allowedClosedLoopError(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
@@ -621,17 +622,17 @@ public final class Tunable {
     public static void motionProfile(String name, SparkFlex spark, ClosedLoopSlot slot) {
         var config = spark.configAccessor.closedLoop.maxMotion;
 
-        doubleValue(name + "/velocity", config.getMaxVelocity(slot), v -> {
+        value(name + "/velocity", config.getMaxVelocity(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.maxMotion.maxVelocity(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/acceleration", config.getMaxAcceleration(slot), v -> {
+        value(name + "/acceleration", config.getMaxAcceleration(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.maxMotion.maxAcceleration(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
         });
-        doubleValue(name + "/allowedClosedLoopError", config.getAllowedClosedLoopError(slot), v -> {
+        value(name + "/allowedClosedLoopError", config.getAllowedClosedLoopError(slot), v -> {
             var newConfig = new SparkFlexConfig();
             newConfig.closedLoop.maxMotion.allowedClosedLoopError(v, slot);
             RevUtil.configEphemeral(spark, newConfig);
@@ -647,27 +648,27 @@ public final class Tunable {
         MotionMagicConfigs config = new MotionMagicConfigs();
         talonFX.getConfigurator().refresh(config);
 
-        doubleValue(name + "/velocity", config.MotionMagicCruiseVelocity, v -> {
+        value(name + "/velocity", config.MotionMagicCruiseVelocity, v -> {
             talonFX.getConfigurator().refresh(config);
             config.MotionMagicCruiseVelocity = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/acceleration", config.MotionMagicAcceleration, v -> {
+        value(name + "/acceleration", config.MotionMagicAcceleration, v -> {
             talonFX.getConfigurator().refresh(config);
             config.MotionMagicAcceleration = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/jerk", config.MotionMagicJerk, v -> {
+        value(name + "/jerk", config.MotionMagicJerk, v -> {
             talonFX.getConfigurator().refresh(config);
             config.MotionMagicJerk = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/expoKv", config.MotionMagicExpo_kV, v -> {
+        value(name + "/expoKv", config.MotionMagicExpo_kV, v -> {
             talonFX.getConfigurator().refresh(config);
             config.MotionMagicExpo_kV = v;
             talonFX.getConfigurator().apply(config);
         });
-        doubleValue(name + "/expoKa", config.MotionMagicExpo_kA, v -> {
+        value(name + "/expoKa", config.MotionMagicExpo_kA, v -> {
             talonFX.getConfigurator().refresh(config);
             config.MotionMagicExpo_kA = v;
             talonFX.getConfigurator().apply(config);
@@ -680,6 +681,6 @@ public final class Tunable {
      * @param debouncer The debouncer to tune.
      */
     public static void debounce(String name, Debouncer debouncer) {
-        doubleValue(name, debouncer.getDebounceTime(), debouncer::setDebounceTime);
+        value(name, debouncer.getDebounceTime(), debouncer::setDebounceTime);
     }
 }

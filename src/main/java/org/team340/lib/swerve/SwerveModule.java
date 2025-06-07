@@ -10,12 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.team340.lib.math.Math2;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.config.SwerveModuleConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders.SwerveEncoder;
 import org.team340.lib.swerve.hardware.SwerveEncoders.SwerveEncoder.HookStatus;
 import org.team340.lib.swerve.hardware.SwerveMotors.SwerveMotor;
+import org.team340.lib.util.Math2;
 
 /**
  * An encapsulation of all hardware for a swerve module.
@@ -139,7 +139,7 @@ class SwerveModule implements AutoCloseable {
      * @param state The state to apply to the module.
      */
     public void applyState(SwerveModuleState state) {
-        if (state.speedMetersPerSecond < config.velDeadband) {
+        if (Math.abs(state.speedMetersPerSecond) < config.velDeadband) {
             state.speedMetersPerSecond = 0.0;
             state.angle = nextTarget.angle;
         }
@@ -155,7 +155,7 @@ class SwerveModule implements AutoCloseable {
         }
 
         boolean flipped = false;
-        if (Math.abs(angleDelta.getRadians()) > Math.PI / 2.0) {
+        if (Math.abs(angleDelta.getRadians()) > Math2.HALF_PI) {
             state.speedMetersPerSecond *= -1.0;
             state.angle = state.angle.rotateBy(Rotation2d.kPi);
             flipped = true;

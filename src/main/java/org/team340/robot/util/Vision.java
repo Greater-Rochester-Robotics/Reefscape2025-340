@@ -3,8 +3,6 @@ package org.team340.robot.util;
 import static org.photonvision.PhotonPoseEstimator.PoseStrategy.CONSTRAINED_SOLVEPNP;
 import static org.photonvision.PhotonPoseEstimator.PoseStrategy.PNP_DISTANCE_TRIG_SOLVE;
 
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.filter.Debouncer;
@@ -30,6 +28,7 @@ import org.photonvision.targeting.PhotonPipelineResult;
 import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
 import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.util.Alliance;
+import org.team340.lib.util.FieldInfo;
 import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 
 /**
@@ -45,7 +44,6 @@ public final class Vision {
     private static boolean ENABLE_SIM = false;
 
     private final Camera[] cameras;
-    private final AprilTagFieldLayout aprilTags;
     private final VisionSystemSim sim;
 
     // Variables for Epilogue logging.
@@ -57,11 +55,9 @@ public final class Vision {
      * @param cameras Configurations for the robot's cameras.
      */
     public Vision(CameraConfig[] cameras) {
-        aprilTags = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
-
         if (RobotBase.isSimulation() && ENABLE_SIM) {
             sim = new VisionSystemSim("simulation");
-            sim.addAprilTags(aprilTags);
+            sim.addAprilTags(FieldInfo.aprilTags());
         } else {
             sim = null;
         }
@@ -121,7 +117,7 @@ public final class Vision {
             Transform3d robotToCamera = new Transform3d(config.translation(), config.rotation());
 
             camera = new PhotonCamera(config.name());
-            estimator = new PhotonPoseEstimator(aprilTags, PNP_DISTANCE_TRIG_SOLVE, robotToCamera);
+            estimator = new PhotonPoseEstimator(FieldInfo.aprilTags(), PNP_DISTANCE_TRIG_SOLVE, robotToCamera);
             constrainedPnpParams = Optional.of(new ConstrainedSolvepnpParams(true, 0.0));
 
             if (sim != null) {
@@ -178,7 +174,7 @@ public final class Vision {
                 if (!useTag(id)) continue;
 
                 // Get the location of the tag on the field.
-                var tagLocation = aprilTags.getTagPose(id);
+                var tagLocation = FieldInfo.aprilTags().getTagPose(id);
                 if (tagLocation.isEmpty()) continue;
 
                 // Determine the distance from the camera to the tag.
