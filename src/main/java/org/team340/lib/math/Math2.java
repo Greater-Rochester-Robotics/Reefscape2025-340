@@ -1,4 +1,4 @@
-package org.team340.lib.util;
+package org.team340.lib.math;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;

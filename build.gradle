@@ -103,7 +103,7 @@ spotless {
         endWithNewline()
         removeUnusedImports()
         trimTrailingWhitespace()
-        prettier(['prettier': '3.4.2', 'prettier-plugin-java': '2.6.7'])
+        prettier(['prettier': '3.4.2', 'prettier-plugin-java': '2.6.8'])
             .config([
                 'parser': 'java',
                 'plugins': ['prettier-plugin-java'],

@@ -26,6 +26,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -33,9 +34,10 @@ import edu.wpi.first.wpilibj2.command.NotifierCommand;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.Mutable;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.CommandBuilder;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
@@ -44,6 +46,13 @@ import org.team340.robot.util.ReefSelection;
 
 @Logged
 public final class GooseNeck extends GRRSubsystem {
+
+    private static final TunableTable tunables = Tunables.getTable("gooseNeck");
+
+    private static final TunableDouble closeToTolerance = tunables.value("closeToTolerance", 0.08);
+    private static final TunableDouble atPositionTolerance = tunables.value("atPositionTolerance", 0.01);
+    private static final TunableDouble torqueDelay = tunables.value("torqueDelay", 0.2);
+    private static final TunableDouble torqueMax = tunables.value("torqueMax", 12.0);
 
     /**
      * A position for the goose neck. All positions in this enum should be
@@ -60,7 +69,7 @@ public final class GooseNeck extends GRRSubsystem {
         private TunableDouble rotations;
 
         private GoosePosition(double rotations) {
-            this.rotations = Tunable.value("gooseNeck/positions/" + name(), rotations);
+            this.rotations = tunables.value("positions/" + name(), rotations);
         }
 
         private double rotations() {
@@ -69,7 +78,7 @@ public final class GooseNeck extends GRRSubsystem {
 
         public static GoosePosition closeTo(double position) {
             for (GoosePosition option : values()) {
-                if (Math.abs(option.rotations() - position) < CLOSE_TO_TOLERANCE.get()) {
+                if (Math.abs(option.rotations() - position) < closeToTolerance.get()) {
                     return option;
                 }
             }
@@ -90,18 +99,13 @@ public final class GooseNeck extends GRRSubsystem {
         private TunableDouble voltage;
 
         private GooseSpeed(double voltage) {
-            this.voltage = Tunable.value("gooseNeck/speeds/" + name(), voltage);
+            this.voltage = tunables.value("speeds/" + name(), voltage);
         }
 
         private double voltage() {
             return voltage.get();
         }
     }
-
-    private static final TunableDouble CLOSE_TO_TOLERANCE = Tunable.value("gooseNeck/kCloseToTolerance", 0.08);
-    private static final TunableDouble AT_POSITION_TOLERANCE = Tunable.value("gooseNeck/atPositionTolerance", 0.01);
-    private static final TunableDouble TORQUE_DELAY = Tunable.value("gooseNeck/torqueDelay", 0.2);
-    private static final TunableDouble TORQUE_MAX = Tunable.value("gooseNeck/torqueMax", 12.0);
 
     private final TalonFX pivotMotor;
     private final TalonFXS beakMotor;
@@ -210,15 +214,14 @@ public final class GooseNeck extends GRRSubsystem {
 
         beakSensorVoltageControl.UpdateFreqHz = 0.0;
 
-        Tunable.pidController("gooseNeck/pid", pivotMotor);
-        Tunable.motionProfile("gooseNeck/motion", pivotMotor);
-        Tunable.pidController("gooseNeck/torquePID", torquePID);
-
         PhoenixUtil.run("Sync Goose Neck Position", () ->
             pivotMotor.setPosition(
                 MathUtil.inputModulus(candi.getPWM2Position(false).waitForUpdate(1.0).getValueAsDouble(), -0.5, 0.5)
             )
         );
+
+        tunables.add("pivotMotor", pivotMotor);
+        tunables.add("torquePID", torquePID);
 
         // Warm-up enums
         GoosePosition.STOW.rotations();
@@ -234,7 +237,7 @@ public final class GooseNeck extends GRRSubsystem {
 
     @NotLogged
     public boolean hasCoral() {
-        return hasCoral.get();
+        return hasCoral.get() || RobotBase.isSimulation();
     }
 
     @NotLogged
@@ -422,10 +425,10 @@ public final class GooseNeck extends GRRSubsystem {
                 lastTarget.value = target;
 
                 if (allowGoosing.getAsBoolean()) {
-                    boolean atPosition = Math.abs(currentPosition - target) < AT_POSITION_TOLERANCE.get();
+                    boolean atPosition = Math.abs(currentPosition - target) < atPositionTolerance.get();
                     goosing = true;
 
-                    if (timer.hasElapsed(TORQUE_DELAY.get())) {
+                    if (timer.hasElapsed(torqueDelay.get())) {
                         if (atPosition) {
                             pivotMotor.stopMotor();
                         } else {
@@ -433,8 +436,8 @@ public final class GooseNeck extends GRRSubsystem {
                                 torqueControl.withOutput(
                                     MathUtil.clamp(
                                         torquePID.calculate(currentPosition, target),
-                                        -TORQUE_MAX.get(),
-                                        TORQUE_MAX.get()
+                                        -torqueMax.get(),
+                                        torqueMax.get()
                                     )
                                 )
                             );

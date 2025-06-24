@@ -29,7 +29,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged
 public final class Robot extends LoggedRobot {
 
-    public final CommandScheduler scheduler = CommandScheduler.getInstance();
+    private final CommandScheduler scheduler = CommandScheduler.getInstance();
 
     public final Climber climber;
     public final Elevator elevator;
@@ -143,7 +143,7 @@ public final class Robot extends LoggedRobot {
      * Returns the current match time in seconds.
      */
     public double matchTime() {
-        return Math.max(DriverStation.getMatchTime(), 0.0);
+        return Math.max(0.0, DriverStation.getMatchTime());
     }
 
     @NotLogged

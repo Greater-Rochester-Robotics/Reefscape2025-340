@@ -299,7 +299,7 @@ public class SwerveConfig {
     public void verify() {
         var missing = missing();
         if (!missing.isEmpty()) {
-            throw new IllegalArgumentException("SwerveConfig missing values: " + String.join(", ", missing));
+            throw new IllegalStateException("SwerveConfig missing values: " + String.join(", ", missing));
         }
     }
 

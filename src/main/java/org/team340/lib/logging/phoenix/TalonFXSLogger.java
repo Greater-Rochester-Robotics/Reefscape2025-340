@@ -8,11 +8,42 @@ import edu.wpi.first.epilogue.logging.EpilogueBackend;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @CustomLoggerFor(TalonFXS.class)
 public class TalonFXSLogger extends ClassSpecificLogger<TalonFXS> {
 
-    private static final Map<TalonFXS, Consumer<EpilogueBackend>> cache = new HashMap<>();
+    private static final Map<TalonFXS, Consumer<EpilogueBackend>> registry = new HashMap<>();
+    private static final Function<TalonFXS, Consumer<EpilogueBackend>> mappingFunction = talonFXS -> {
+        var closedLoopReference = talonFXS.getClosedLoopReference(false);
+        var deviceTemp = talonFXS.getDeviceTemp(false);
+        var motorVoltage = talonFXS.getMotorVoltage(false);
+        var position = talonFXS.getPosition(false);
+        var statorCurrent = talonFXS.getStatorCurrent(false);
+        var supplyCurrent = talonFXS.getSupplyCurrent(false);
+        var velocity = talonFXS.getVelocity(false);
+
+        BaseStatusSignal[] signals = {
+            closedLoopReference,
+            deviceTemp,
+            motorVoltage,
+            position,
+            statorCurrent,
+            supplyCurrent,
+            velocity
+        };
+
+        return backend -> {
+            BaseStatusSignal.refreshAll(signals);
+            backend.log("closedLoopReference", closedLoopReference.getValueAsDouble());
+            backend.log("deviceTemp", deviceTemp.getValueAsDouble());
+            backend.log("motorVoltage", motorVoltage.getValueAsDouble());
+            backend.log("position", position.getValueAsDouble());
+            backend.log("statorCurrent", statorCurrent.getValueAsDouble());
+            backend.log("supplyCurrent", supplyCurrent.getValueAsDouble());
+            backend.log("velocity", velocity.getValueAsDouble());
+        };
+    };
 
     public TalonFXSLogger() {
         super(TalonFXS.class);
@@ -20,37 +51,6 @@ public class TalonFXSLogger extends ClassSpecificLogger<TalonFXS> {
 
     @Override
     public void update(EpilogueBackend backend, TalonFXS talonFXS) {
-        cache
-            .computeIfAbsent(talonFXS, key -> {
-                var closedLoopReference = talonFXS.getClosedLoopReference(false);
-                var deviceTemp = talonFXS.getDeviceTemp(false);
-                var motorVoltage = talonFXS.getMotorVoltage(false);
-                var position = talonFXS.getPosition(false);
-                var statorCurrent = talonFXS.getStatorCurrent(false);
-                var supplyCurrent = talonFXS.getSupplyCurrent(false);
-                var velocity = talonFXS.getVelocity(false);
-
-                BaseStatusSignal[] signals = {
-                    closedLoopReference,
-                    deviceTemp,
-                    motorVoltage,
-                    position,
-                    statorCurrent,
-                    supplyCurrent,
-                    velocity
-                };
-
-                return b -> {
-                    BaseStatusSignal.refreshAll(signals);
-                    b.log("closedLoopReference", closedLoopReference.getValueAsDouble());
-                    b.log("deviceTemp", deviceTemp.getValueAsDouble());
-                    b.log("motorVoltage", motorVoltage.getValueAsDouble());
-                    b.log("position", position.getValueAsDouble());
-                    b.log("statorCurrent", statorCurrent.getValueAsDouble());
-                    b.log("supplyCurrent", supplyCurrent.getValueAsDouble());
-                    b.log("velocity", velocity.getValueAsDouble());
-                };
-            })
-            .accept(backend);
+        registry.computeIfAbsent(talonFXS, mappingFunction).accept(backend);
     }
 }

@@ -10,9 +10,10 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
-import org.team340.lib.util.Math2;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableInteger;
+import org.team340.lib.math.Math2;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableInteger;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants.RioIO;
 import org.team340.robot.util.ReefSelection;
@@ -22,6 +23,8 @@ public final class Lights {
 
     private static final int LENGTH = 28;
     private static final int COUNT = 3;
+
+    private static final TunableTable tunables = Tunables.getTable("lights");
 
     private static enum Color {
         LEVEL(255, 255, 255),
@@ -37,9 +40,9 @@ public final class Lights {
         private final TunableInteger b;
 
         private Color(int r, int g, int b) {
-            this.r = Tunable.value("lights/colors/" + name() + "/r", r);
-            this.g = Tunable.value("lights/colors/" + name() + "/g", g);
-            this.b = Tunable.value("lights/colors/" + name() + "/b", b);
+            this.r = tunables.value(name() + "/r", r);
+            this.g = tunables.value(name() + "/g", g);
+            this.b = tunables.value(name() + "/b", b);
         }
 
         private int r() {

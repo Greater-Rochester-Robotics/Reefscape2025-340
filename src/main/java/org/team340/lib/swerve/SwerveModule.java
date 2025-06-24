@@ -10,12 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.team340.lib.math.Math2;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.config.SwerveModuleConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders.SwerveEncoder;
 import org.team340.lib.swerve.hardware.SwerveEncoders.SwerveEncoder.HookStatus;
 import org.team340.lib.swerve.hardware.SwerveMotors.SwerveMotor;
-import org.team340.lib.util.Math2;
 
 /**
  * An encapsulation of all hardware for a swerve module.

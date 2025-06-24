@@ -2,6 +2,7 @@ package org.team340.lib.logging;
 
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.EpilogueConfiguration;
+import edu.wpi.first.epilogue.Logged.Importance;
 import edu.wpi.first.epilogue.logging.ClassSpecificLogger;
 import edu.wpi.first.epilogue.logging.EpilogueBackend;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -48,6 +49,14 @@ public final class EpilogueProxy {
      */
     public static EpilogueBackend getRootBackend() {
         return getConfig().backend.getNested(getConfig().root);
+    }
+
+    /**
+     * Checks if data associated with a given importance level should be logged.
+     * @param importance The data's importance.
+     */
+    public static boolean shouldLog(Importance importance) {
+        return Epilogue.shouldLog(importance);
     }
 
     /**

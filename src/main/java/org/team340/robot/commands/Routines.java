@@ -2,17 +2,16 @@ package org.team340.robot.commands;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableBoolean;
 import org.team340.lib.util.Mutable;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableBoolean;
 import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Climber;
 import org.team340.robot.subsystems.Elevator;
@@ -28,10 +27,11 @@ import org.team340.robot.util.ReefSelection;
  * or parallel command groups, that require multiple subsystems.
  */
 @SuppressWarnings("unused")
-@Logged(strategy = Strategy.OPT_IN)
 public final class Routines {
 
-    private static final TunableBoolean AUTO_DRIVE = Tunable.value("routines/autoDrive", true);
+    private static final TunableTable tunables = Tunables.getTable("routines");
+
+    private static final TunableBoolean autoDrive = tunables.value("autoDrive", true);
 
     private final Robot robot;
 
@@ -193,7 +193,7 @@ public final class Routines {
                     swerve.apfDrive(selection::isLeft, robot::readyToScore, selection::isL4).until(gooseNeck::noCoral),
                     swerve.drive(robot::driverX, robot::driverY, robot::driverAngular)
                 ),
-                () -> !AUTO_DRIVE.get() || gooseNeck.noCoral()
+                () -> !autoDrive.get() || gooseNeck.noCoral()
             )
         ).withName("Routines.assistedScore()");
     }

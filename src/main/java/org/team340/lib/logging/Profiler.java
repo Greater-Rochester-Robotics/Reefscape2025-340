@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * followed by a closing {@link Profiler#end()}. Additionally, it is expected
  * that a single {@link Profiler#start(String)}/{@link Profiler#end()} pair is
  * found at the highest level of the robot's code, with no other "root" pairs
- * (this is already done if utilizing {@link LoggedRobot}. If either of these
+ * (this is already done if utilizing {@link LoggedRobot}). If either of these
  * limitations are left unsatisfied, an error will be printed to the Driver Station
  * console. Profiling across threads is also not supported.
  */
@@ -37,7 +37,7 @@ public final class Profiler {
         throw new UnsupportedOperationException("This is a utility class!");
     }
 
-    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("Profiling");
+    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Profiling");
 
     private static final Map<String, CallData> callGraph = new HashMap<>();
     private static final List<String> stack = new ArrayList<>();

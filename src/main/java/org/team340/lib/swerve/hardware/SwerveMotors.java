@@ -331,8 +331,8 @@ public final class SwerveMotors {
         return (config, isMoveMotor) -> {
             TalonFX talonFX = new TalonFX(id, config.phoenixCanBus);
 
-            StatusSignal<Angle> position = talonFX.getPosition().clone();
-            StatusSignal<AngularVelocity> velocity = talonFX.getVelocity().clone();
+            StatusSignal<Angle> position = talonFX.getPosition(false).clone();
+            StatusSignal<AngularVelocity> velocity = talonFX.getVelocity(false).clone();
 
             boolean enableFOC = isMoveMotor ? config.phoenixMoveFOC : config.phoenixTurnFOC;
 

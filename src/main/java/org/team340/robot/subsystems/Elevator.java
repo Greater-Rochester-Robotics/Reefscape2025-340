@@ -20,9 +20,10 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.Mutable;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.LowerCAN;
@@ -30,6 +31,12 @@ import org.team340.robot.util.ReefSelection;
 
 @Logged
 public final class Elevator extends GRRSubsystem {
+
+    private static final TunableTable tunables = Tunables.getTable("elevator");
+
+    private static final TunableDouble closestTolerance = tunables.value("closestTolerance", 0.35);
+    private static final TunableDouble atPositionTolerance = tunables.value("atPositionTolerance", 0.5);
+    private static final TunableDouble homingVolts = tunables.value("homingVolts", -1.0);
 
     public static enum ElevatorPosition {
         DOWN(0.18),
@@ -58,7 +65,7 @@ public final class Elevator extends GRRSubsystem {
         }
 
         private ElevatorPosition(double rotations, Type type) {
-            this.rotations = Tunable.value("elevator/positions/" + name(), rotations);
+            this.rotations = tunables.value("positions/" + name(), rotations);
             this.type = type;
         }
 
@@ -71,7 +78,7 @@ public final class Elevator extends GRRSubsystem {
             double min = Double.MAX_VALUE;
             for (ElevatorPosition option : values()) {
                 double distance = Math.abs(option.rotations() - position);
-                if (distance < CLOSEST_TOLERANCE.get() && distance <= min) {
+                if (distance < closestTolerance.get() && distance <= min) {
                     closest = option;
                     min = distance;
                 }
@@ -80,10 +87,6 @@ public final class Elevator extends GRRSubsystem {
             return closest;
         }
     }
-
-    private static final TunableDouble CLOSEST_TOLERANCE = Tunable.value("elevator/closestTolerance", 0.35);
-    private static final TunableDouble AT_POSITION_TOLERANCE = Tunable.value("elevator/atPositionTolerance", 0.5);
-    private static final TunableDouble HOMING_VOLTS = Tunable.value("elevator/homingVoltage", -1.0);
 
     private final TalonFX leadMotor;
     private final TalonFX followMotor;
@@ -105,7 +108,6 @@ public final class Elevator extends GRRSubsystem {
     private boolean homed = false;
 
     public Elevator() {
-        // MOTOR SETUP
         leadMotor = new TalonFX(LowerCAN.ELEVATOR_LEAD, LowerCAN.LOWER_CAN);
         followMotor = new TalonFX(LowerCAN.ELEVATOR_FOLLOW, LowerCAN.LOWER_CAN);
         candi = new CANdi(LowerCAN.ELEVATOR_CANDI, LowerCAN.LOWER_CAN);
@@ -142,7 +144,8 @@ public final class Elevator extends GRRSubsystem {
         PhoenixUtil.run("Clear Elevator Lead Sticky Faults", () -> leadMotor.clearStickyFaults());
         PhoenixUtil.run("Clear Elevator Follow Sticky Faults", () -> followMotor.clearStickyFaults());
         PhoenixUtil.run("Clear Elevator CANdi Sticky Faults", () -> candi.clearStickyFaults());
-        PhoenixUtil.run("Apply Elevator Lead TalonFXConfiguration", () -> leadMotor.getConfigurator().apply(motorConfig)
+        PhoenixUtil.run("Apply Elevator Lead TalonFXConfiguration", () ->
+            leadMotor.getConfigurator().apply(motorConfig)
         );
         PhoenixUtil.run("Apply Elevator Follow TalonFXConfiguration", () ->
             followMotor.getConfigurator().apply(motorConfig)
@@ -184,10 +187,8 @@ public final class Elevator extends GRRSubsystem {
 
         PhoenixUtil.run("Set Elevator Follow Motor Control", () -> followMotor.setControl(followControl));
 
-        Tunable.pidController("elevator/pid", leadMotor);
-        Tunable.pidController("elevator/pid", followMotor);
-        Tunable.motionProfile("elevator/motion", leadMotor);
-        Tunable.motionProfile("elevator/motion", followMotor);
+        tunables.add("motor", leadMotor);
+        tunables.add("motor", followMotor);
     }
 
     @Override
@@ -213,7 +214,7 @@ public final class Elevator extends GRRSubsystem {
     }
 
     public boolean safeForIntake() {
-        return getPosition() <= ElevatorPosition.INTAKE.rotations() + CLOSEST_TOLERANCE.get();
+        return getPosition() <= ElevatorPosition.INTAKE.rotations() + closestTolerance.get();
     }
 
     /**
@@ -279,7 +280,7 @@ public final class Elevator extends GRRSubsystem {
             .onInitialize(() -> holdPosition.value = -1.0)
             .onExecute(() -> {
                 if (!homed) {
-                    leadMotor.setControl(voltageControl.withOutput(HOMING_VOLTS.get()));
+                    leadMotor.setControl(voltageControl.withOutput(homingVolts.get()));
                     homed = limitSwitch.getValue();
                     return;
                 }
@@ -287,7 +288,7 @@ public final class Elevator extends GRRSubsystem {
                 ElevatorPosition targetPos = position.get();
                 double target = targetPos.rotations();
                 double currentPosition = getPosition();
-                atPosition = Math.abs(currentPosition - target) < AT_POSITION_TOLERANCE.get();
+                atPosition = Math.abs(currentPosition - target) < atPositionTolerance.get();
                 scoring = !targetPos.type.equals(ElevatorPosition.Type.OTHER);
                 dunking = targetPos.type.equals(ElevatorPosition.Type.DUNK);
 

@@ -17,8 +17,9 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.BooleanSupplier;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableDouble;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RioCAN;
@@ -26,11 +27,13 @@ import org.team340.robot.Constants.RioCAN;
 @Logged
 public final class Intake extends GRRSubsystem {
 
-    private static final TunableDouble INTAKE_VOLTS = Tunable.value("intake/intakeVoltage", 6.0);
-    private static final TunableDouble BARF_VOLTS = Tunable.value("intake/barfVoltage", 7.0);
-    private static final TunableDouble SWALLOW_VOLTS = Tunable.value("intake/swallowVoltage", -6.0);
-    private static final TunableDouble CURRENT_THRESHOLD = Tunable.value("intake/currentThreshold", 30.0);
-    private static final TunableDouble UNJAM_TIME = Tunable.value("intake/unjamTime", 0.2);
+    private static final TunableTable tunables = Tunables.getTable("intake");
+
+    private static final TunableDouble intakeVolts = tunables.value("intakeVolts", 6.0);
+    private static final TunableDouble barfVolts = tunables.value("barfVolts", 7.0);
+    private static final TunableDouble swallowVolts = tunables.value("swallowVolts", -6.0);
+    private static final TunableDouble currentThreshold = tunables.value("currentThreshold", 30.0);
+    private static final TunableDouble unjamTime = tunables.value("unjamTime", 0.2);
 
     private final TalonFX motor;
     private final CANrange canRange;
@@ -115,14 +118,14 @@ public final class Intake extends GRRSubsystem {
                 unjamTimer.reset();
             })
             .onExecute(() -> {
-                if (debouncer.calculate(current.getValueAsDouble() > CURRENT_THRESHOLD.get())) {
+                if (debouncer.calculate(current.getValueAsDouble() > currentThreshold.get())) {
                     unjamTimer.start();
                 }
 
-                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(UNJAM_TIME.get())) || swallow.getAsBoolean()) {
-                    motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.get()));
+                if ((unjamTimer.isRunning() && !unjamTimer.hasElapsed(unjamTime.get())) || swallow.getAsBoolean()) {
+                    motor.setControl(voltageControl.withOutput(swallowVolts.get()));
                 } else {
-                    motor.setControl(voltageControl.withOutput(INTAKE_VOLTS.get()));
+                    motor.setControl(voltageControl.withOutput(intakeVolts.get()));
                     unjamTimer.stop();
                     unjamTimer.reset();
                 }
@@ -140,7 +143,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command barf() {
         return commandBuilder("Intake.barf()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(BARF_VOLTS.get())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(barfVolts.get())))
             .onEnd(motor::stopMotor);
     }
 
@@ -149,7 +152,7 @@ public final class Intake extends GRRSubsystem {
      */
     public Command swallow() {
         return commandBuilder("Intake.swallow()")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(SWALLOW_VOLTS.get())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(swallowVolts.get())))
             .onEnd(motor::stopMotor);
     }
 }

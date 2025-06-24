@@ -9,8 +9,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import java.util.function.Consumer;
+import org.team340.lib.tunable.Tunables;
 import org.team340.lib.util.DisableWatchdog;
-import org.team340.lib.util.Tunable;
 
 /**
  * LoggedRobot implements the IterativeRobotBase robot program framework,
@@ -88,7 +88,7 @@ public class LoggedRobot extends IterativeRobotBase {
             Profiler.start("robot");
             Profiler.run("loopFunction", () -> loopFunc());
             Profiler.run("epilogue", () -> logger.accept(EpilogueProxy.getRootBackend()));
-            Profiler.run("tunables", Tunable::update);
+            Profiler.run("tunables", Tunables::update);
             Profiler.end();
         }
     }
@@ -102,6 +102,7 @@ public class LoggedRobot extends IterativeRobotBase {
     public void close() {
         NotifierJNI.stopNotifier(notifier);
         NotifierJNI.cleanNotifier(notifier);
+        super.close();
     }
 
     @Override

@@ -1,17 +1,15 @@
 package org.team340.lib.util.command;
 
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringArrayPublisher;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StringSubscriber;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +22,6 @@ import java.util.Map;
  * instance, and will automatically schedule the selected command at the
  * beginning of autonomous.
  */
-@Logged(strategy = Strategy.OPT_IN)
 public final class AutoChooser {
 
     private static final String DEFAULT = "Do Nothing";
@@ -39,12 +36,13 @@ public final class AutoChooser {
     private String activeName = DEFAULT;
     private Command activeCommand = Commands.none();
     private boolean newSelection = false;
+    private boolean running = false;
 
     /**
      * Creates an auto chooser.
      */
     public AutoChooser() {
-        this("Autos", true);
+        this("/Autos", true);
     }
 
     /**
@@ -71,7 +69,6 @@ public final class AutoChooser {
         activePub.set(activeName);
 
         CommandScheduler.getInstance().getDefaultButtonLoop().bind(this::update);
-        RobotModeTriggers.autonomous().whileTrue(Commands.deferredProxy(() -> activeCommand));
     }
 
     /**
@@ -90,6 +87,14 @@ public final class AutoChooser {
     }
 
     /**
+     * Returns a {@link Trigger} that is {@code true}
+     * when the default option ("Do Nothing") is selected.
+     */
+    public Trigger defaultSelected() {
+        return new Trigger(() -> activeName.equals(DEFAULT));
+    }
+
+    /**
      * Add an option to the chooser.
      * @param name The name of the option. Must be unique.
      * @param command The option's command.
@@ -104,18 +109,28 @@ public final class AutoChooser {
     }
 
     /**
-     * Updates the auto chooser. You do not need to call this method
-     * when using {@link AutoChooser#bind(CommandScheduler)}.
+     * Updates the auto chooser.
      */
     private void update() {
-        String selected = selectedSub.get();
-        if (!selected.equals(activeName)) {
-            activeName = options.containsKey(selected) ? selected : DEFAULT;
-            activeCommand = options.get(activeName);
-            activePub.set(activeName);
-            newSelection = true;
-        } else {
-            newSelection = false;
+        boolean autoEnabled = DriverStation.isAutonomousEnabled();
+        if (!running && autoEnabled) {
+            activeCommand.schedule();
+            running = true;
+        } else if (running && !autoEnabled) {
+            activeCommand.cancel();
+            running = false;
+        }
+
+        if (!running) {
+            String selected = selectedSub.get();
+            if (!selected.equals(activeName)) {
+                activeName = options.containsKey(selected) ? selected : DEFAULT;
+                activeCommand = options.get(activeName);
+                activePub.set(activeName);
+                newSelection = true;
+            } else {
+                newSelection = false;
+            }
         }
     }
 }

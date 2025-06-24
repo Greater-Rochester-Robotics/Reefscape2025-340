@@ -3,6 +3,7 @@ package org.team340.lib.swerve.hardware;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.reduxrobotics.canand.CanandEventLoop;
 import com.reduxrobotics.sensors.canandgyro.Canandgyro;
 import com.reduxrobotics.sensors.canandgyro.CanandgyroSettings;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -144,6 +145,10 @@ public final class SwerveIMUs {
             canandgyro.clearStickyFaults();
             ReduxUtil.applySettings(canandgyro, settings);
 
+            if (RobotBase.isSimulation()) {
+                CanandEventLoop.getInstance().setDevicePresenceWarnings(canandgyro, false);
+            }
+
             return new SwerveIMU() {
                 @Override
                 public Rotation2d getYaw() {
@@ -193,9 +198,9 @@ public final class SwerveIMUs {
         return config -> {
             Pigeon2 pigeon2 = new Pigeon2(id, config.phoenixCanBus);
 
-            StatusSignal<Angle> yaw = pigeon2.getYaw().clone();
-            StatusSignal<Angle> pitch = pigeon2.getPitch();
-            StatusSignal<Angle> roll = pigeon2.getRoll();
+            StatusSignal<Angle> yaw = pigeon2.getYaw(false).clone();
+            StatusSignal<Angle> pitch = pigeon2.getPitch(false);
+            StatusSignal<Angle> roll = pigeon2.getRoll(false);
             StatusSignal<AngularVelocity> yawVelocity = pigeon2.getAngularVelocityZWorld().clone();
             StatusSignal<AngularVelocity> pitchVelocity = pigeon2.getAngularVelocityXWorld();
             StatusSignal<AngularVelocity> rollVelocity = pigeon2.getAngularVelocityYWorld();

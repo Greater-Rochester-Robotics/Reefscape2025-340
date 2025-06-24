@@ -1,7 +1,5 @@
 package org.team340.lib.swerve;
 
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -15,13 +13,11 @@ import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
 /**
  * Represents the state of the robot's drivetrain.
  */
-@Logged(strategy = Strategy.OPT_IN)
 public final class SwerveState {
 
     /**
      * Contains information about swerve module states and positions.
      */
-    @Logged(strategy = Strategy.OPT_IN)
     public static final class Modules {
 
         /** The current measured module positions. */
@@ -50,7 +46,6 @@ public final class SwerveState {
     /**
      * Represents the state of the odometry thread.
      */
-    @Logged(strategy = Strategy.OPT_IN)
     public static final class OdometryThread {
 
         /** If Phoenix timesync is being utilized. */

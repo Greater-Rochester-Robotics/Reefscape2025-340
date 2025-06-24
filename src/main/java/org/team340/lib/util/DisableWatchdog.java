@@ -34,9 +34,11 @@ public final class DisableWatchdog {
 
             field.setAccessible(true);
             Watchdog watchdog = (Watchdog) field.get(obj);
-            watchdog.disable();
 
-            watchdog.setTimeout(1e5);
+            // Careful when changing this value. At runtime, any value
+            // over (1L << 31L) / 1e6 - Timer.getFPGATimestamp() is subject
+            // to integer overflow in the HAL and may crash your RIO :)
+            watchdog.setTimeout(60.0);
         } catch (Exception e) {
             DriverStation.reportWarning(
                 "Unable to disable watchdog: Attempted with accessor \"" +

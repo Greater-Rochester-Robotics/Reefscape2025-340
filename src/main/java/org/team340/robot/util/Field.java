@@ -1,75 +1,82 @@
 package org.team340.robot.util;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import org.team340.lib.util.FieldFlip;
-import org.team340.lib.util.FieldInfo;
-import org.team340.lib.util.PAPFController.CircleObstacle;
-import org.team340.lib.util.PAPFController.LateralObstacle;
-import org.team340.lib.util.PAPFController.LineObstacle;
-import org.team340.lib.util.PAPFController.LongitudinalObstacle;
-import org.team340.lib.util.PAPFController.Obstacle;
+import org.team340.lib.math.FieldInfo;
+import org.team340.lib.math.PAPFController.CircleObstacle;
+import org.team340.lib.math.PAPFController.LateralObstacle;
+import org.team340.lib.math.PAPFController.LineObstacle;
+import org.team340.lib.math.PAPFController.LongitudinalObstacle;
+import org.team340.lib.math.PAPFController.Obstacle;
+import org.team340.lib.math.geometry.ExtPose;
+import org.team340.lib.math.geometry.ExtTranslation;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
 
 /**
  * Field locations and utilities.
  */
 public final class Field {
 
-    public static final double PIPE_Y = 0.164;
-    public static final double REEF_WALL_DIST = 0.781;
+    public static final double pipeY = 0.164;
+    public static final double reefWallDist = 0.781;
 
-    public static final Translation2d REEF_BLUE = new Translation2d(4.489, FieldInfo.width() / 2.0);
-    public static final Translation2d REEF_RED = FieldFlip.overLength(REEF_BLUE);
+    public static final ExtTranslation reef = new ExtTranslation(4.489, FieldInfo.width() / 2.0);
 
-    public static final Pose2d STATION_STRAIGHT = new Pose2d(1.54, 0.71, Rotation2d.fromDegrees(54.0));
-    public static final Pose2d STATION_FORWARDS = new Pose2d(1.54, 0.71, Rotation2d.fromDegrees(-36.0));
-    public static final Pose2d STATION_BACKWARDS = new Pose2d(1.29, 0.89, Rotation2d.fromDegrees(144.0));
+    public static final ExtPose loadStraight = new ExtPose(1.54, 0.71, Rotation2d.fromDegrees(54.0));
+    public static final ExtPose loadForwards = new ExtPose(1.54, 0.71, Rotation2d.fromDegrees(-36.0));
+    public static final ExtPose loadBackwards = new ExtPose(1.29, 0.89, Rotation2d.fromDegrees(144.0));
 
-    public static final Pose2d AVOID_LEFT = new Pose2d(6.45, 0.9, Rotation2d.kPi);
-    public static final Pose2d AVOID_RIGHT = FieldFlip.overWidth(AVOID_LEFT);
+    public static final ExtPose avoid = new ExtPose(6.45, 0.9, Rotation2d.k180deg);
 
-    private static final Translation2d CORAL_START = new Translation2d(0.0, 1.125);
-    private static final Translation2d CORAL_END = new Translation2d(1.6, 0.0);
+    private static final ExtTranslation coralStart = new ExtTranslation(0.0, 1.125);
+    private static final ExtTranslation coralEnd = new ExtTranslation(1.6, 0.0);
 
-    public static final Obstacle[] OBSTACLES = {
+    public static final Obstacle[] obstacles = {
         // Walls
-        new LongitudinalObstacle(0.0, 0.1, true),
-        new LongitudinalObstacle(FieldInfo.length(), 0.1, true),
-        new LateralObstacle(0.0, 0.1, true),
-        new LateralObstacle(FieldInfo.width(), 0.1, true),
+        new LongitudinalObstacle(0.0, 1.0, 1.0),
+        new LongitudinalObstacle(FieldInfo.length(), 1.0, 1.0),
+        new LateralObstacle(0.0, 1.0, 1.0),
+        new LateralObstacle(FieldInfo.width(), 1.0, 1.0),
         // Coral stations
-        new LineObstacle(CORAL_START, CORAL_END, 0.1, true),
-        new LineObstacle(FieldFlip.overWidth(CORAL_START), FieldFlip.overWidth(CORAL_END), 0.1, true),
-        new LineObstacle(FieldFlip.overLength(CORAL_START), FieldFlip.overLength(CORAL_END), 0.1, true),
-        new LineObstacle(FieldFlip.overDiagonal(CORAL_START), FieldFlip.overDiagonal(CORAL_END), 0.1, true),
+        new LineObstacle(coralStart.getBlue(), coralEnd.getBlue(), 1.0, 1.0),
+        new LineObstacle(coralStart.getBlue(true), coralEnd.getBlue(true), 1.0, 1.0),
+        new LineObstacle(coralStart.getRed(), coralEnd.getRed(), 1.0, 1.0),
+        new LineObstacle(coralStart.getRed(true), coralEnd.getRed(true), 1.0, 1.0),
         // Reef
-        new CircleObstacle(REEF_BLUE, 0.83, 1.0),
-        new CircleObstacle(REEF_RED, 0.83, 1.0)
+        new CircleObstacle(reef.getBlue(), 0.83, 4.0, 1.5),
+        new CircleObstacle(reef.getRed(), 0.83, 4.0, 1.5)
     };
 
     public static enum ReefLocation {
-        A(Rotation2d.fromDegrees(0.0), true, false),
-        B(Rotation2d.fromDegrees(0.0), false, false),
-        C(Rotation2d.fromDegrees(60.0), true, false),
-        D(Rotation2d.fromDegrees(60.0), false, false),
-        E(Rotation2d.fromDegrees(120.0), true, true),
-        F(Rotation2d.fromDegrees(120.0), false, true),
-        G(Rotation2d.fromDegrees(180.0), true, true),
-        H(Rotation2d.fromDegrees(180.0), false, true),
-        I(Rotation2d.fromDegrees(-120.0), true, true),
-        J(Rotation2d.fromDegrees(-120.0), false, true),
-        K(Rotation2d.fromDegrees(-60.0), true, false),
-        L(Rotation2d.fromDegrees(-60.0), false, false);
+        A(0.0, true, false),
+        B(0.0, false, false),
+        C(60.0, true, false),
+        D(60.0, false, false),
+        E(120.0, true, true),
+        F(120.0, false, true),
+        G(180.0, true, true),
+        H(180.0, false, true),
+        I(-120.0, true, true),
+        J(-120.0, false, true),
+        K(-60.0, true, false),
+        L(-60.0, false, false);
 
         public final Rotation2d side;
         public final boolean left;
         public final boolean back;
 
-        private ReefLocation(Rotation2d side, boolean left, boolean back) {
-            this.side = side;
+        private ReefLocation(double degrees, boolean left, boolean back) {
+            this.side = Rotation2d.fromDegrees(degrees);
             this.left = left;
             this.back = back;
         }
+    }
+
+    static {
+        TunableTable tunables = Tunables.getTable("field");
+        tunables.add("loadStraight", loadStraight);
+        tunables.add("loadForwards", loadForwards);
+        tunables.add("loadBackwards", loadBackwards);
+        tunables.add("avoid", avoid);
     }
 }

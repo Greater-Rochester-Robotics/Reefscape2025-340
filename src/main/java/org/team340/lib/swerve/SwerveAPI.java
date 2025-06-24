@@ -3,8 +3,6 @@ package org.team340.lib.swerve;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -28,16 +26,18 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import org.team340.lib.math.Math2;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU;
-import org.team340.lib.util.Math2;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables.Tunable;
 import org.team340.lib.util.Sleep;
 import org.team340.robot.Robot;
 
 /**
  * An implementation of a swerve drivetrain, with support for various hardware.
  */
-public class SwerveAPI implements AutoCloseable {
+public class SwerveAPI implements Tunable, AutoCloseable {
 
     public final SwerveState state;
     public final SwerveConfig config;
@@ -271,7 +271,7 @@ public class SwerveAPI implements AutoCloseable {
         y *= k;
         angular = MathUtil.applyDeadband(angular, config.driverAngularVelDeadband);
 
-        double xyMult = config.driverVel * Math.pow(Math.hypot(x, y), config.driverVelExp - 1.0);
+        double xyMult = config.driverVel * Math.pow(x * x + y * y, 0.5 * (config.driverVelExp - 1.0));
         double angularVel =
             config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
 
@@ -423,17 +423,91 @@ public class SwerveAPI implements AutoCloseable {
      * @param angle The robot-relative angle to apply to the turn motors.
      */
     public void applyVoltage(double voltage, Rotation2d angle) {
-        for (int i = 0; i < moduleCount; i++) {
-            modules[i].applyVoltage(voltage, angle);
+        for (var module : modules) {
+            module.applyVoltage(voltage, angle);
         }
     }
 
     /**
-     * Enables publishing tunables for adjustment of the API's constants.
-     * @param name The parent name for the tunables in NetworkTables.
+     * Re-applies PID and FF gains to motors from the swerve config.
+     * Used for setting new gains after the config has been mutated.
+     * @param moveMotors {@code true} reapplies to all move motors, {@code false} reapplies to all turn motors.
      */
-    public void enableTunables(String name) {
-        SwerveTunables.initialize(name, this);
+    private void reapplyGains(boolean moveMotors) {
+        for (var module : modules) {
+            if (moveMotors) {
+                module.moveMotor.reapplyGains();
+            } else {
+                module.turnMotor.reapplyGains();
+            }
+        }
+    }
+
+    @Override
+    public void initTunable(TunableTable table) {
+        // setTimings()
+        TunableTable timings = table.getSubTable("timings");
+        timings.value("discretization", config.discretizationPeriod, v -> config.discretizationPeriod = v);
+
+        // setMovePID()
+        TunableTable movePID = table.getSubTable("movePID");
+        movePID.value("kP", config.movePID[0], v -> {
+            config.movePID[0] = v;
+            reapplyGains(true);
+        });
+        movePID.value("kI", config.movePID[1], v -> {
+            config.movePID[1] = v;
+            reapplyGains(true);
+        });
+        movePID.value("kD", config.movePID[2], v -> {
+            config.movePID[2] = v;
+            reapplyGains(true);
+        });
+
+        // setMoveFF()
+        TunableTable moveFF = table.getSubTable("moveFF");
+        moveFF.value("kS", config.moveFF[0], v -> {
+            config.moveFF[0] = v;
+            reapplyGains(true);
+        });
+        moveFF.value("kV", config.moveFF[1], v -> {
+            config.moveFF[1] = v;
+            reapplyGains(true);
+        });
+
+        // setTurnPID()
+        TunableTable turnPID = table.getSubTable("turnPID");
+        turnPID.value("kP", config.turnPID[0], v -> {
+            config.turnPID[0] = v;
+            reapplyGains(false);
+        });
+        turnPID.value("kI", config.turnPID[1], v -> {
+            config.turnPID[1] = v;
+            reapplyGains(false);
+        });
+        turnPID.value("kD", config.turnPID[2], v -> {
+            config.turnPID[2] = v;
+            reapplyGains(false);
+        });
+
+        // setLimits()
+        TunableTable limits = table.getSubTable("limits");
+        limits.value("velocity", config.velocity, v -> config.velocity = v);
+        limits.value("velDeadband", config.velDeadband, v -> config.velDeadband = v);
+        limits.value("slipAccel", config.slipAccel, v -> config.slipAccel = v);
+        limits.value("torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
+        limits.value("angularAccel", config.angularAccel, v -> config.angularAccel = v);
+
+        // setDriverProfile()
+        TunableTable driverProfile = table.getSubTable("driverProfile");
+        driverProfile.value("vel", config.driverVel, v -> config.driverVel = v);
+        driverProfile.value("velExp", config.driverVelExp, v -> config.driverVelExp = v);
+        driverProfile.value("velDeadband", config.driverVelDeadband, v -> config.driverVelDeadband = v);
+        driverProfile.value("angularVel", config.driverAngularVel, v -> config.driverAngularVel = v);
+        driverProfile.value("angularVelExp", config.driverAngularVelExp, v -> config.driverAngularVelExp = v);
+        driverProfile.value("angularVelDeadband", config.driverAngularVelDeadband, v ->
+            config.driverAngularVelDeadband = v
+        );
     }
 
     @Override
@@ -449,7 +523,6 @@ public class SwerveAPI implements AutoCloseable {
      * Represents a measurement from vision to apply to the pose estimator.
      * @see {@link PoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
      */
-    @Logged(strategy = Strategy.OPT_IN)
     public static final record VisionMeasurement(Pose2d pose, double timestamp, Matrix<N3, N1> stdDevs)
         implements Comparable<VisionMeasurement> {
         /**

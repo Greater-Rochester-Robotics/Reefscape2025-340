@@ -1,9 +1,8 @@
-package org.team340.lib.util;
+package org.team340.lib.math;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import java.util.function.Supplier;
 
 /**
  * Utility class for flipping field locations across lines of symmetry.
@@ -108,28 +107,5 @@ public final class FieldFlip {
      */
     public static Pose2d overDiagonal(Pose2d pose) {
         return new Pose2d(overDiagonal(pose.getTranslation()), overDiagonal(pose.getRotation()));
-    }
-
-    /**
-     * Creates a supplier that returns the provided blue origin relative
-     * {@link Pose2d}, optionally flipped over the length of the field
-     * (i.e. hamburger style) if the robot is on the red alliance.
-     * @param pose The blue origin relative pose.
-     */
-    public static Supplier<Pose2d> allianceLength(Pose2d pose) {
-        Pose2d flipped = overLength(pose);
-        return () -> Alliance.isBlue() ? pose : flipped;
-    }
-
-    /**
-     * Creates a supplier that returns the provided blue origin relative
-     * {@link Pose2d}, optionally flipped over the field's diagonal
-     * (i.e. rotated 180deg around the field's center) if the robot
-     * is on the red alliance.
-     * @param pose The blue origin relative pose.
-     */
-    public static Supplier<Pose2d> allianceDiagonal(Pose2d pose) {
-        Pose2d flipped = overDiagonal(pose);
-        return () -> Alliance.isBlue() ? pose : flipped;
     }
 }

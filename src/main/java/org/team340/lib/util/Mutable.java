@@ -1,7 +1,5 @@
 package org.team340.lib.util;
 
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.Logged.Strategy;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -18,7 +16,6 @@ import java.util.function.Supplier;
  * to provide stateful behavior does not suffer from aforementioned race
  * conditions as commands are invoked synchronously.
  */
-@Logged(strategy = Strategy.OPT_IN)
 public class Mutable<T> implements Supplier<T>, Consumer<T> {
 
     public T value;

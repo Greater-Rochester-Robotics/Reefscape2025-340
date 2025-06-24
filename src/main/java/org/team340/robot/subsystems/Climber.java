@@ -13,14 +13,20 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import org.team340.lib.util.Tunable;
-import org.team340.lib.util.Tunable.TunableDouble;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.Constants.RioCAN;
 
 @Logged
 public final class Climber extends GRRSubsystem {
+
+    private static final TunableTable tunables = Tunables.getTable("climber");
+
+    private static final TunableDouble volts = tunables.value("volts", 12.0);
+    private static final TunableDouble overrideVolts = tunables.value("overrideVolts", 4.0);
 
     private static enum ClimberPosition {
         DEPLOY(90.0),
@@ -29,16 +35,13 @@ public final class Climber extends GRRSubsystem {
         private final TunableDouble rotations;
 
         private ClimberPosition(double rotations) {
-            this.rotations = Tunable.value("climber/positions/" + name(), rotations);
+            this.rotations = tunables.value("positions/" + name(), rotations);
         }
 
         private double rotations() {
             return rotations.get();
         }
     }
-
-    private static final TunableDouble VOLTS = Tunable.value("climber/volts", 12.0);
-    private static final TunableDouble OVERRIDE_VOLTS = Tunable.value("climber/overrideVolts", 4.0);
 
     private final TalonFX motor;
 
@@ -131,7 +134,7 @@ public final class Climber extends GRRSubsystem {
      */
     public Command override() {
         return commandBuilder()
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(OVERRIDE_VOLTS.get())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(overrideVolts.get())))
             .onEnd(motor::stopMotor)
             .onlyIf(this::isClimbed)
             .withName("Climber.override()");
@@ -143,7 +146,7 @@ public final class Climber extends GRRSubsystem {
      */
     private Command goTo(ClimberPosition position) {
         return commandBuilder("Climber.goTo(" + position.name() + ")")
-            .onExecute(() -> motor.setControl(voltageControl.withOutput(VOLTS.get())))
+            .onExecute(() -> motor.setControl(voltageControl.withOutput(volts.get())))
             .isFinished(() -> getPosition() >= position.rotations())
             .onEnd(motor::stopMotor);
     }

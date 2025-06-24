@@ -25,10 +25,10 @@ import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonPipelineResult;
+import org.team340.lib.math.FieldInfo;
 import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
 import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
 import org.team340.lib.util.Alliance;
-import org.team340.lib.util.FieldInfo;
 import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 
 /**

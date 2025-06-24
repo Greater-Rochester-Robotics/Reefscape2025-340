@@ -9,6 +9,7 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
+import com.reduxrobotics.canand.CanandEventLoop;
 import com.reduxrobotics.sensors.canandmag.Canandmag;
 import com.reduxrobotics.sensors.canandmag.CanandmagSettings;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
@@ -220,6 +221,10 @@ public final class SwerveEncoders {
             canandmag.clearStickyFaults();
             ReduxUtil.applySettings(canandmag, settings);
 
+            if (RobotBase.isSimulation()) {
+                CanandEventLoop.getInstance().setDevicePresenceWarnings(canandmag, false);
+            }
+
             return new SwerveEncoder() {
                 @Override
                 public double getPosition() {
@@ -250,8 +255,8 @@ public final class SwerveEncoders {
             CANcoder cancoder = new CANcoder(id, config.phoenixCanBus);
             HookStatus tempHookStatus = new HookStatus(false, false);
 
-            StatusSignal<Angle> position = cancoder.getPosition().clone();
-            StatusSignal<AngularVelocity> velocity = cancoder.getVelocity().clone();
+            StatusSignal<Angle> position = cancoder.getPosition(false).clone();
+            StatusSignal<AngularVelocity> velocity = cancoder.getVelocity(false).clone();
 
             var cancoderConfig = new CANcoderConfiguration();
             cancoderConfig.MagnetSensor.MagnetOffset = offset;
