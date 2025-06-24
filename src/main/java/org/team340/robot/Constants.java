@@ -1,9 +1,5 @@
 package org.team340.robot;
 
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
-import org.team340.robot.util.Vision.CameraConfig;
-
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -16,27 +12,27 @@ public final class Constants {
     public static final int DRIVER = 0;
     public static final int CO_DRIVER = 1;
 
-    public static final CameraConfig[] CAMERAS = {
-        new CameraConfig(
-            "middle",
-            new Translation3d(0.354, 0.0, 0.215),
-            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(0.0))
-        ),
-        new CameraConfig(
-            "left",
-            new Translation3d(0.316, 0.092, 0.211),
-            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(45.0))
-        ),
-        new CameraConfig(
-            "right",
-            new Translation3d(0.316, -0.092, 0.211),
-            new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(-45.0))
-        )
-    };
+    // public static final CameraConfig[] CAMERAS = {
+    //     new CameraConfig(
+    //         "middle",
+    //         new Translation3d(0.354, 0.0, 0.215),
+    //         new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(0.0))
+    //     ),
+    //     new CameraConfig(
+    //         "left",
+    //         new Translation3d(0.316, 0.092, 0.211),
+    //         new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(45.0))
+    //     ),
+    //     new CameraConfig(
+    //         "right",
+    //         new Translation3d(0.316, -0.092, 0.211),
+    //         new Rotation3d(0.0, Math.toRadians(-5.0), Math.toRadians(-45.0))
+    //     )
+    // };
 
     public static final class LowerCAN {
 
-        public static final String LOWER_CAN = "LowerCAN";
+        public static final String ID = "LowerCAN";
 
         // Swerve
         public static final int FL_MOVE = 2;
@@ -59,7 +55,9 @@ public final class Constants {
         public static final int ELEVATOR_CANDI = 22;
     }
 
-    public static final class RioCAN {
+    public static final class CAN0 {
+
+        public static final String ID = "can_s0";
 
         // Swerve
         public static final int CANANDGYRO = 14;
@@ -77,8 +75,8 @@ public final class Constants {
         public static final int CLIMBER_MOTOR = 50;
     }
 
-    public static final class RioIO {
+    public static final class SmartIO {
 
-        public static final int LIGHTS = 9;
+        public static final int LIGHTS = 0;
     }
 }

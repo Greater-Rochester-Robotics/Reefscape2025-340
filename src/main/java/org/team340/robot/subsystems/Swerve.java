@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.OnboardIMU.MountOrientation;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -37,10 +38,8 @@ import org.team340.lib.util.Mutable;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.robot.Constants;
 import org.team340.robot.Constants.LowerCAN;
-import org.team340.robot.Constants.RioCAN;
 import org.team340.robot.util.Field;
 import org.team340.robot.util.Field.ReefLocation;
-import org.team340.robot.util.Vision;
 
 /**
  * The robot's swerve drivetrain.
@@ -119,12 +118,13 @@ public final class Swerve extends GRRSubsystem {
         .setPowerProperties(Constants.VOLTAGE, 100.0, 80.0, 60.0, 60.0)
         .setMechanicalProperties(243.0 / 38.0, 12.1, 0.0, Units.inchesToMeters(4.0))
         .setOdometryStd(0.1, 0.1, 0.05)
-        .setIMU(SwerveIMUs.canandgyro(RioCAN.CANANDGYRO))
-        .setPhoenixFeatures(new CANBus(LowerCAN.LOWER_CAN), true, true, true)
+        .setIMU(SwerveIMUs.onboardIMU(MountOrientation.kFlat))
+        .setPhoenixFeatures(new CANBus(LowerCAN.ID), true, true, true)
         .setModules(frontLeft, frontRight, backLeft, backRight);
 
     private final SwerveAPI api;
-    private final Vision vision;
+    // TODO Enable Vision
+    // private final Vision vision;
     private final SwerveState state;
     private final PAPFController apf;
 
@@ -139,7 +139,8 @@ public final class Swerve extends GRRSubsystem {
 
     public Swerve() {
         api = new SwerveAPI(config);
-        vision = new Vision(Constants.CAMERAS);
+        // TODO Enable Vision
+        // vision = new Vision(Constants.CAMERAS);
         state = api.state;
         apf = new PAPFController(6.0, 0.25, 0.025, true, Field.obstacles);
 
@@ -157,7 +158,8 @@ public final class Swerve extends GRRSubsystem {
         api.refresh();
 
         // Apply vision estimates to the pose estimator.
-        api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory, state.odometryPose));
+        // TODO Enable Vision
+        // api.addVisionMeasurements(vision.getUnreadResults(state.poseHistory, state.odometryPose));
 
         // Calculate helpers
         Translation2d reefCenter = Field.reef.get();
@@ -252,7 +254,6 @@ public final class Swerve extends GRRSubsystem {
         return commandBuilder("Swerve.tareRotation()")
             .onInitialize(() -> {
                 api.tareRotation(Perspective.OPERATOR);
-                vision.reset();
             })
             .isFinished(true)
             .ignoringDisable(true);
@@ -267,7 +268,6 @@ public final class Swerve extends GRRSubsystem {
         return commandBuilder("Swerve.resetPose()")
             .onInitialize(() -> {
                 api.resetPose(pose.get());
-                vision.reset();
             })
             .isFinished(true)
             .ignoringDisable(true);
@@ -335,7 +335,7 @@ public final class Swerve extends GRRSubsystem {
 
         return commandBuilder("Swerve.driveReef()")
             .onInitialize(() -> {
-                angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond);
+                angularPID.reset(state.rotation.getRadians(), state.speeds.omega);
                 exitLock.value = false;
             })
             .onExecute(() -> {
@@ -436,7 +436,7 @@ public final class Swerve extends GRRSubsystem {
         Mutable<Boolean> nowSafe = new Mutable<>(false);
 
         return commandBuilder("Swerve.apfDrive()")
-            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond))
+            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omega))
             .onExecute(() -> {
                 Pose2d goal = reefAssist.targetPipe = generateReefLocation(apfX.get(), side.get(), left.getAsBoolean());
 
@@ -478,10 +478,7 @@ public final class Swerve extends GRRSubsystem {
 
                 var speeds = apf.calculate(state.pose, goal.getTranslation(), apfVel.get(), deceleration, attract);
 
-                speeds.omegaRadiansPerSecond = angularPID.calculate(
-                    state.rotation.getRadians(),
-                    goal.getRotation().getRadians()
-                );
+                speeds.omega = angularPID.calculate(state.rotation.getRadians(), goal.getRotation().getRadians());
 
                 api.applySpeeds(speeds, Perspective.BLUE, true, true);
             })
@@ -511,15 +508,12 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command apfDrive(Supplier<Pose2d> target, DoubleSupplier deceleration) {
         return commandBuilder("Swerve.apfDrive()")
-            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond))
+            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omega))
             .onExecute(() -> {
                 Pose2d goal = target.get();
                 var speeds = apf.calculate(state.pose, goal.getTranslation(), apfVel.get(), deceleration.getAsDouble());
 
-                speeds.omegaRadiansPerSecond = angularPID.calculate(
-                    state.rotation.getRadians(),
-                    goal.getRotation().getRadians()
-                );
+                speeds.omega = angularPID.calculate(state.rotation.getRadians(), goal.getRotation().getRadians());
 
                 api.applySpeeds(speeds, Perspective.BLUE, true, true);
             });

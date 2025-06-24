@@ -83,10 +83,10 @@ class SwerveModule implements AutoCloseable {
         Rotation2d angle = Rotation2d.fromRotations(hookStatus.readMotor() ? turnPosition : encoder.getPosition());
         double moveRotationsPerMeter = config.moveGearRatio / (config.wheelDiameter * Math.PI);
 
-        position.distanceMeters = movePosition / moveRotationsPerMeter;
+        position.distance = movePosition / moveRotationsPerMeter;
         position.angle = angle;
 
-        state.speedMetersPerSecond = moveMotor.getVelocity() / moveRotationsPerMeter;
+        state.speed = moveMotor.getVelocity() / moveRotationsPerMeter;
         state.angle = angle;
 
         cacheMutex.lock();
@@ -139,8 +139,8 @@ class SwerveModule implements AutoCloseable {
      * @param state The state to apply to the module.
      */
     public void applyState(SwerveModuleState state) {
-        if (Math.abs(state.speedMetersPerSecond) < config.velDeadband) {
-            state.speedMetersPerSecond = 0.0;
+        if (Math.abs(state.speed) < config.velDeadband) {
+            state.speed = 0.0;
             state.angle = nextTarget.angle;
         }
 
@@ -156,12 +156,12 @@ class SwerveModule implements AutoCloseable {
 
         boolean flipped = false;
         if (Math.abs(angleDelta.getRadians()) > Math2.HALF_PI) {
-            state.speedMetersPerSecond *= -1.0;
+            state.speed *= -1.0;
             state.angle = state.angle.rotateBy(Rotation2d.kPi);
             flipped = true;
         }
 
-        moveMotor.setVelocity(state.speedMetersPerSecond * (config.moveGearRatio / (config.wheelDiameter * Math.PI)));
+        moveMotor.setVelocity(state.speed * (config.moveGearRatio / (config.wheelDiameter * Math.PI)));
 
         if (hookStatus.applyAbsolute()) {
             turnMotor.setPosition(state.angle.getRotations());

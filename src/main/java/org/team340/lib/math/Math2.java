@@ -43,7 +43,7 @@ public final class Math2 {
      * @see {@link ChassisSpeeds#discretize(ChassisSpeeds, double)}
      */
     public static ChassisSpeeds discretize(ChassisSpeeds speeds, double dtSeconds) {
-        double dtheta = speeds.omegaRadiansPerSecond * dtSeconds;
+        double dtheta = speeds.omega * dtSeconds;
 
         double sin = -dtheta / 2.0;
         double cos = Math.abs(Math.cos(dtheta) - 1.0) < 1e-6
@@ -51,11 +51,11 @@ public final class Math2 {
             : (sin * Math.sin(dtheta)) / (Math.cos(dtheta) - 1.0);
 
         double dt = dtSeconds;
-        double dx = speeds.vxMetersPerSecond * dt;
-        double dy = speeds.vyMetersPerSecond * dt;
+        double dx = speeds.vx * dt;
+        double dy = speeds.vy * dt;
 
-        speeds.vxMetersPerSecond = ((dx * cos) - (dy * sin)) / dt;
-        speeds.vyMetersPerSecond = ((dx * sin) + (dy * cos)) / dt;
+        speeds.vx = ((dx * cos) - (dy * sin)) / dt;
+        speeds.vy = ((dx * sin) + (dy * cos)) / dt;
 
         return speeds;
     }
@@ -120,9 +120,9 @@ public final class Math2 {
      * @return The output speeds.
      */
     public static ChassisSpeeds copyInto(ChassisSpeeds source, ChassisSpeeds output) {
-        output.vxMetersPerSecond = source.vxMetersPerSecond;
-        output.vyMetersPerSecond = source.vyMetersPerSecond;
-        output.omegaRadiansPerSecond = source.omegaRadiansPerSecond;
+        output.vx = source.vx;
+        output.vy = source.vy;
+        output.omega = source.omega;
         return output;
     }
 
@@ -133,7 +133,7 @@ public final class Math2 {
      * @return The output position.
      */
     public static SwerveModulePosition copyInto(SwerveModulePosition source, SwerveModulePosition output) {
-        output.distanceMeters = source.distanceMeters;
+        output.distance = source.distance;
         output.angle = source.angle;
         return output;
     }
@@ -145,7 +145,7 @@ public final class Math2 {
      * @return The output state.
      */
     public static SwerveModuleState copyInto(SwerveModuleState source, SwerveModuleState output) {
-        output.speedMetersPerSecond = source.speedMetersPerSecond;
+        output.speed = source.speed;
         output.angle = source.angle;
         return output;
     }

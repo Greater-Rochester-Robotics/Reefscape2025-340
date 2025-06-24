@@ -15,7 +15,7 @@ import org.team340.lib.tunable.TunableTable;
 import org.team340.lib.tunable.Tunables;
 import org.team340.lib.tunable.Tunables.TunableInteger;
 import org.team340.lib.util.command.GRRSubsystem;
-import org.team340.robot.Constants.RioIO;
+import org.team340.robot.Constants.SmartIO;
 import org.team340.robot.util.ReefSelection;
 
 @Logged
@@ -65,7 +65,7 @@ public final class Lights {
     private final AddressableLEDBuffer buffer;
 
     public Lights() {
-        lights = new AddressableLED(RioIO.LIGHTS);
+        lights = new AddressableLED(SmartIO.LIGHTS);
         buffer = new AddressableLEDBuffer(LENGTH * COUNT);
 
         lights.setLength(buffer.getLength());

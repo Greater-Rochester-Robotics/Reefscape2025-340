@@ -9,9 +9,6 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
-import com.reduxrobotics.canand.CanandEventLoop;
-import com.reduxrobotics.sensors.canandmag.Canandmag;
-import com.reduxrobotics.sensors.canandmag.CanandmagSettings;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkMax;
@@ -28,7 +25,6 @@ import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveEncoders.SwerveEncoder.HookStatus;
 import org.team340.lib.swerve.hardware.SwerveMotors.SwerveMotor;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.lib.util.vendors.ReduxUtil;
 import org.team340.lib.util.vendors.RevUtil;
 
 /**
@@ -201,51 +197,8 @@ public final class SwerveEncoders {
     }
 
     /**
-     * Configures a {@link Canandmag}.
-     * @param id CAN ID of the device, as configured in Alchemist.
-     * @param offset Offset of the magnet in rotations.
-     * @param inverted If the encoder is inverted.
-     */
-    public static SwerveEncoder.Ctor canandmag(int id, double offset, boolean inverted) {
-        return (config, turnMotor) -> {
-            Canandmag canandmag = new Canandmag(id);
-
-            var settings = new CanandmagSettings()
-                .setDisableZeroButton(true)
-                .setInvertDirection(inverted)
-                .setPositionFramePeriod(config.odometryPeriod)
-                .setStatusFramePeriod(config.defaultFramePeriod)
-                .setVelocityFramePeriod(config.odometryPeriod)
-                .setZeroOffset(offset);
-
-            canandmag.clearStickyFaults();
-            ReduxUtil.applySettings(canandmag, settings);
-
-            if (RobotBase.isSimulation()) {
-                CanandEventLoop.getInstance().setDevicePresenceWarnings(canandmag, false);
-            }
-
-            return new SwerveEncoder() {
-                @Override
-                public double getPosition() {
-                    return ReduxUtil.latencyCompensate(canandmag.getAbsPositionFrame(), canandmag.getVelocity());
-                }
-
-                @Override
-                public Object getAPI() {
-                    return canandmag;
-                }
-
-                @Override
-                public void close() {
-                    canandmag.close();
-                }
-            };
-        };
-    }
-
-    /**
      * Configures a {@link CANcoder}.
+     * CAN bus is pulled from {@link SwerveConfig#phoenixCanBus}.
      * @param id CAN ID of the device, as configured in Phoenix Tuner.
      * @param offset Offset of the magnet in rotations.
      * @param inverted If the encoder is inverted.

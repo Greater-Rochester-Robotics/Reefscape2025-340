@@ -3,18 +3,13 @@ package org.team340.lib.swerve.hardware;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.Pigeon2;
-import com.reduxrobotics.canand.CanandEventLoop;
-import com.reduxrobotics.sensors.canandgyro.Canandgyro;
-import com.reduxrobotics.sensors.canandgyro.CanandgyroSettings;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import edu.wpi.first.wpilibj.OnboardIMU;
+import edu.wpi.first.wpilibj.OnboardIMU.MountOrientation;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.SPI;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -23,7 +18,6 @@ import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU.IMUSimHook;
 import org.team340.lib.util.Mutable;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.lib.util.vendors.ReduxUtil;
 
 /**
  * Contains implementations for IMUs to be used with the {@link SwerveAPI}.
@@ -81,117 +75,43 @@ public final class SwerveIMUs {
     }
 
     /**
-     * Configures an {@link ADIS16470_IMU ADIS16470 IMU}.
-     * @param yawAxis The axis to use for yaw.
-     * @param pitchAxis The axis to use for pitch.
-     * @param rollAxis The axis to use for roll.
-     * @param port The SPI port used.
-     * @param calibrationTime The time frame to calibrate for.
+     * Configures a {@link OnboardIMU}.
+     * @param mountOrientation The mount orientation of SystemCore to determine yaw.
      */
-    public static SwerveIMU.Ctor adis16470(
-        IMUAxis yawAxis,
-        IMUAxis pitchAxis,
-        IMUAxis rollAxis,
-        SPI.Port port,
-        CalibrationTime calibrationTime
-    ) {
+    public static SwerveIMU.Ctor onboardIMU(MountOrientation mountOrientation) {
         return config -> {
-            ADIS16470_IMU adis16470 = new ADIS16470_IMU(yawAxis, pitchAxis, rollAxis, port, calibrationTime);
+            OnboardIMU onboardIMU = new OnboardIMU(mountOrientation);
 
             return new SwerveIMU() {
                 @Override
                 public Rotation2d getYaw() {
-                    return Rotation2d.fromDegrees(adis16470.getAngle(adis16470.getYawAxis()));
+                    return onboardIMU.getRotation2d();
                 }
 
                 @Override
                 public Rotation2d getPitch() {
-                    return Rotation2d.fromDegrees(adis16470.getAngle(adis16470.getPitchAxis()));
+                    return Rotation2d.fromRadians(onboardIMU.getAngleX());
                 }
 
                 @Override
                 public Rotation2d getRoll() {
-                    return Rotation2d.fromDegrees(adis16470.getAngle(adis16470.getRollAxis()));
+                    return Rotation2d.fromRadians(onboardIMU.getAngleY());
                 }
 
                 @Override
                 public Object getAPI() {
-                    return adis16470;
+                    return onboardIMU;
                 }
 
                 @Override
-                public void close() {
-                    adis16470.close();
-                }
-            };
-        };
-    }
-
-    /**
-     * Configures a {@link Canandgyro}.
-     * @param id CAN ID of the device, as configured in Alchemist.
-     */
-    public static SwerveIMU.Ctor canandgyro(int id) {
-        return config -> {
-            Canandgyro canandgyro = new Canandgyro(id);
-
-            var settings = new CanandgyroSettings()
-                .setAccelerationFramePeriod(config.defaultFramePeriod)
-                .setAngularPositionFramePeriod(config.odometryPeriod)
-                .setAngularVelocityFramePeriod(config.odometryPeriod)
-                .setStatusFramePeriod(config.defaultFramePeriod)
-                .setYawFramePeriod(config.odometryPeriod);
-
-            canandgyro.clearStickyFaults();
-            ReduxUtil.applySettings(canandgyro, settings);
-
-            if (RobotBase.isSimulation()) {
-                CanandEventLoop.getInstance().setDevicePresenceWarnings(canandgyro, false);
-            }
-
-            return new SwerveIMU() {
-                @Override
-                public Rotation2d getYaw() {
-                    return Rotation2d.fromRotations(
-                        ReduxUtil.latencyCompensate(canandgyro.getYawFrame(), canandgyro.getAngularVelocityYaw())
-                    );
-                }
-
-                @Override
-                public Rotation2d getPitch() {
-                    return Rotation2d.fromRotations(
-                        ReduxUtil.latencyCompensateQuaternionPitch(
-                            canandgyro.getAngularPositionFrame(),
-                            canandgyro.getAngularVelocityPitch()
-                        )
-                    );
-                }
-
-                @Override
-                public Rotation2d getRoll() {
-                    return Rotation2d.fromRotations(
-                        ReduxUtil.latencyCompensateQuaternionRoll(
-                            canandgyro.getAngularPositionFrame(),
-                            canandgyro.getAngularVelocityRoll()
-                        )
-                    );
-                }
-
-                @Override
-                public Object getAPI() {
-                    return canandgyro;
-                }
-
-                @Override
-                public void close() {
-                    canandgyro.close();
-                }
+                public void close() {}
             };
         };
     }
 
     /**
      * Configures a {@link Pigeon2}.
+     * CAN bus is pulled from {@link SwerveConfig#phoenixCanBus}.
      * @param id CAN ID of the device, as configured in Phoenix Tuner.
      */
     public static SwerveIMU.Ctor pigeon2(int id) {
@@ -270,7 +190,7 @@ public final class SwerveIMUs {
     private static SwerveIMU simulate(SwerveIMU imu, SwerveConfig config, IMUSimHook simHook) {
         Mutable<Double> yaw = new Mutable<>(0.0);
         simHook.accept(speeds -> {
-            yaw.value += speeds.omegaRadiansPerSecond * config.period;
+            yaw.value += speeds.omega * config.period;
         });
 
         return new SwerveIMU() {

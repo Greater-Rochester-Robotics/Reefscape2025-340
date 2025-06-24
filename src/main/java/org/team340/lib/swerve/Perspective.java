@@ -37,12 +37,12 @@ public enum Perspective {
     BLUE {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle);
+            return speeds.toRobotRelative(robotAngle);
         }
 
         @Override
         public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return ChassisSpeeds.fromRobotRelativeSpeeds(speeds, robotAngle);
+            return speeds.toFieldRelative(robotAngle);
         }
 
         @Override
@@ -58,12 +58,12 @@ public enum Perspective {
     RED {
         @Override
         public ChassisSpeeds toRobotSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, robotAngle.rotateBy(Rotation2d.kPi));
+            return speeds.toRobotRelative(robotAngle.rotateBy(Rotation2d.kPi));
         }
 
         @Override
         public ChassisSpeeds toPerspectiveSpeeds(ChassisSpeeds speeds, Rotation2d robotAngle) {
-            return ChassisSpeeds.fromRobotRelativeSpeeds(speeds, robotAngle.rotateBy(Rotation2d.kPi));
+            return speeds.toFieldRelative(robotAngle.rotateBy(Rotation2d.kPi));
         }
 
         @Override

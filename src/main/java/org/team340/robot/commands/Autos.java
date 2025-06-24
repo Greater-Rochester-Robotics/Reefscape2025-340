@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.team340.lib.math.geometry.ExtPose;
@@ -140,7 +141,7 @@ public final class Autos {
     private Command stinkyOne(boolean left) {
         return sequence(
             setupL4(),
-            deadline(waitSeconds(2.5), swerve.stop(false), routines.stow()),
+            deadline(Commands.wait(2.5), swerve.stop(false), routines.stow()),
             parallel(
                 sequence(score(left ? G : H, left), avoid(left), swerve.stop(false)),
                 sequence(
@@ -205,7 +206,7 @@ public final class Autos {
         Function<ReefLocation, Command> goReef = reefLocation ->
             swerve
                 .apfDrive(reefLocation, robot::readyToScore, selection::isL4)
-                .withDeadline(sequence(waitUntil(() -> !swerve.wildlifeConservationProgram()), waitSeconds(0.75)));
+                .withDeadline(sequence(waitUntil(() -> !swerve.wildlifeConservationProgram()), Commands.wait(0.75)));
 
         Supplier<Command> goIntake = () -> swerve.apfDrive(Field.loadStraight, intakeDecel::get, avoidTol::get);
 

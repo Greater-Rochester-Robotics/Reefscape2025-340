@@ -124,7 +124,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
             }
 
             state.pose = poseEstimator.getEstimatedPosition();
-            state.odometryPose = odometry.getPoseMeters();
+            state.odometryPose = odometry.getPose();
 
             state.poseHistory.clear();
             state.poseHistory.addAll(odometryThread.poseHistory);
@@ -134,7 +134,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         }
 
         Math2.copyInto(kinematics.toChassisSpeeds(state.modules.states), state.speeds);
-        state.velocity = Math.hypot(state.speeds.vxMetersPerSecond, state.speeds.vyMetersPerSecond);
+        state.velocity = Math.hypot(state.speeds.vx, state.speeds.vy);
         state.translation = state.pose.getTranslation();
         state.rotation = state.pose.getRotation();
 
@@ -276,9 +276,9 @@ public class SwerveAPI implements Tunable, AutoCloseable {
             config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
 
         ChassisSpeeds speeds = new ChassisSpeeds(
-            (-y * xyMult) + assist.vxMetersPerSecond,
-            (-x * xyMult) + assist.vyMetersPerSecond,
-            angularVel + assist.omegaRadiansPerSecond
+            (-y * xyMult) + assist.vx,
+            (-x * xyMult) + assist.vy,
+            angularVel + assist.omega
         );
 
         applySpeeds(speeds, perspective, discretize, ratelimit);
@@ -293,16 +293,16 @@ public class SwerveAPI implements Tunable, AutoCloseable {
      */
     public void applySpeeds(ChassisSpeeds speeds, Perspective perspective, boolean discretize, boolean ratelimit) {
         double w_max = config.velocity / farthestModule;
-        if (Math.abs(speeds.omegaRadiansPerSecond) >= w_max) {
-            speeds.vxMetersPerSecond = 0.0;
-            speeds.vyMetersPerSecond = 0.0;
-            speeds.omegaRadiansPerSecond = Math.copySign(w_max, speeds.omegaRadiansPerSecond);
+        if (Math.abs(speeds.omega) >= w_max) {
+            speeds.vx = 0.0;
+            speeds.vy = 0.0;
+            speeds.omega = Math.copySign(w_max, speeds.omega);
         } else {
             ChassisSpeeds relative = perspective.toRobotSpeeds(speeds, state.pose.getRotation());
 
-            double vx = relative.vxMetersPerSecond;
-            double vy = relative.vyMetersPerSecond;
-            double w = relative.omegaRadiansPerSecond;
+            double vx = relative.vx;
+            double vy = relative.vy;
+            double w = relative.omega;
 
             double k = 1.0;
             double v_max2 = config.velocity * config.velocity;
@@ -325,8 +325,8 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 }
             }
 
-            speeds.vxMetersPerSecond *= k;
-            speeds.vyMetersPerSecond *= k;
+            speeds.vx *= k;
+            speeds.vy *= k;
         }
 
         if (ratelimit) {
@@ -336,31 +336,31 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 ? perspective.toPerspectiveSpeeds(state.targetSpeeds, lastRobotAngle)
                 : perspective.toPerspectiveSpeeds(state.speeds, state.rotation);
 
-            double vx_l = lastSpeeds.vxMetersPerSecond;
-            double vy_l = lastSpeeds.vyMetersPerSecond;
+            double vx_l = lastSpeeds.vx;
+            double vy_l = lastSpeeds.vy;
             double v_l = Math.hypot(vx_l, vy_l);
-            double w_l = lastSpeeds.omegaRadiansPerSecond;
+            double w_l = lastSpeeds.omega;
 
-            double dx = speeds.vxMetersPerSecond - vx_l;
-            double dy = speeds.vyMetersPerSecond - vy_l;
+            double dx = speeds.vx - vx_l;
+            double dy = speeds.vy - vy_l;
             double a_slip = config.slipAccel * config.period;
             if (dx * dx + dy * dy > a_slip * a_slip) {
                 double k = a_slip / Math.hypot(dx, dy);
-                speeds.vxMetersPerSecond = vx_l + (k * dx);
-                speeds.vyMetersPerSecond = vy_l + (k * dy);
+                speeds.vx = vx_l + (k * dx);
+                speeds.vy = vy_l + (k * dy);
             }
 
-            double v = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+            double v = Math.hypot(speeds.vx, speeds.vy);
             double a_torque = (config.torqueAccel * config.period) * (1.0 - (v_l / config.velocity));
             if (v - v_l > a_torque && v > 1e-6) {
                 double k = (v_l + a_torque) / v;
-                speeds.vxMetersPerSecond *= k;
-                speeds.vyMetersPerSecond *= k;
+                speeds.vx *= k;
+                speeds.vy *= k;
             }
 
-            double dw = speeds.omegaRadiansPerSecond - w_l;
+            double dw = speeds.omega - w_l;
             double a_angular = config.angularAccel * config.period;
-            speeds.omegaRadiansPerSecond = w_l + (Math.min(a_angular / Math.abs(dw), 1.0) * dw);
+            speeds.omega = w_l + (Math.min(a_angular / Math.abs(dw), 1.0) * dw);
 
             lastRatelimit = now;
         }
@@ -397,9 +397,9 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     public void applyStop(boolean lock) {
         lastRatelimit = Timer.getFPGATimestamp();
 
-        state.targetSpeeds.vxMetersPerSecond = 0.0;
-        state.targetSpeeds.vyMetersPerSecond = 0.0;
-        state.targetSpeeds.omegaRadiansPerSecond = 0.0;
+        state.targetSpeeds.vx = 0.0;
+        state.targetSpeeds.vy = 0.0;
+        state.targetSpeeds.omega = 0.0;
 
         for (int i = 0; i < moduleCount; i++) {
             SwerveModuleState state;
@@ -407,7 +407,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 state = lockedStates[i];
             } else {
                 state = modules[i].getNextTarget();
-                state.speedMetersPerSecond = 0.0;
+                state.speed = 0.0;
             }
 
             modules[i].applyState(state);

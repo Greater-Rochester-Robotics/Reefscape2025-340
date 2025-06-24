@@ -41,7 +41,7 @@ import org.team340.lib.util.Mutable;
 import org.team340.lib.util.command.CommandBuilder;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RioCAN;
+import org.team340.robot.Constants.CAN0;
 import org.team340.robot.util.ReefSelection;
 
 @Logged
@@ -126,9 +126,9 @@ public final class GooseNeck extends GRRSubsystem {
     private boolean goosing = false;
 
     public GooseNeck() {
-        pivotMotor = new TalonFX(RioCAN.GOOSE_NECK);
-        beakMotor = new TalonFXS(RioCAN.GOOSE_BEAK);
-        candi = new CANdi(RioCAN.GOOSE_CANDI);
+        pivotMotor = new TalonFX(CAN0.GOOSE_NECK, CAN0.ID);
+        beakMotor = new TalonFXS(CAN0.GOOSE_BEAK, CAN0.ID);
+        candi = new CANdi(CAN0.GOOSE_CANDI, CAN0.ID);
 
         TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
 
@@ -165,7 +165,7 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        beakConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = RioCAN.GOOSE_CANDI;
+        beakConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = CAN0.GOOSE_CANDI;
         beakConfig.HardwareLimitSwitch.ReverseLimitSource = ReverseLimitSourceValue.RemoteCANdiS1;
         beakConfig.HardwareLimitSwitch.ReverseLimitType = ReverseLimitTypeValue.NormallyOpen;
         beakConfig.HardwareLimitSwitch.ReverseLimitEnable = true;

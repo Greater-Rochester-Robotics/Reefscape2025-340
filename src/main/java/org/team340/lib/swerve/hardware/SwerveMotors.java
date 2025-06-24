@@ -102,12 +102,13 @@ public final class SwerveMotors {
 
     /**
      * Configures a {@link CANSparkMax Spark Max}.
+     * @param busId The bus ID.
      * @param id CAN ID of the device, as configured in the REV Hardware Client.
      * @param inverted If the motor is inverted.
      */
-    public static SwerveMotor.Ctor sparkMax(int id, boolean inverted) {
+    public static SwerveMotor.Ctor sparkMax(int busId, int id, boolean inverted) {
         return (config, isMoveMotor) -> {
-            SparkMax sparkMax = new SparkMax(id, MotorType.kBrushless);
+            SparkMax sparkMax = new SparkMax(busId, id, MotorType.kBrushless);
             RelativeEncoder relativeEncoder = sparkMax.getEncoder();
             SparkClosedLoopController pid = sparkMax.getClosedLoopController();
             ClosedLoopSlot pidSlot = ClosedLoopSlot.kSlot0;
@@ -211,12 +212,13 @@ public final class SwerveMotors {
 
     /**
      * Configures a {@link CANSparkFlex Spark Flex}.
+     * @param busId The bus ID.
      * @param id CAN ID of the device, as configured in the REV Hardware Client.
      * @param inverted If the motor is inverted.
      */
-    public static SwerveMotor.Ctor sparkFlex(int id, boolean inverted) {
+    public static SwerveMotor.Ctor sparkFlex(int busId, int id, boolean inverted) {
         return (config, isMoveMotor) -> {
-            SparkFlex sparkFlex = new SparkFlex(id, MotorType.kBrushless);
+            SparkFlex sparkFlex = new SparkFlex(busId, id, MotorType.kBrushless);
             RelativeEncoder relativeEncoder = sparkFlex.getEncoder();
             SparkClosedLoopController pid = sparkFlex.getClosedLoopController();
             ClosedLoopSlot pidSlot = ClosedLoopSlot.kSlot0;
@@ -324,6 +326,7 @@ public final class SwerveMotors {
 
     /**
      * Configures a {@link TalonFX}.
+     * CAN bus is pulled from {@link SwerveConfig#phoenixCanBus}.
      * @param id CAN ID of the device, as configured in Phoenix Tuner.
      * @param inverted If the motor is inverted.
      */

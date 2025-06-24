@@ -108,9 +108,9 @@ public final class Elevator extends GRRSubsystem {
     private boolean homed = false;
 
     public Elevator() {
-        leadMotor = new TalonFX(LowerCAN.ELEVATOR_LEAD, LowerCAN.LOWER_CAN);
-        followMotor = new TalonFX(LowerCAN.ELEVATOR_FOLLOW, LowerCAN.LOWER_CAN);
-        candi = new CANdi(LowerCAN.ELEVATOR_CANDI, LowerCAN.LOWER_CAN);
+        leadMotor = new TalonFX(LowerCAN.ELEVATOR_LEAD, LowerCAN.ID);
+        followMotor = new TalonFX(LowerCAN.ELEVATOR_FOLLOW, LowerCAN.ID);
+        candi = new CANdi(LowerCAN.ELEVATOR_CANDI, LowerCAN.ID);
 
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 

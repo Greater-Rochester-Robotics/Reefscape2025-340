@@ -18,7 +18,7 @@ import org.team340.lib.tunable.Tunables;
 import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.command.GRRSubsystem;
 import org.team340.lib.util.vendors.PhoenixUtil;
-import org.team340.robot.Constants.RioCAN;
+import org.team340.robot.Constants.CAN0;
 
 @Logged
 public final class Climber extends GRRSubsystem {
@@ -51,7 +51,7 @@ public final class Climber extends GRRSubsystem {
     private final VoltageOut voltageControl;
 
     public Climber() {
-        motor = new TalonFX(RioCAN.CLIMBER_MOTOR);
+        motor = new TalonFX(CAN0.CLIMBER_MOTOR, CAN0.ID);
 
         TalonFXConfiguration config = new TalonFXConfiguration();
 
