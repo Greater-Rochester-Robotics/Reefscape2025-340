@@ -22,7 +22,6 @@ import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
-import org.team340.robot.subsystems.Lights;
 import org.team340.robot.subsystems.Swerve;
 import org.team340.robot.util.ReefSelection;
 
@@ -35,7 +34,7 @@ public final class Robot extends LoggedRobot {
     public final Elevator elevator;
     public final GooseNeck gooseNeck;
     public final Intake intake;
-    public final Lights lights;
+    // public final Lights lights;
     public final Swerve swerve;
 
     public final ReefSelection selection;
@@ -52,7 +51,7 @@ public final class Robot extends LoggedRobot {
         elevator = new Elevator();
         gooseNeck = new GooseNeck();
         intake = new Intake();
-        lights = new Lights();
+        // lights = new Lights();
         swerve = new Swerve();
 
         // Initialize helpers
@@ -67,14 +66,14 @@ public final class Robot extends LoggedRobot {
         coDriver = new CommandXboxController(Constants.CO_DRIVER);
 
         // Setup lights
-        lights.disabled().until(this::isEnabled).schedule();
-        RobotModeTriggers.disabled().whileTrue(lights.disabled());
-        RobotModeTriggers.autonomous().whileTrue(lights.sides.flames());
-        RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
-        new Trigger(this::isEnabled)
-            .and(gooseNeck::hasCoral)
-            .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
-            .onFalse(lights.top.scored().onlyIf(this::isEnabled));
+        // lights.disabled().until(this::isEnabled).schedule();
+        // RobotModeTriggers.disabled().whileTrue(lights.disabled());
+        // RobotModeTriggers.autonomous().whileTrue(lights.sides.flames());
+        // RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
+        // new Trigger(this::isEnabled)
+        //     .and(gooseNeck::hasCoral)
+        //     .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
+        //     .onFalse(lights.top.scored().onlyIf(this::isEnabled));
 
         // Create triggers
         Trigger allowGoosing = coDriver.a().negate();
@@ -175,6 +174,6 @@ public final class Robot extends LoggedRobot {
     @Override
     public void robotPeriodic() {
         Profiler.run("scheduler", scheduler::run);
-        Profiler.run("lights", lights::update);
+        // Profiler.run("lights", lights::update);
     }
 }

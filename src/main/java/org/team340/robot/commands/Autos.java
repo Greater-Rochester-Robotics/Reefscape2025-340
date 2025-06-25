@@ -20,7 +20,6 @@ import org.team340.robot.Robot;
 import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
-import org.team340.robot.subsystems.Lights;
 import org.team340.robot.subsystems.Swerve;
 import org.team340.robot.util.Field;
 import org.team340.robot.util.Field.ReefLocation;
@@ -45,7 +44,7 @@ public final class Autos {
     private final Elevator elevator;
     private final GooseNeck gooseNeck;
     private final Intake intake;
-    private final Lights lights;
+    // private final Lights lights;
     private final Swerve swerve;
 
     private final Routines routines;
@@ -59,7 +58,7 @@ public final class Autos {
         elevator = robot.elevator;
         gooseNeck = robot.gooseNeck;
         intake = robot.intake;
-        lights = robot.lights;
+        // lights = robot.lights;
         swerve = robot.swerve;
 
         selection = robot.selection;
@@ -82,7 +81,7 @@ public final class Autos {
         // chooser.add("test12 right", test12(false));
 
         // Chooser bindings
-        chooser.newSelection().onTrue(lights.top.scored().andThen(lights.disabled()));
+        // chooser.newSelection().onTrue(lights.top.scored().andThen(lights.disabled()));
     }
 
     private Command forPiece(boolean left) {

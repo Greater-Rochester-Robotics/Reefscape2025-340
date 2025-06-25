@@ -18,7 +18,6 @@ import org.team340.robot.subsystems.Elevator;
 import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
-import org.team340.robot.subsystems.Lights;
 import org.team340.robot.subsystems.Swerve;
 import org.team340.robot.util.ReefSelection;
 
@@ -39,7 +38,7 @@ public final class Routines {
     private final Elevator elevator;
     private final GooseNeck gooseNeck;
     private final Intake intake;
-    private final Lights lights;
+    // private final Lights lights;
     private final Swerve swerve;
 
     private final ReefSelection selection;
@@ -50,7 +49,7 @@ public final class Routines {
         elevator = robot.elevator;
         gooseNeck = robot.gooseNeck;
         intake = robot.intake;
-        lights = robot.lights;
+        // lights = robot.lights;
         swerve = robot.swerve;
         selection = robot.selection;
     }
@@ -203,7 +202,8 @@ public final class Routines {
      * For emergencies
      */
     public Command killTheGoose() {
-        return parallel(idle(elevator, gooseNeck), lights.top.gooseAssassination())
+        // return parallel(idle(elevator, gooseNeck), lights.top.gooseAssassination())
+        return parallel(idle(elevator, gooseNeck))
             .withInterruptBehavior(InterruptionBehavior.kCancelIncoming)
             .withName("Routines.killTheGoose()");
     }
