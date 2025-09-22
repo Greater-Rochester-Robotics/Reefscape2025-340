@@ -19,6 +19,10 @@ import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
 import org.team340.lib.logging.LoggedRobot;
 
+/**
+ * The Tunables class is used to construct tunable properties
+ * of the robot to be modified live via NetworkTables.
+ */
 public final class Tunables {
 
     /**
@@ -68,10 +72,11 @@ public final class Tunables {
     }
 
     /**
-     * Gets the table with a specified key.
+     * Gets a table that can be used to add nested
+     * tunable values under a specified path.
      * @param name The name of the table.
      */
-    public static TunableTable getTable(String name) {
+    public static TunableTable getNested(String name) {
         name = NetworkTable.normalizeKey(name, false);
         if (!name.endsWith("/")) name += "/";
 
@@ -98,14 +103,14 @@ public final class Tunables {
      */
     public static <T> T add(String name, T obj) {
         if (obj instanceof Tunable tunable) {
-            tunable.initTunable(getTable(name));
+            tunable.initTunable(getNested(name));
         } else {
             boolean initialized = false;
             for (var entry : handlers.entrySet()) {
                 if (entry.getKey().isInstance(obj)) {
                     @SuppressWarnings("unchecked")
-                    TunableHandler<T> handler = (TunableHandler<T>) entry.getValue();
-                    handler.init(getTable(name), obj);
+                    var handler = (TunableHandler<T>) entry.getValue();
+                    handler.init(getNested(name), obj);
                     initialized = true;
                     break;
                 }

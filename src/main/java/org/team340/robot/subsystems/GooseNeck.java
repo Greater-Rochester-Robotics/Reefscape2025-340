@@ -30,7 +30,6 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.NotifierCommand;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -47,7 +46,7 @@ import org.team340.robot.util.ReefSelection;
 @Logged
 public final class GooseNeck extends GRRSubsystem {
 
-    private static final TunableTable tunables = Tunables.getTable("gooseNeck");
+    private static final TunableTable tunables = Tunables.getNested("gooseNeck");
 
     private static final TunableDouble closeToTolerance = tunables.value("closeToTolerance", 0.08);
     private static final TunableDouble atPositionTolerance = tunables.value("atPositionTolerance", 0.01);
@@ -88,11 +87,12 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        INTAKE(-6.0),
+        INTAKE(-6.5),
         SEAT(-5.0),
+        POOP_L1(-4.25),
         L1(4.0),
         L2_L3(12.0),
-        L4(9.0),
+        L4(9.25),
         BARF(-8.0),
         SWALLOW(8.0);
 
@@ -114,7 +114,6 @@ public final class GooseNeck extends GRRSubsystem {
     private final StatusSignal<Angle> position;
     private final StatusSignal<AngularVelocity> velocity;
     private final StatusSignal<Boolean> beamBreak;
-    private final StatusSignal<Boolean> beamBreakVolatile;
 
     private final MotionMagicVoltage positionControl;
     private final TorqueCurrentFOC torqueControl;
@@ -138,8 +137,8 @@ public final class GooseNeck extends GRRSubsystem {
         pivotConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         pivotConfig.Feedback.SensorToMechanismRatio = (50.0 / 10.0) * (72.0 / 14.0);
 
-        pivotConfig.MotionMagic.MotionMagicCruiseVelocity = 20.0;
-        pivotConfig.MotionMagic.MotionMagicAcceleration = 20.0;
+        pivotConfig.MotionMagic.MotionMagicCruiseVelocity = 40.0;
+        pivotConfig.MotionMagic.MotionMagicAcceleration = 17.5;
 
         pivotConfig.Slot0.kP = 200.0;
         pivotConfig.Slot0.kI = 0.0;
@@ -159,8 +158,8 @@ public final class GooseNeck extends GRRSubsystem {
 
         beakConfig.Commutation.MotorArrangement = MotorArrangementValue.Minion_JST;
 
-        beakConfig.CurrentLimits.StatorCurrentLimit = 60.0;
-        beakConfig.CurrentLimits.SupplyCurrentLimit = 40.0;
+        beakConfig.CurrentLimits.StatorCurrentLimit = 40.0;
+        beakConfig.CurrentLimits.SupplyCurrentLimit = 20.0;
 
         beakConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         beakConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -174,21 +173,19 @@ public final class GooseNeck extends GRRSubsystem {
         candiConfig.PWM2.AbsoluteSensorOffset = 0.927;
         candiConfig.PWM2.SensorDirection = true;
 
-        PhoenixUtil.run("Clear Goose Neck Pivot Sticky Faults", () -> pivotMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Goose Neck Beak Sticky Faults", () -> beakMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Goose Neck CANdi Sticky Faults", () -> candi.clearStickyFaults());
-        PhoenixUtil.run("Apply Goose Neck TalonFXConfiguration", () -> pivotMotor.getConfigurator().apply(pivotConfig));
-        PhoenixUtil.run("Apply Goose Neck Beak TalonFXSConfiguration", () ->
-            beakMotor.getConfigurator().apply(beakConfig)
-        );
-        PhoenixUtil.run("Apply Goose Neck CANdiConfiguration", () -> candi.getConfigurator().apply(candiConfig));
+        PhoenixUtil.run(() -> pivotMotor.clearStickyFaults());
+        PhoenixUtil.run(() -> beakMotor.clearStickyFaults());
+        PhoenixUtil.run(() -> candi.clearStickyFaults());
+
+        PhoenixUtil.run(() -> pivotMotor.getConfigurator().apply(pivotConfig));
+        PhoenixUtil.run(() -> beakMotor.getConfigurator().apply(beakConfig));
+        PhoenixUtil.run(() -> candi.getConfigurator().apply(candiConfig));
 
         position = pivotMotor.getPosition();
         velocity = pivotMotor.getVelocity();
         beamBreak = candi.getS1Closed();
-        beamBreakVolatile = candi.getS1Closed().clone();
 
-        PhoenixUtil.run("Set Goose Neck Signal Frequencies", () ->
+        PhoenixUtil.run(() ->
             BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
                 position,
@@ -197,12 +194,8 @@ public final class GooseNeck extends GRRSubsystem {
                 candi.getPWM2Velocity()
             )
         );
-        PhoenixUtil.run("Set Goose Neck Fast Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(300, beamBreak, beamBreakVolatile)
-        );
-        PhoenixUtil.run("Optimize Goose Neck CAN Utilization", () ->
-            ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi)
-        );
+        PhoenixUtil.run(() -> beamBreak.setUpdateFrequency(300));
+        PhoenixUtil.run(() -> ParentDevice.optimizeBusUtilizationForAll(10, pivotMotor, beakMotor, candi));
 
         positionControl = new MotionMagicVoltage(0.0);
         torqueControl = new TorqueCurrentFOC(0.0);
@@ -214,7 +207,7 @@ public final class GooseNeck extends GRRSubsystem {
 
         beakSensorVoltageControl.UpdateFreqHz = 0.0;
 
-        PhoenixUtil.run("Sync Goose Neck Position", () ->
+        PhoenixUtil.run(() ->
             pivotMotor.setPosition(
                 MathUtil.inputModulus(candi.getPWM2Position(false).waitForUpdate(1.0).getValueAsDouble(), -0.5, 0.5)
             )
@@ -275,26 +268,33 @@ public final class GooseNeck extends GRRSubsystem {
         return goTo(() -> GoosePosition.STOW, () -> false, () -> false, safe).withName("GooseNeck.stow()");
     }
 
-    public Command intake(BooleanSupplier button, BooleanSupplier swallow, BooleanSupplier safe) {
+    public Command intake(
+        BooleanSupplier button,
+        BooleanSupplier swallow,
+        BooleanSupplier inHopper,
+        BooleanSupplier safe
+    ) {
         enum State {
             INIT,
             SEAT,
             DONE
         }
 
-        AtomicBoolean swallowAtomic = new AtomicBoolean(false);
         Mutable<State> state = new Mutable<>(State.INIT);
         Debouncer debounce = new Debouncer(0.065, DebounceType.kRising);
         Timer delay = new Timer();
 
         return goTo(() -> GoosePosition.STOW, () -> false, () -> false, safe)
-            .alongWith(Commands.run(() -> swallowAtomic.set(swallow.getAsBoolean())))
             .withDeadline(
-                new NotifierCommand(
-                    () -> {
-                        boolean beamBroken = debounce.calculate(!beamBreakVolatile.waitForUpdate(0.01).getValue());
+                new CommandBuilder()
+                    .onInitialize(() -> {
+                        state.value = State.INIT;
+                        debounce.calculate(false);
+                    })
+                    .onExecute(() -> {
+                        boolean beamBroken = debounce.calculate(beamBroken());
 
-                        if (swallowAtomic.get()) {
+                        if (swallow.getAsBoolean()) {
                             beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.SWALLOW.voltage()));
                             hasCoral.set(false);
                             state.value = State.INIT;
@@ -303,7 +303,7 @@ public final class GooseNeck extends GRRSubsystem {
 
                         switch (state.value) {
                             case INIT:
-                                if (!beamBroken) {
+                                if (!beamBroken || inHopper.getAsBoolean()) {
                                     beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.INTAKE.voltage()));
                                     break;
                                 }
@@ -327,18 +327,12 @@ public final class GooseNeck extends GRRSubsystem {
                                 beakMotor.stopMotor();
                                 break;
                         }
-                    },
-                    0.0
-                )
-                    .until(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.INIT)))
-                    .beforeStarting(() -> {
-                        state.value = State.INIT;
-                        debounce.calculate(false);
                     })
-                    .finallyDo(beakMotor::stopMotor)
-                    .onlyIf(this::noCoral)
-                    .withName("GooseNeck.receive()")
-            );
+                    .isFinished(() -> hasCoral() || (!button.getAsBoolean() && state.value.equals(State.INIT)))
+                    .onEnd(beakMotor::stopMotor)
+            )
+            .onlyIf(this::noCoral)
+            .withName("GooseNeck.intake()");
     }
 
     public Command score(
@@ -374,6 +368,17 @@ public final class GooseNeck extends GRRSubsystem {
                     .onEnd(beakMotor::stopMotor)
             )
             .withName("GooseNeck.score()");
+    }
+
+    public Command poopL1(BooleanSupplier safe) {
+        return goTo(() -> GoosePosition.STOW, () -> false, () -> false, safe)
+            .alongWith(
+                new CommandBuilder()
+                    .onInitialize(() -> hasCoral.set(false))
+                    .onExecute(() -> beakMotor.setControl(beakVoltageControl.withOutput(GooseSpeed.POOP_L1.voltage())))
+                    .onEnd(beakMotor::stopMotor)
+            )
+            .withName("GooseNeck.poopL1()");
     }
 
     public Command barf(BooleanSupplier safe) {

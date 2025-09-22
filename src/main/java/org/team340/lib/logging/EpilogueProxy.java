@@ -14,8 +14,8 @@ import org.team340.lib.util.Mutable;
 //
 // Do not fret if your IDE reports errors in this file!
 //
-// Epilogue is a generated class and may not have been seen yet by your
-// editor, but your code will still build and function as normal.
+// Epilogue is a generated class and may not have been seen yet by
+// your editor. Your code will still build and function as normal.
 //
 
 /**
@@ -45,13 +45,6 @@ public final class EpilogueProxy {
     }
 
     /**
-     * Gets the configured root backend.
-     */
-    public static EpilogueBackend getRootBackend() {
-        return getConfig().backend.getNested(getConfig().root);
-    }
-
-    /**
      * Checks if data associated with a given importance level should be logged.
      * @param importance The data's importance.
      */
@@ -60,14 +53,35 @@ public final class EpilogueProxy {
     }
 
     /**
+     * Configures a new backend.
+     * @param backend The new backend for Epilogue to utilize.
+     */
+    public static void setBackend(EpilogueBackend backend) {
+        getConfig().backend = backend;
+    }
+
+    /**
+     * Returns the configured backend.
+     */
+    public static EpilogueBackend getBackend() {
+        return getConfig().backend;
+    }
+
+    /**
+     * Gets the configured root backend.
+     */
+    public static EpilogueBackend getRootBackend() {
+        return getBackend().getNested(getConfig().root);
+    }
+
+    /**
      * Generates a logging function for the provided object via reflection. This
      * method should not be invoked periodically due to performance implications.
      * @param obj The object to generate the logger for.
      */
-    @SuppressWarnings("unchecked")
     public static Consumer<EpilogueBackend> getLogger(Object obj) {
         Field[] fields = Epilogue.class.getDeclaredFields();
-        Mutable<ClassSpecificLogger<Object>> objLogger = new Mutable<>(null);
+        Mutable<ClassSpecificLogger<?>> objLogger = new Mutable<>(null);
 
         for (Field field : fields) {
             if (Modifier.isStatic(field.getModifiers())) {
@@ -85,7 +99,9 @@ public final class EpilogueProxy {
         }
 
         if (objLogger.value != null) {
-            return backend -> objLogger.value.tryUpdate(backend, obj, Epilogue.getConfig().errorHandler);
+            @SuppressWarnings("unchecked")
+            var logger = (ClassSpecificLogger<Object>) objLogger.value;
+            return backend -> logger.tryUpdate(backend, obj, getConfig().errorHandler);
         } else {
             DriverStation.reportWarning(
                 "[EpilogueProxy] Unable to find logger for class \"" + obj.getClass().getSimpleName() + "\"",

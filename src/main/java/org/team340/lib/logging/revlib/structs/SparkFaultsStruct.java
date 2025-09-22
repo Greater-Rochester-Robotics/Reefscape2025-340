@@ -25,14 +25,14 @@ public class SparkFaultsStruct implements Struct<Integer> {
     @Override
     public String getSchema() {
         return (
-            "bool other:1; " +
-            "bool motorType:1; " +
-            "bool sensor:1; " +
-            "bool can:1; " +
-            "bool temperature:1; " +
-            "bool gateDriver:1; " +
-            "bool escEeprom:1; " +
-            "bool firmware:1;"
+            "bool other:1; "
+            + "bool motorType:1; "
+            + "bool sensor:1; "
+            + "bool can:1; "
+            + "bool temperature:1; "
+            + "bool gateDriver:1; "
+            + "bool escEeprom:1; "
+            + "bool firmware:1;"
         );
     }
 

@@ -378,8 +378,8 @@ public class PhotonPoseEstimator {
         // timestamp, return an
         // empty result
         if (
-            poseCacheTimestampSeconds > 0 &&
-            Math.abs(poseCacheTimestampSeconds - cameraResult.getTimestampSeconds()) < 1e-6
+            poseCacheTimestampSeconds > 0
+            && Math.abs(poseCacheTimestampSeconds - cameraResult.getTimestampSeconds()) < 1e-6
         ) {
             return Optional.empty();
         }
@@ -415,26 +415,25 @@ public class PhotonPoseEstimator {
         Optional<ConstrainedSolvepnpParams> constrainedPnpParams,
         PoseStrategy strategy
     ) {
-        Optional<EstimatedRobotPose> estimatedPose =
-            switch (strategy) {
-                case LOWEST_AMBIGUITY -> lowestAmbiguityStrategy(cameraResult);
-                case CLOSEST_TO_CAMERA_HEIGHT -> closestToCameraHeightStrategy(cameraResult);
-                case CLOSEST_TO_REFERENCE_POSE -> closestToReferencePoseStrategy(cameraResult, referencePose);
-                case CLOSEST_TO_LAST_POSE -> {
-                    setReferencePose(lastPose);
-                    yield closestToReferencePoseStrategy(cameraResult, referencePose);
-                }
-                case AVERAGE_BEST_TARGETS -> averageBestTargetsStrategy(cameraResult);
-                case MULTI_TAG_PNP_ON_RIO -> multiTagOnRioStrategy(cameraResult, cameraMatrix, distCoeffs);
-                case MULTI_TAG_PNP_ON_COPROCESSOR -> multiTagOnCoprocStrategy(cameraResult);
-                case PNP_DISTANCE_TRIG_SOLVE -> pnpDistanceTrigSolveStrategy(cameraResult);
-                case CONSTRAINED_SOLVEPNP -> constrainedPnpStrategy(
-                    cameraResult,
-                    cameraMatrix,
-                    distCoeffs,
-                    constrainedPnpParams
-                );
-            };
+        Optional<EstimatedRobotPose> estimatedPose = switch (strategy) {
+            case LOWEST_AMBIGUITY -> lowestAmbiguityStrategy(cameraResult);
+            case CLOSEST_TO_CAMERA_HEIGHT -> closestToCameraHeightStrategy(cameraResult);
+            case CLOSEST_TO_REFERENCE_POSE -> closestToReferencePoseStrategy(cameraResult, referencePose);
+            case CLOSEST_TO_LAST_POSE -> {
+                setReferencePose(lastPose);
+                yield closestToReferencePoseStrategy(cameraResult, referencePose);
+            }
+            case AVERAGE_BEST_TARGETS -> averageBestTargetsStrategy(cameraResult);
+            case MULTI_TAG_PNP_ON_RIO -> multiTagOnRioStrategy(cameraResult, cameraMatrix, distCoeffs);
+            case MULTI_TAG_PNP_ON_COPROCESSOR -> multiTagOnCoprocStrategy(cameraResult);
+            case PNP_DISTANCE_TRIG_SOLVE -> pnpDistanceTrigSolveStrategy(cameraResult);
+            case CONSTRAINED_SOLVEPNP -> constrainedPnpStrategy(
+                cameraResult,
+                cameraMatrix,
+                distCoeffs,
+                constrainedPnpParams
+            );
+        };
 
         if (estimatedPose.isPresent()) {
             lastPose = estimatedPose.get().estimatedPose;
@@ -718,8 +717,8 @@ public class PhotonPoseEstimator {
             }
 
             double alternateTransformDelta = Math.abs(
-                robotToCamera.getZ() -
-                targetPosition.get().transformBy(target.getAlternateCameraToTarget().inverse()).getZ()
+                robotToCamera.getZ()
+                - targetPosition.get().transformBy(target.getAlternateCameraToTarget().inverse()).getZ()
             );
             double bestTransformDelta = Math.abs(
                 robotToCamera.getZ() - targetPosition.get().transformBy(target.getBestCameraToTarget().inverse()).getZ()

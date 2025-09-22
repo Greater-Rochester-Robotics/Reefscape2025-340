@@ -3,6 +3,7 @@ package org.team340.lib.math;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.wpilibj.DriverStation;
+import java.util.List;
 
 /**
  * Retrieves information about the playing field from an AprilTag field
@@ -47,6 +48,9 @@ public final class FieldInfo {
                 case k2022RapidReact -> SymmetryType.ROTATE;
             };
         } catch (Exception e) {
+            layout = new AprilTagFieldLayout(List.of(), 0.0, 0.0);
+            symmetryType = SymmetryType.MIRROR;
+
             DriverStation.reportError(
                 "[AprilTags] Unable to load layout from field \"" + field.name() + "\": " + e.getMessage(),
                 true
@@ -65,6 +69,9 @@ public final class FieldInfo {
             layout = AprilTagFieldLayout.loadFromResource(resourcePath);
             FieldInfo.symmetryType = symmetryType;
         } catch (Exception e) {
+            layout = new AprilTagFieldLayout(List.of(), 0.0, 0.0);
+            symmetryType = SymmetryType.MIRROR;
+
             DriverStation.reportError(
                 "[AprilTags] Unable to load layout from resource \"" + resourcePath + "\": " + e.getMessage(),
                 true
@@ -84,14 +91,14 @@ public final class FieldInfo {
     }
 
     /**
-     * Returns the length of the field in meters.
+     * Returns the length (X-axis) of the field in meters.
      */
     public static double length() {
         return layout.getFieldLength();
     }
 
     /**
-     * Returns the width of the field in meters.
+     * Returns the width (Y-axis) of the field in meters.
      */
     public static double width() {
         return layout.getFieldWidth();

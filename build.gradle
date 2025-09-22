@@ -1,7 +1,7 @@
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2025.3.2"
-    id "com.diffplug.spotless" version "7.0.3"
+    id "com.diffplug.spotless" version "7.2.1"
 }
 
 java {
@@ -28,23 +28,23 @@ deploy {
                 // getTargetTypeClass is a shortcut to get the class type using a string
 
                 frcJava(getArtifactTypeClass('FRCJavaArtifact')) {
-                    jvmArgs.add("-XX:+UnlockExperimentalVMOptions")
-                    jvmArgs.add("-XX:GCTimeRatio=5")
-                    jvmArgs.add("-XX:+UseSerialGC")
-                    jvmArgs.add("-XX:MaxGCPauseMillis=50")
+                    jvmArgs.add('-XX:+UnlockExperimentalVMOptions')
+                    jvmArgs.add('-XX:GCTimeRatio=5')
+                    jvmArgs.add('-XX:+UseSerialGC')
+                    jvmArgs.add('-XX:MaxGCPauseMillis=50')
 
                     // Only enable these arguments when using a RIO 2
-                    jvmArgs.add("-Xmx100M")
-                    jvmArgs.add("-Xms100M")
-                    jvmArgs.add("-XX:+AlwaysPreTouch")
+                    jvmArgs.add('-Xmx100M')
+                    jvmArgs.add('-Xms100M')
+                    jvmArgs.add('-XX:+AlwaysPreTouch')
 
                     // Enable VisualVM connection
-                    // jvmArgs.add("-Dcom.sun.management.jmxremote=true")
-                    // jvmArgs.add("-Dcom.sun.management.jmxremote.port=1198")
-                    // jvmArgs.add("-Dcom.sun.management.jmxremote.local.only=false")
-                    // jvmArgs.add("-Dcom.sun.management.jmxremote.ssl=false")
-                    // jvmArgs.add("-Dcom.sun.management.jmxremote.authenticate=false")
-                    // jvmArgs.add("-Djava.rmi.server.hostname=10.3.40.2")
+                    // jvmArgs.add('-Dcom.sun.management.jmxremote=true')
+                    // jvmArgs.add('-Dcom.sun.management.jmxremote.port=1198')
+                    // jvmArgs.add('-Dcom.sun.management.jmxremote.local.only=false')
+                    // jvmArgs.add('-Dcom.sun.management.jmxremote.ssl=false')
+                    // jvmArgs.add('-Dcom.sun.management.jmxremote.authenticate=false')
+                    // jvmArgs.add('-Djava.rmi.server.hostname=10.3.40.2')
                 }
 
                 // Static files artifact
@@ -103,14 +103,16 @@ spotless {
         endWithNewline()
         removeUnusedImports()
         trimTrailingWhitespace()
-        prettier(['prettier': '3.4.2', 'prettier-plugin-java': '2.6.8'])
+        prettier(['prettier': '3.6.2', 'prettier-plugin-java': '2.7.4'])
             .config([
-                'parser': 'java',
-                'plugins': ['prettier-plugin-java'],
+                parser: 'java',
+                plugins: ['prettier-plugin-java'],
+                arrowParens: 'avoid',
+                experimentalOperatorPosition: 'start',
                 printWidth: 120,
                 tabWidth: 4,
                 useTabs: false,
-                trailingComma: "none"
+                trailingComma: 'none'
             ])
     }
 }

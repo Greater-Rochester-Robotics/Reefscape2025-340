@@ -9,7 +9,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 
 /**
- * Math utilities.
+ * General math utilities.
  * We reinvented math. It's called Math 2.
  */
 public final class Math2 {

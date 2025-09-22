@@ -26,8 +26,8 @@ import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.team340.lib.math.FieldInfo;
-import org.team340.lib.swerve.SwerveAPI.TimestampedPose;
-import org.team340.lib.swerve.SwerveAPI.VisionMeasurement;
+import org.team340.lib.math.geometry.TimestampedPose;
+import org.team340.lib.math.geometry.VisionMeasurement;
 import org.team340.lib.util.Alliance;
 import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 
@@ -63,7 +63,9 @@ public final class Vision {
         }
 
         cameras = RobotBase.isSimulation() && !ENABLE_SIM ? new CameraConfig[0] : cameras;
-        this.cameras = Arrays.stream(cameras).map(config -> new Camera(config)).toArray(Camera[]::new);
+        this.cameras = Arrays.stream(cameras)
+            .map(config -> new Camera(config))
+            .toArray(Camera[]::new);
 
         // Hit the undocumented Photon Turbo Button™
         // https://github.com/PhotonVision/photonvision/pull/1662
@@ -97,7 +99,12 @@ public final class Vision {
             camera.refresh(measurements, targets);
         }
 
-        estimates.addAll(measurements.stream().map(m -> m.pose()).toList());
+        estimates.addAll(
+            measurements
+                .stream()
+                .map(m -> m.pose())
+                .toList()
+        );
         return measurements.stream().toArray(VisionMeasurement[]::new);
     }
 
@@ -182,7 +189,7 @@ public final class Vision {
 
                 // Calculate the pose estimation weights for X/Y location. As
                 // distance increases, the tag is trusted exponentially less.
-                double xyStd = (usingTrig ? 0.1 : 0.4) * distance * distance;
+                double xyStd = (usingTrig ? 0.18 : 0.4) * distance * distance;
 
                 // Calculate the angular pose estimation weight. If we're solving via trig, reject
                 // the heading estimate to ensure the pose estimator doesn't "poison" itself with
@@ -193,7 +200,7 @@ public final class Vision {
                 measurements.add(
                     new VisionMeasurement(
                         estimate.get().estimatedPose.toPose2d(),
-                        estimate.get().timestampSeconds,
+                        estimate.get().timestampSeconds - (1.0 / 30.0),
                         VecBuilder.fill(xyStd, xyStd, angStd)
                     )
                 );

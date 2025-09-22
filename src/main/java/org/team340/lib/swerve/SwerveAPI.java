@@ -4,7 +4,6 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -15,18 +14,20 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import org.team340.lib.math.Math2;
+import org.team340.lib.math.geometry.TimestampedPose;
+import org.team340.lib.math.geometry.VisionMeasurement;
 import org.team340.lib.swerve.config.SwerveConfig;
 import org.team340.lib.swerve.hardware.SwerveIMUs.SwerveIMU;
 import org.team340.lib.tunable.TunableTable;
@@ -56,6 +57,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
 
     private final Lock odometryMutex = new ReentrantLock();
     private final SwerveOdometryThread odometryThread;
+    private final ExecutorService configExecutors;
 
     private Rotation2d lastRobotAngle = Rotation2d.kZero;
     private double lastRatelimit = 0.0;
@@ -97,7 +99,9 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         );
 
         imu = SwerveIMU.construct(config.imu, config, hook -> imuSimHook = hook);
+
         odometryThread = new SwerveOdometryThread();
+        configExecutors = Executors.newFixedThreadPool(moduleCount);
     }
 
     /**
@@ -153,7 +157,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         try {
             Arrays.sort(measurements);
             for (VisionMeasurement measurement : measurements) {
-                if (measurement.stdDevs == null) {
+                if (measurement.stdDevs() == null) {
                     poseEstimator.addVisionMeasurement(measurement.pose(), measurement.timestamp());
                 } else {
                     poseEstimator.addVisionMeasurement(
@@ -214,6 +218,34 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     }
 
     /**
+     * Utility method for converting driver input to chassis speeds. The {@code x} and {@code y}
+     * parameters expect the controller's NED (north-east-down) convention, and will automatically
+     * convert to WPILib's typical NWU (north-west-up) convention when converting to chassis speeds.
+     * @param x The X value of the driver's joystick, from {@code [-1.0, 1.0]}.
+     * @param y The Y value of the driver's joystick, from {@code [-1.0, 1.0]}.
+     * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
+     */
+    public ChassisSpeeds calculateDriverSpeeds(double x, double y, double angular) {
+        double k = 0.0;
+        double norm = Math.hypot(x, y);
+        double deadband = config.driverVelDeadband;
+
+        if (norm >= deadband) {
+            k = ((norm - deadband) / (1.0 - deadband)) / norm;
+        }
+
+        x *= k;
+        y *= k;
+        angular = MathUtil.applyDeadband(angular, config.driverAngularVelDeadband);
+
+        double xyMult = config.driverVel * Math.pow(x * x + y * y, 0.5 * (config.driverVelExp - 1.0));
+        double angularVel =
+            config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
+
+        return new ChassisSpeeds(-y * xyMult, -x * xyMult, angularVel);
+    }
+
+    /**
      * Drives using inputs from the driver's controller. The {@code x} and {@code y} parameters
      * expect the controller's NED (north-east-down) convention, and will automatically convert
      * to WPILib's typical NWU (north-west-up) convention when applying chassis speeds.
@@ -232,7 +264,8 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         boolean discretize,
         boolean ratelimit
     ) {
-        applyAssistedDriverInput(x, y, angular, new ChassisSpeeds(), perspective, discretize, ratelimit);
+        ChassisSpeeds speeds = calculateDriverSpeeds(x, y, angular);
+        applySpeeds(speeds, perspective, discretize, ratelimit);
     }
 
     /**
@@ -259,28 +292,10 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         boolean discretize,
         boolean ratelimit
     ) {
-        double k = 0.0;
-        double norm = Math.hypot(x, y);
-        double deadband = config.driverVelDeadband;
-
-        if (norm >= deadband) {
-            k = ((norm - deadband) / (1.0 - deadband)) / norm;
-        }
-
-        x *= k;
-        y *= k;
-        angular = MathUtil.applyDeadband(angular, config.driverAngularVelDeadband);
-
-        double xyMult = config.driverVel * Math.pow(x * x + y * y, 0.5 * (config.driverVelExp - 1.0));
-        double angularVel =
-            config.driverAngularVel * Math.copySign(Math.pow(angular, config.driverAngularVelExp), angular);
-
-        ChassisSpeeds speeds = new ChassisSpeeds(
-            (-y * xyMult) + assist.vxMetersPerSecond,
-            (-x * xyMult) + assist.vyMetersPerSecond,
-            angularVel + assist.omegaRadiansPerSecond
-        );
-
+        ChassisSpeeds speeds = calculateDriverSpeeds(x, y, angular);
+        speeds.vxMetersPerSecond += assist.vxMetersPerSecond;
+        speeds.vyMetersPerSecond += assist.vyMetersPerSecond;
+        speeds.omegaRadiansPerSecond += assist.omegaRadiansPerSecond;
         applySpeeds(speeds, perspective, discretize, ratelimit);
     }
 
@@ -429,137 +444,6 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     }
 
     /**
-     * Re-applies PID and FF gains to motors from the swerve config.
-     * Used for setting new gains after the config has been mutated.
-     * @param moveMotors {@code true} reapplies to all move motors, {@code false} reapplies to all turn motors.
-     */
-    private void reapplyGains(boolean moveMotors) {
-        for (var module : modules) {
-            if (moveMotors) {
-                module.moveMotor.reapplyGains();
-            } else {
-                module.turnMotor.reapplyGains();
-            }
-        }
-    }
-
-    @Override
-    public void initTunable(TunableTable table) {
-        // setTimings()
-        TunableTable timings = table.getSubTable("timings");
-        timings.value("discretization", config.discretizationPeriod, v -> config.discretizationPeriod = v);
-
-        // setMovePID()
-        TunableTable movePID = table.getSubTable("movePID");
-        movePID.value("kP", config.movePID[0], v -> {
-            config.movePID[0] = v;
-            reapplyGains(true);
-        });
-        movePID.value("kI", config.movePID[1], v -> {
-            config.movePID[1] = v;
-            reapplyGains(true);
-        });
-        movePID.value("kD", config.movePID[2], v -> {
-            config.movePID[2] = v;
-            reapplyGains(true);
-        });
-
-        // setMoveFF()
-        TunableTable moveFF = table.getSubTable("moveFF");
-        moveFF.value("kS", config.moveFF[0], v -> {
-            config.moveFF[0] = v;
-            reapplyGains(true);
-        });
-        moveFF.value("kV", config.moveFF[1], v -> {
-            config.moveFF[1] = v;
-            reapplyGains(true);
-        });
-
-        // setTurnPID()
-        TunableTable turnPID = table.getSubTable("turnPID");
-        turnPID.value("kP", config.turnPID[0], v -> {
-            config.turnPID[0] = v;
-            reapplyGains(false);
-        });
-        turnPID.value("kI", config.turnPID[1], v -> {
-            config.turnPID[1] = v;
-            reapplyGains(false);
-        });
-        turnPID.value("kD", config.turnPID[2], v -> {
-            config.turnPID[2] = v;
-            reapplyGains(false);
-        });
-
-        // setLimits()
-        TunableTable limits = table.getSubTable("limits");
-        limits.value("velocity", config.velocity, v -> config.velocity = v);
-        limits.value("velDeadband", config.velDeadband, v -> config.velDeadband = v);
-        limits.value("slipAccel", config.slipAccel, v -> config.slipAccel = v);
-        limits.value("torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
-        limits.value("angularAccel", config.angularAccel, v -> config.angularAccel = v);
-
-        // setDriverProfile()
-        TunableTable driverProfile = table.getSubTable("driverProfile");
-        driverProfile.value("vel", config.driverVel, v -> config.driverVel = v);
-        driverProfile.value("velExp", config.driverVelExp, v -> config.driverVelExp = v);
-        driverProfile.value("velDeadband", config.driverVelDeadband, v -> config.driverVelDeadband = v);
-        driverProfile.value("angularVel", config.driverAngularVel, v -> config.driverAngularVel = v);
-        driverProfile.value("angularVelExp", config.driverAngularVelExp, v -> config.driverAngularVelExp = v);
-        driverProfile.value("angularVelDeadband", config.driverAngularVelDeadband, v ->
-            config.driverAngularVelDeadband = v
-        );
-    }
-
-    @Override
-    public void close() {
-        try {
-            odometryThread.close();
-            for (var module : modules) module.close();
-            imu.close();
-        } catch (Exception e) {}
-    }
-
-    /**
-     * Represents a measurement from vision to apply to the pose estimator.
-     * @see {@link PoseEstimator#addVisionMeasurement(Pose2d, double, Matrix)}.
-     */
-    public static final record VisionMeasurement(Pose2d pose, double timestamp, Matrix<N3, N1> stdDevs)
-        implements Comparable<VisionMeasurement> {
-        /**
-         * Represents a measurement from vision to apply to the pose estimator.
-         * @see {@link PoseEstimator#addVisionMeasurement(Pose2d, double)}.
-         */
-        public VisionMeasurement(Pose2d pose, double timestamp) {
-            this(pose, timestamp, null);
-        }
-
-        @Override
-        public int compareTo(VisionMeasurement o) {
-            return Double.compare(timestamp, o.timestamp());
-        }
-
-        @Override
-        public String toString() {
-            return String.format("VisionMeasurement(%s, timestamp: %.3f)", pose, timestamp);
-        }
-    }
-
-    /**
-     * Contains a {@link Pose2d} alongside a timestamp in seconds.
-     */
-    public static final record TimestampedPose(Pose2d pose, double timestamp) implements Comparable<TimestampedPose> {
-        @Override
-        public int compareTo(TimestampedPose o) {
-            return Double.compare(timestamp, o.timestamp());
-        }
-
-        @Override
-        public String toString() {
-            return String.format("TimestampedPose(%s, timestamp: %.3f)", pose, timestamp);
-        }
-    }
-
-    /**
      * Manages swerve odometry. Will run asynchronously at the configured odometry update
      * period, unless the configured period is the same or more than the main robot loop
      * period. The {@link SwerveOdometryThread#run(boolean)} method is also invoked in
@@ -661,5 +545,113 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 }
             }
         }
+    }
+
+    /**
+     * Sets motor brake modes.
+     * @param move If the move motors should have brake mode enabled.
+     * @param turn If the turn motors should have brake mode enabled.
+     */
+    public void setBrakeMode(boolean move, boolean turn) {
+        boolean setMove = config.moveBrakeMode != (config.moveBrakeMode = move);
+        boolean setTurn = config.turnBrakeMode != (config.turnBrakeMode = move);
+
+        for (var module : modules) {
+            configExecutors.execute(() -> {
+                if (setMove) module.moveMotor.reapplyBrakeMode();
+                if (setTurn) module.turnMotor.reapplyBrakeMode();
+            });
+        }
+    }
+
+    /**
+     * Re-applies PID and FF gains to motors from the swerve config.
+     * Used for setting new gains after the config has been mutated.
+     * @param moveMotors {@code true} reapplies to all move motors, {@code false} reapplies to all turn motors.
+     */
+    private void reapplyGains(boolean moveMotors) {
+        for (var module : modules) {
+            configExecutors.execute(() -> {
+                if (moveMotors) module.moveMotor.reapplyGains();
+                else module.turnMotor.reapplyGains();
+            });
+        }
+    }
+
+    @Override
+    public void initTunable(TunableTable table) {
+        // setTimings()
+        TunableTable timings = table.getNested("timings");
+        timings.value("discretization", config.discretizationPeriod, v -> config.discretizationPeriod = v);
+
+        // setMovePID()
+        TunableTable movePID = table.getNested("movePID");
+        movePID.value("kP", config.movePID[0], v -> {
+            config.movePID[0] = v;
+            reapplyGains(true);
+        });
+        movePID.value("kI", config.movePID[1], v -> {
+            config.movePID[1] = v;
+            reapplyGains(true);
+        });
+        movePID.value("kD", config.movePID[2], v -> {
+            config.movePID[2] = v;
+            reapplyGains(true);
+        });
+
+        // setMoveFF()
+        TunableTable moveFF = table.getNested("moveFF");
+        moveFF.value("kS", config.moveFF[0], v -> {
+            config.moveFF[0] = v;
+            reapplyGains(true);
+        });
+        moveFF.value("kV", config.moveFF[1], v -> {
+            config.moveFF[1] = v;
+            reapplyGains(true);
+        });
+
+        // setTurnPID()
+        TunableTable turnPID = table.getNested("turnPID");
+        turnPID.value("kP", config.turnPID[0], v -> {
+            config.turnPID[0] = v;
+            reapplyGains(false);
+        });
+        turnPID.value("kI", config.turnPID[1], v -> {
+            config.turnPID[1] = v;
+            reapplyGains(false);
+        });
+        turnPID.value("kD", config.turnPID[2], v -> {
+            config.turnPID[2] = v;
+            reapplyGains(false);
+        });
+
+        // setLimits()
+        TunableTable limits = table.getNested("limits");
+        limits.value("velocity", config.velocity, v -> config.velocity = v);
+        limits.value("velDeadband", config.velDeadband, v -> config.velDeadband = v);
+        limits.value("slipAccel", config.slipAccel, v -> config.slipAccel = v);
+        limits.value("torqueAccel", config.torqueAccel, v -> config.torqueAccel = v);
+        limits.value("angularAccel", config.angularAccel, v -> config.angularAccel = v);
+
+        // setDriverProfile()
+        TunableTable driverProfile = table.getNested("driverProfile");
+        driverProfile.value("vel", config.driverVel, v -> config.driverVel = v);
+        driverProfile.value("velExp", config.driverVelExp, v -> config.driverVelExp = v);
+        driverProfile.value("velDeadband", config.driverVelDeadband, v -> config.driverVelDeadband = v);
+        driverProfile.value("angularVel", config.driverAngularVel, v -> config.driverAngularVel = v);
+        driverProfile.value("angularVelExp", config.driverAngularVelExp, v -> config.driverAngularVelExp = v);
+        driverProfile.value("angularVelDeadband", config.driverAngularVelDeadband, v ->
+            config.driverAngularVelDeadband = v
+        );
+    }
+
+    @Override
+    public void close() {
+        try {
+            configExecutors.shutdown();
+            odometryThread.close();
+            for (var module : modules) module.close();
+            imu.close();
+        } catch (Exception e) {}
     }
 }

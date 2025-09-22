@@ -264,14 +264,12 @@ public final class SwerveEncoders {
                 ? SensorDirectionValue.Clockwise_Positive
                 : SensorDirectionValue.CounterClockwise_Positive;
 
-            PhoenixUtil.run("Clear Sticky Faults", () -> cancoder.clearStickyFaults());
-            PhoenixUtil.run("Apply CANcoderConfiguration", () -> cancoder.getConfigurator().apply(cancoderConfig));
-            PhoenixUtil.run("Set Update Frequency", () ->
+            PhoenixUtil.run(() -> cancoder.clearStickyFaults());
+            PhoenixUtil.run(() -> cancoder.getConfigurator().apply(cancoderConfig));
+            PhoenixUtil.run(() ->
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
-            PhoenixUtil.run("Optimize Bus Utilization", () ->
-                cancoder.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
-            );
+            PhoenixUtil.run(() -> cancoder.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05));
 
             if (turnMotor.getAPI() instanceof TalonFX talonFX) {
                 var feedbackConfig = new FeedbackConfigs();
@@ -287,10 +285,8 @@ public final class SwerveEncoders {
                 talonFX.getConfigurator().refresh(closedLoopConfig);
                 closedLoopConfig.ContinuousWrap = true;
 
-                PhoenixUtil.run("Apply FeedbackConfigs", () -> talonFX.getConfigurator().apply(feedbackConfig));
-                PhoenixUtil.run("Apply ClosedLoopGeneralConfigs", () ->
-                    talonFX.getConfigurator().apply(closedLoopConfig)
-                );
+                PhoenixUtil.run(() -> talonFX.getConfigurator().apply(feedbackConfig));
+                PhoenixUtil.run(() -> talonFX.getConfigurator().apply(closedLoopConfig));
 
                 tempHookStatus = new HookStatus(true, true);
             }
@@ -336,7 +332,7 @@ public final class SwerveEncoders {
         return new SwerveEncoder() {
             @Override
             public double getPosition() {
-                return turnMotor.getPosition() / (hookStatus().readMotor() ? 1.0 : config.turnGearRatio);
+                return (turnMotor.getPosition() / (hookStatus().readMotor() ? 1.0 : config.turnGearRatio));
             }
 
             @Override

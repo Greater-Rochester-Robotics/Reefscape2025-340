@@ -23,7 +23,7 @@ import org.team340.robot.Constants.RioCAN;
 @Logged
 public final class Climber extends GRRSubsystem {
 
-    private static final TunableTable tunables = Tunables.getTable("climber");
+    private static final TunableTable tunables = Tunables.getNested("climber");
 
     private static final TunableDouble volts = tunables.value("volts", 12.0);
     private static final TunableDouble overrideVolts = tunables.value("overrideVolts", 4.0);
@@ -64,22 +64,20 @@ public final class Climber extends GRRSubsystem {
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 450.0;
 
-        PhoenixUtil.run("Clear Climber Sticky Faults", () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Apply Climber Motor Configuration", () -> motor.getConfigurator().apply(config));
+        PhoenixUtil.run(() -> motor.clearStickyFaults());
+        PhoenixUtil.run(() -> motor.getConfigurator().apply(config));
 
         position = motor.getPosition();
         velocity = motor.getVelocity();
 
-        PhoenixUtil.run("Set Climber Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(100, position, velocity)
-        );
-        PhoenixUtil.run("Optimize Climber CAN Utilization", () -> ParentDevice.optimizeBusUtilizationForAll(10, motor));
+        PhoenixUtil.run(() -> BaseStatusSignal.setUpdateFrequencyForAll(100, position, velocity));
+        PhoenixUtil.run(() -> ParentDevice.optimizeBusUtilizationForAll(10, motor));
 
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = true;
         voltageControl.UpdateFreqHz = 0.0;
 
-        PhoenixUtil.run("Zero Climber Position", () -> motor.setPosition(0.0));
+        PhoenixUtil.run(() -> motor.setPosition(0.0));
     }
 
     @Override
@@ -164,7 +162,7 @@ public final class Climber extends GRRSubsystem {
                 motor.getConfigurator().refresh(config);
                 config.NeutralMode = NeutralModeValue.Brake;
                 motor.getConfigurator().apply(config);
-                PhoenixUtil.run("Set Climber Zero", () -> motor.setPosition(0.0));
+                PhoenixUtil.run(() -> motor.setPosition(0.0));
             })
             .ignoringDisable(true);
     }

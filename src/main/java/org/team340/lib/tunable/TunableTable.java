@@ -13,6 +13,9 @@ import org.team340.lib.tunable.Tunables.TunableHandler;
 import org.team340.lib.tunable.Tunables.TunableInteger;
 import org.team340.lib.tunable.Tunables.TunableString;
 
+/**
+ * A TunableTable represents a nested table of tunable values in the NetworkTables tree.
+ */
 public final class TunableTable {
 
     private final String name;
@@ -31,8 +34,8 @@ public final class TunableTable {
      * tunable values under a specified path.
      * @param name The name of the table. Must be unique.
      */
-    public TunableTable getSubTable(String name) {
-        return Tunables.getTable(this.name + name);
+    public TunableTable getNested(String name) {
+        return Tunables.getNested(this.name + name);
     }
 
     /**

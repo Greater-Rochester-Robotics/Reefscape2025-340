@@ -5,7 +5,8 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANdi;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -32,19 +33,20 @@ import org.team340.robot.util.ReefSelection;
 @Logged
 public final class Elevator extends GRRSubsystem {
 
-    private static final TunableTable tunables = Tunables.getTable("elevator");
+    private static final TunableTable tunables = Tunables.getNested("elevator");
 
     private static final TunableDouble closestTolerance = tunables.value("closestTolerance", 0.35);
-    private static final TunableDouble atPositionTolerance = tunables.value("atPositionTolerance", 0.5);
+    private static final TunableDouble atPositionTolerance = tunables.value("atPositionTolerance", 2.5);
+    private static final TunableDouble emergencyRPS = tunables.value("emergencyRPS", -25.0);
     private static final TunableDouble homingVolts = tunables.value("homingVolts", -1.0);
 
     public static enum ElevatorPosition {
-        DOWN(0.18),
-        INTAKE(0.18),
-        BARF(0.18),
-        SWALLOW(0.65),
+        DOWN(1.0),
+        INTAKE(0.0),
+        BARF(0.0),
+        SWALLOW(0.45),
         L1(4.0, Type.SCORING),
-        L2(10.75, Type.SCORING),
+        L2(10.9, Type.SCORING),
         L3(22.5, Type.SCORING),
         L4(40.25, Type.SCORING),
         L2_DUNK(8.25, Type.DUNK),
@@ -98,7 +100,8 @@ public final class Elevator extends GRRSubsystem {
     private final StatusSignal<AngularVelocity> followVelocity;
     private final StatusSignal<Boolean> limitSwitch;
 
-    private final MotionMagicExpoVoltage positionControl;
+    private final MotionMagicVoltage positionControl;
+    private final VelocityVoltage velocityControl;
     private final VoltageOut voltageControl;
     private final Follower followControl;
 
@@ -114,7 +117,7 @@ public final class Elevator extends GRRSubsystem {
 
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
-        motorConfig.CurrentLimits.StatorCurrentLimit = 100.0;
+        motorConfig.CurrentLimits.StatorCurrentLimit = 120.0;
         motorConfig.CurrentLimits.SupplyCurrentLimit = 80.0;
 
         motorConfig.HardwareLimitSwitch.ReverseLimitRemoteSensorID = LowerCAN.ELEVATOR_CANDI;
@@ -123,34 +126,39 @@ public final class Elevator extends GRRSubsystem {
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionEnable = true;
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
 
-        motorConfig.MotionMagic.MotionMagicExpo_kV = 0.06;
-        motorConfig.MotionMagic.MotionMagicExpo_kA = 0.03;
+        motorConfig.MotionMagic.MotionMagicCruiseVelocity = 92.5;
+        motorConfig.MotionMagic.MotionMagicAcceleration = 600.0;
 
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         motorConfig.Slot0.kP = 4.0;
         motorConfig.Slot0.kI = 0.0;
         motorConfig.Slot0.kD = 0.0;
-        motorConfig.Slot0.kG = 0.4;
+        motorConfig.Slot0.kG = 0.57;
         motorConfig.Slot0.kS = 0.0;
-        motorConfig.Slot0.kV = 0.15;
+        motorConfig.Slot0.kV = 0.158;
         motorConfig.Slot0.kA = 0.004;
 
-        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 42.75;
+        motorConfig.Slot1.kP = 6.0;
+        motorConfig.Slot1.kI = 0.0;
+        motorConfig.Slot1.kD = 0.06;
+        motorConfig.Slot1.kG = 0.57;
+        motorConfig.Slot1.kS = 0.0;
+        motorConfig.Slot1.kV = 0.1;
+        motorConfig.Slot1.kA = 0.004;
+
+        motorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 40.5;
         motorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
 
-        PhoenixUtil.run("Clear Elevator Lead Sticky Faults", () -> leadMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Elevator Follow Sticky Faults", () -> followMotor.clearStickyFaults());
-        PhoenixUtil.run("Clear Elevator CANdi Sticky Faults", () -> candi.clearStickyFaults());
-        PhoenixUtil.run("Apply Elevator Lead TalonFXConfiguration", () ->
-            leadMotor.getConfigurator().apply(motorConfig)
-        );
-        PhoenixUtil.run("Apply Elevator Follow TalonFXConfiguration", () ->
-            followMotor.getConfigurator().apply(motorConfig)
-        );
-        PhoenixUtil.run("Apply Elevator CANdiConfiguration", () -> candi.getConfigurator().apply(candiConfig));
+        PhoenixUtil.run(() -> leadMotor.clearStickyFaults());
+        PhoenixUtil.run(() -> followMotor.clearStickyFaults());
+        PhoenixUtil.run(() -> candi.clearStickyFaults());
+
+        PhoenixUtil.run(() -> leadMotor.getConfigurator().apply(motorConfig));
+        PhoenixUtil.run(() -> followMotor.getConfigurator().apply(motorConfig));
+        PhoenixUtil.run(() -> candi.getConfigurator().apply(candiConfig));
 
         leadPosition = leadMotor.getPosition();
         followPosition = followMotor.getPosition();
@@ -158,7 +166,7 @@ public final class Elevator extends GRRSubsystem {
         followVelocity = followMotor.getVelocity();
         limitSwitch = candi.getS1Closed();
 
-        PhoenixUtil.run("Set Elevator Signal Frequencies", () ->
+        PhoenixUtil.run(() ->
             BaseStatusSignal.setUpdateFrequencyForAll(
                 200,
                 leadPosition,
@@ -169,7 +177,7 @@ public final class Elevator extends GRRSubsystem {
                 candi.getS1State()
             )
         );
-        PhoenixUtil.run("Set Elevator Signal Frequencies for Following", () ->
+        PhoenixUtil.run(() ->
             BaseStatusSignal.setUpdateFrequencyForAll(
                 1000,
                 leadMotor.getDutyCycle(),
@@ -177,15 +185,14 @@ public final class Elevator extends GRRSubsystem {
                 leadMotor.getTorqueCurrent()
             )
         );
-        PhoenixUtil.run("Optimize Elevator CAN Utilization", () ->
-            ParentDevice.optimizeBusUtilizationForAll(20, leadMotor, followMotor, candi)
-        );
+        PhoenixUtil.run(() -> ParentDevice.optimizeBusUtilizationForAll(50, leadMotor, followMotor, candi));
 
-        positionControl = new MotionMagicExpoVoltage(0.0);
+        positionControl = new MotionMagicVoltage(0.0);
+        velocityControl = new VelocityVoltage(0.0);
         voltageControl = new VoltageOut(0.0);
         followControl = new Follower(leadMotor.getDeviceID(), false);
 
-        PhoenixUtil.run("Set Elevator Follow Motor Control", () -> followMotor.setControl(followControl));
+        PhoenixUtil.run(() -> followMotor.setControl(followControl));
 
         tunables.add("motor", leadMotor);
         tunables.add("motor", followMotor);
@@ -217,18 +224,29 @@ public final class Elevator extends GRRSubsystem {
         return getPosition() <= ElevatorPosition.INTAKE.rotations() + closestTolerance.get();
     }
 
+    public boolean safeForSwallow() {
+        return getPosition() <= ElevatorPosition.SWALLOW.rotations() + closestTolerance.get();
+    }
+
     /**
      * Gets the elevator's current position, in rotations.
      */
     private double getPosition() {
         return (
-            (BaseStatusSignal.getLatencyCompensatedValueAsDouble(leadPosition, leadVelocity) +
-                BaseStatusSignal.getLatencyCompensatedValueAsDouble(followPosition, followVelocity)) /
-            2.0
+            (BaseStatusSignal.getLatencyCompensatedValueAsDouble(leadPosition, leadVelocity)
+                + BaseStatusSignal.getLatencyCompensatedValueAsDouble(followPosition, followVelocity))
+            / 2.0
         );
     }
 
     // *************** Commands ***************
+
+    public Command optimisticIdle(ReefSelection selection, BooleanSupplier hasCoral, BooleanSupplier safe) {
+        return goTo(
+            () -> !selection.isL1() && hasCoral.getAsBoolean() ? ElevatorPosition.L2 : ElevatorPosition.DOWN,
+            safe
+        );
+    }
 
     /**
      * Goes to a scoring position.
@@ -268,6 +286,12 @@ public final class Elevator extends GRRSubsystem {
         return goTo(() -> position, safe);
     }
 
+    public Command emergency() {
+        return commandBuilder("Elevator.emergency()")
+            .onExecute(() -> leadMotor.setControl(velocityControl.withVelocity(emergencyRPS.get())))
+            .onEnd(leadMotor::stopMotor);
+    }
+
     /**
      * Goes to a position.
      * @param position The position to go to.
@@ -303,7 +327,8 @@ public final class Elevator extends GRRSubsystem {
                     holdPosition.value = -1.0;
                 }
 
-                leadMotor.setControl(positionControl.withPosition(target));
+                int slot = targetPos.type.equals(ElevatorPosition.Type.OTHER) ? 1 : 0;
+                leadMotor.setControl(positionControl.withPosition(target).withSlot(slot));
             })
             .onEnd(() -> {
                 atPosition = false;

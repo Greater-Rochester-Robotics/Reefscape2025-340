@@ -62,11 +62,15 @@ public final class ReefSelection {
     }
 
     public Command setLeft() {
-        return Commands.runOnce(() -> left = true).ignoringDisable(true).withName("ReefSelection.setLeft()");
+        return Commands.runOnce(() -> left = true)
+            .ignoringDisable(true)
+            .withName("ReefSelection.setLeft()");
     }
 
     public Command setRight() {
-        return Commands.runOnce(() -> left = false).ignoringDisable(true).withName("ReefSelection.setRight()");
+        return Commands.runOnce(() -> left = false)
+            .ignoringDisable(true)
+            .withName("ReefSelection.setRight()");
     }
 
     public Command whileScoring() {

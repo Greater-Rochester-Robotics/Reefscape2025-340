@@ -122,7 +122,7 @@ final class ThirdParty {
             });
 
             var motionConfig = spark.configAccessor.closedLoop.maxMotion;
-            TunableTable motionTable = table.getSubTable("motion");
+            TunableTable motionTable = table.getNested("motion");
 
             motionTable.value("velocity", motionConfig.getMaxVelocity(slot), v -> {
                 var newConfig = new SparkMaxConfig();
@@ -190,7 +190,7 @@ final class ThirdParty {
             });
 
             var motionConfig = spark.configAccessor.closedLoop.maxMotion;
-            TunableTable motionTable = table.getSubTable("motion");
+            TunableTable motionTable = table.getNested("motion");
 
             motionTable.value("velocity", motionConfig.getMaxVelocity(slot), v -> {
                 var newConfig = new SparkFlexConfig();
@@ -254,7 +254,7 @@ final class ThirdParty {
 
             MotionMagicConfigs motionConfig = new MotionMagicConfigs();
             talonFX.getConfigurator().refresh(motionConfig);
-            TunableTable motionTable = table.getSubTable("motion");
+            TunableTable motionTable = table.getNested("motion");
 
             motionTable.value("velocity", motionConfig.MotionMagicCruiseVelocity, v -> {
                 talonFX.getConfigurator().refresh(motionConfig);
@@ -328,7 +328,7 @@ final class ThirdParty {
 
             MotionMagicConfigs motionConfig = new MotionMagicConfigs();
             talonFXS.getConfigurator().refresh(motionConfig);
-            TunableTable motionTable = table.getSubTable("motion");
+            TunableTable motionTable = table.getNested("motion");
 
             motionTable.value("velocity", motionConfig.MotionMagicCruiseVelocity, v -> {
                 talonFXS.getConfigurator().refresh(motionConfig);

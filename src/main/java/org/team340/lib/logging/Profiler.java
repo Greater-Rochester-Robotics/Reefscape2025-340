@@ -1,6 +1,7 @@
 package org.team340.lib.logging;
 
 import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -37,16 +38,20 @@ public final class Profiler {
         throw new UnsupportedOperationException("This is a utility class!");
     }
 
-    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Profiling");
-
+    private static final List<GarbageCollectorMXBean> gcList = ManagementFactory.getGarbageCollectorMXBeans();
     private static final Map<String, CallData> callGraph = new HashMap<>();
     private static final List<String> stack = new ArrayList<>();
 
-    private static final List<GarbageCollectorMXBean> gcList = ManagementFactory.getGarbageCollectorMXBeans();
+    private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Profiling");
+
+    private static final DoublePublisher startupPub = nt.getDoubleTopic("startupTime").publish();
+    private static final IntegerPublisher overrunPub = nt.getIntegerTopic("overrunCount").publish();
     private static final DoublePublisher overheadPub = nt.getDoubleTopic("overhead").publish();
     private static final DoublePublisher gcPub = nt.getDoubleTopic("gc").publish();
 
     private static String root = "";
+    private static double startupTime = 0.0;
+    private static long overrunCount = 0L;
     private static long lastGCTime = 0L;
 
     /**
@@ -99,11 +104,11 @@ public final class Profiler {
                 root = name;
             } else if (name != root) {
                 DriverStation.reportError(
-                    "[Profiler] Unexpected secondary root with name \"" +
-                    name +
-                    "\", expected primary root \"" +
-                    root +
-                    "\"",
+                    "[Profiler] Unexpected secondary root with name \""
+                    + name
+                    + "\", expected primary root \""
+                    + root
+                    + "\"",
                     true
                 );
             }
@@ -150,14 +155,33 @@ public final class Profiler {
                     long gcTime = gc.getCollectionTime();
                     if (gcTime != -1L) gcSum += gcTime;
                 }
-                gcPub.set(gcSum - lastGCTime);
+                gcPub.set(gcSum - lastGCTime, start);
                 lastGCTime = gcSum;
 
-                overheadPub.set((RobotController.getFPGATime() - start) / 1000.0);
+                startupPub.set(startupTime, start);
+                overrunPub.set(overrunCount, start);
+
+                overheadPub.set((RobotController.getFPGATime() - start) / 1000.0, start);
             }
         } else {
             DriverStation.reportError("[Profiler] Unexpected end() call", true);
         }
+    }
+
+    /**
+     * This method should be invoked when the user program is ready.
+     * Utilized in {@link LoggedRobot#startCompetition()}.
+     */
+    static void observeProgramReady() {
+        startupTime = RobotController.getFPGATime() / 1000.0;
+    }
+
+    /**
+     * This method should be invoked when the main robot loop overruns.
+     * Utilized in {@link LoggedRobot#startCompetition()}.
+     */
+    static void observeOverrun() {
+        overrunCount++;
     }
 
     /**

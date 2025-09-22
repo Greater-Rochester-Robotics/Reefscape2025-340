@@ -3,11 +3,6 @@ package org.team340.lib.swerve;
 import edu.wpi.first.epilogue.CustomLoggerFor;
 import edu.wpi.first.epilogue.logging.ClassSpecificLogger;
 import edu.wpi.first.epilogue.logging.EpilogueBackend;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -19,8 +14,9 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
 
     private static final Map<SwerveAPI, Consumer<EpilogueBackend>> registry = new HashMap<>();
     private static final Function<SwerveAPI, Consumer<EpilogueBackend>> mappingFunction = api -> {
-        var imu = EpilogueProxy.getLogger(api.imu.getAPI());
+        var state = EpilogueProxy.getLogger(api.state);
 
+        var imu = EpilogueProxy.getLogger(api.imu.getAPI());
         Map<String, Consumer<EpilogueBackend>> modules = new HashMap<>();
         for (SwerveModule module : api.modules) {
             var move = EpilogueProxy.getLogger(module.moveMotor.getAPI());
@@ -35,9 +31,12 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
         }
 
         return backend -> {
-            imu.accept(backend.getNested("imu"));
+            state.accept(backend.getNested("state"));
+
+            var hardware = backend.getNested("hardware");
+            imu.accept(hardware.getNested("imu"));
             for (var module : modules.entrySet()) {
-                module.getValue().accept(backend.getNested(module.getKey()));
+                module.getValue().accept(hardware.getNested(module.getKey()));
             }
         };
     };
@@ -48,26 +47,6 @@ public class SwerveAPILogger extends ClassSpecificLogger<SwerveAPI> {
 
     @Override
     public void update(EpilogueBackend backend, SwerveAPI api) {
-        registry.computeIfAbsent(api, mappingFunction).accept(backend.getNested("hardware"));
-        logState(backend.getNested("state"), api.state);
-    }
-
-    private void logState(EpilogueBackend backend, SwerveState state) {
-        backend.log("speeds", state.speeds, ChassisSpeeds.struct);
-        backend.log("velocity", state.velocity);
-        backend.log("pose", state.pose, Pose2d.struct);
-        backend.log("pitch", state.pitch, Rotation2d.struct);
-        backend.log("roll", state.roll, Rotation2d.struct);
-        backend.log("odometryPose", state.odometryPose, Pose2d.struct);
-
-        var modules = backend.getNested("modules");
-        modules.log("positions", state.modules.positions, SwerveModulePosition.struct);
-        modules.log("states", state.modules.states, SwerveModuleState.struct);
-        modules.log("lastTarget", state.modules.lastTarget, SwerveModuleState.struct);
-
-        var odometryThread = backend.getNested("odometryThread");
-        odometryThread.log("timesync", state.odometryThread.timesync);
-        odometryThread.log("successes", state.odometryThread.successes);
-        odometryThread.log("failures", state.odometryThread.failures);
+        registry.computeIfAbsent(api, mappingFunction).accept(backend);
     }
 }

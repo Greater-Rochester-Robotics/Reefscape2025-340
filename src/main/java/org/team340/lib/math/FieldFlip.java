@@ -6,26 +6,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 
 /**
  * Utility class for flipping field locations across lines of symmetry.
- * By default, {@link FieldInfo} is utilized to retrieve field dimensions.
+ * {@link FieldInfo} is utilized to retrieve field dimensions.
  */
 public final class FieldFlip {
 
     private FieldFlip() {
         throw new UnsupportedOperationException("This is a utility class!");
-    }
-
-    private static double length = FieldInfo.length();
-    private static double width = FieldInfo.width();
-
-    /**
-     * Overrides the default field dimensions. This method
-     * should be called before all other user code.
-     * @param length The field's length, in meters.
-     * @param width The field's width, in meters.
-     */
-    public static void setFieldDimensions(double length, double width) {
-        FieldFlip.length = length;
-        FieldFlip.width = width;
     }
 
     /**
@@ -34,7 +20,7 @@ public final class FieldFlip {
      * @param translation The translation to flip.
      */
     public static Translation2d overLength(Translation2d translation) {
-        return new Translation2d(length - translation.getX(), translation.getY());
+        return new Translation2d(FieldInfo.length() - translation.getX(), translation.getY());
     }
 
     /**
@@ -61,7 +47,7 @@ public final class FieldFlip {
      * @param translation The translation to flip.
      */
     public static Translation2d overWidth(Translation2d translation) {
-        return new Translation2d(translation.getX(), width - translation.getY());
+        return new Translation2d(translation.getX(), FieldInfo.width() - translation.getY());
     }
 
     /**
@@ -88,7 +74,7 @@ public final class FieldFlip {
      * @param translation The translation to flip.
      */
     public static Translation2d overDiagonal(Translation2d translation) {
-        return new Translation2d(length - translation.getX(), width - translation.getY());
+        return new Translation2d(FieldInfo.length() - translation.getX(), FieldInfo.width() - translation.getY());
     }
 
     /**

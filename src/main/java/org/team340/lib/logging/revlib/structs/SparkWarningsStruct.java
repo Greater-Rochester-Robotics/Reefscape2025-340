@@ -25,14 +25,14 @@ public class SparkWarningsStruct implements Struct<Integer> {
     @Override
     public String getSchema() {
         return (
-            "bool brownout:1; " +
-            "bool overcurrent:1; " +
-            "bool escEeprom:1; " +
-            "bool extEeprom:1; " +
-            "bool sensor:1; " +
-            "bool stall:1; " +
-            "bool hasReset:1; " +
-            "bool other:1;"
+            "bool brownout:1; "
+            + "bool overcurrent:1; "
+            + "bool escEeprom:1; "
+            + "bool extEeprom:1; "
+            + "bool sensor:1; "
+            + "bool stall:1; "
+            + "bool hasReset:1; "
+            + "bool other:1;"
         );
     }
 

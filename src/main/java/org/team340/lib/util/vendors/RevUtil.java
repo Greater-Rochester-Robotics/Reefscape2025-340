@@ -6,8 +6,7 @@ import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.SparkFlexConfig;
-import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.function.Supplier;
 
@@ -27,7 +26,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean config(SparkMax spark, SparkMaxConfig config) {
+    public static boolean config(SparkMax spark, SparkBaseConfig config) {
         return run("Configure", spark, () ->
             spark.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters)
         );
@@ -40,7 +39,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean config(SparkFlex spark, SparkFlexConfig config) {
+    public static boolean config(SparkFlex spark, SparkBaseConfig config) {
         return run("Configure", spark, () ->
             spark.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters)
         );
@@ -53,7 +52,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean configNoReset(SparkMax spark, SparkMaxConfig config) {
+    public static boolean configNoReset(SparkMax spark, SparkBaseConfig config) {
         return run("Configure (No Reset)", spark, () ->
             spark.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters)
         );
@@ -66,7 +65,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean configNoReset(SparkFlex spark, SparkFlexConfig config) {
+    public static boolean configNoReset(SparkFlex spark, SparkBaseConfig config) {
         return run("Configure (No Reset)", spark, () ->
             spark.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters)
         );
@@ -79,7 +78,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean configEphemeral(SparkMax spark, SparkMaxConfig config) {
+    public static boolean configEphemeral(SparkMax spark, SparkBaseConfig config) {
         return run("Configure (Ephemeral)", spark, () ->
             spark.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters)
         );
@@ -92,7 +91,7 @@ public final class RevUtil {
      * @param config The configuration to apply.
      * @return {@code true} if success ({@link REVLibError#kOk}), {@code false} otherwise.
      */
-    public static boolean configEphemeral(SparkFlex spark, SparkFlexConfig config) {
+    public static boolean configEphemeral(SparkFlex spark, SparkBaseConfig config) {
         return run("Configure (Ephemeral)", spark, () ->
             spark.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters)
         );
@@ -127,14 +126,14 @@ public final class RevUtil {
         }
 
         DriverStation.reportError(
-            "[RevUtil] " +
-            device.getClass().getSimpleName() +
-            " (ID " +
-            device.getDeviceId() +
-            ") \"" +
-            name +
-            "\": " +
-            results,
+            "[RevUtil] "
+            + device.getClass().getSimpleName()
+            + " (ID "
+            + device.getDeviceId()
+            + ") \""
+            + name
+            + "\": "
+            + results,
             false
         );
         return false;

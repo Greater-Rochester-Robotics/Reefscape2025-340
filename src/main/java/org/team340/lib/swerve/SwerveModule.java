@@ -79,11 +79,10 @@ class SwerveModule implements AutoCloseable {
      */
     public boolean refresh() {
         double turnPosition = turnMotor.getPosition();
-        double movePosition = moveMotor.getPosition() - (turnPosition * config.couplingRatio);
         Rotation2d angle = Rotation2d.fromRotations(hookStatus.readMotor() ? turnPosition : encoder.getPosition());
         double moveRotationsPerMeter = config.moveGearRatio / (config.wheelDiameter * Math.PI);
 
-        position.distanceMeters = movePosition / moveRotationsPerMeter;
+        position.distanceMeters = moveMotor.getPosition() / moveRotationsPerMeter;
         position.angle = angle;
 
         state.speedMetersPerSecond = moveMotor.getVelocity() / moveRotationsPerMeter;

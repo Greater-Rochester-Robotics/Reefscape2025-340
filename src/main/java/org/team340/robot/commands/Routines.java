@@ -29,7 +29,7 @@ import org.team340.robot.util.ReefSelection;
 @SuppressWarnings("unused")
 public final class Routines {
 
-    private static final TunableTable tunables = Tunables.getTable("routines");
+    private static final TunableTable tunables = Tunables.getNested("routines");
 
     private static final TunableBoolean autoDrive = tunables.value("autoDrive", true);
 
@@ -103,7 +103,12 @@ public final class Routines {
                 intake.swallow()
             ),
             deadline(
-                gooseNeck.intake(button, () -> chokingGoose.getAsBoolean() || intake.unjamming(), robot::safeForGoose),
+                gooseNeck.intake(
+                    button,
+                    () -> chokingGoose.getAsBoolean() || intake.unjamming(),
+                    intake::coralDetected,
+                    robot::safeForGoose
+                ),
                 elevator.goTo(ElevatorPosition.INTAKE, robot::safeForGoose),
                 intake.intake(chokingGoose)
             )
@@ -116,8 +121,8 @@ public final class Routines {
      */
     public Command barf() {
         return parallel(
-            gooseNeck.barf(robot::safeForGoose),
             intake.barf(),
+            gooseNeck.barf(robot::safeForGoose),
             elevator.goTo(ElevatorPosition.BARF, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.barf()");
     }
@@ -128,10 +133,9 @@ public final class Routines {
      */
     public Command swallow() {
         return parallel(
-            intake.swallow(),
-            gooseNeck
-                .swallow(robot::safeForGoose)
-                .beforeStarting(gooseNeck.stow(robot::safeForGoose).withTimeout(0.05)),
+            waitUntil(elevator::safeForSwallow).andThen(
+                parallel(intake.swallow(), gooseNeck.swallow(robot::safeForGoose))
+            ),
             elevator.goTo(ElevatorPosition.SWALLOW, swerve::wildlifeConservationProgram) // Ignore beam break in safety check
         ).withName("Routines.swallow()");
     }
@@ -158,10 +162,10 @@ public final class Routines {
                 elevator.score(
                     selection,
                     () ->
-                        hadCoral.value &&
-                        gooseNeck.beamBroken() &&
-                        !runManual.getAsBoolean() &&
-                        swerve.getVelocity() > 0.25,
+                        hadCoral.value
+                        && gooseNeck.beamBroken()
+                        && !runManual.getAsBoolean()
+                        && swerve.getVelocity() > 0.25,
                     robot::safeForGoose
                 ),
                 gooseNeck.score(

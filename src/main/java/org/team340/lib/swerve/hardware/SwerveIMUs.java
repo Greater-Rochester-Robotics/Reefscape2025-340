@@ -205,8 +205,8 @@ public final class SwerveIMUs {
             StatusSignal<AngularVelocity> pitchVelocity = pigeon2.getAngularVelocityXWorld();
             StatusSignal<AngularVelocity> rollVelocity = pigeon2.getAngularVelocityYWorld();
 
-            PhoenixUtil.run("Clear Sticky Faults", () -> pigeon2.clearStickyFaults());
-            PhoenixUtil.run("Set Update Frequency", () ->
+            PhoenixUtil.run(() -> pigeon2.clearStickyFaults());
+            PhoenixUtil.run(() ->
                 BaseStatusSignal.setUpdateFrequencyForAll(
                     1.0 / config.odometryPeriod,
                     yaw,
@@ -217,9 +217,7 @@ public final class SwerveIMUs {
                     rollVelocity
                 )
             );
-            PhoenixUtil.run("Optimize Bus Utilization", () ->
-                pigeon2.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
-            );
+            PhoenixUtil.run(() -> pigeon2.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05));
 
             return new SwerveIMU() {
                 @Override

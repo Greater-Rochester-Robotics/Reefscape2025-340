@@ -96,8 +96,16 @@ public final class SwerveMotors {
         /**
          * Re-applies PID and FF gains from the swerve config. Used
          * for setting new gains after the config has been mutated.
+         * <b>This is likely a blocking operation.</b>
          */
         public abstract void reapplyGains();
+
+        /**
+         * Configures the motor's brake mode from the swerve config.
+         * Used for setting a new value after the config has been mutated.
+         * <b>This is likely a blocking operation.</b>
+         */
+        public abstract void reapplyBrakeMode();
     }
 
     /**
@@ -189,6 +197,18 @@ public final class SwerveMotors {
                     newConfig.closedLoop.pid(pidGains[0], pidGains[1], pidGains[2], pidSlot);
 
                     RevUtil.configEphemeral(sparkMax, newConfig);
+                }
+
+                @Override
+                public void reapplyBrakeMode() {
+                    RevUtil.configEphemeral(
+                        sparkMax,
+                        new SparkMaxConfig().idleMode(
+                            (isMoveMotor ? config.moveBrakeMode : config.turnBrakeMode)
+                                ? IdleMode.kBrake
+                                : IdleMode.kCoast
+                        )
+                    );
                 }
 
                 @Override
@@ -305,6 +325,18 @@ public final class SwerveMotors {
                 }
 
                 @Override
+                public void reapplyBrakeMode() {
+                    RevUtil.configEphemeral(
+                        sparkFlex,
+                        new SparkFlexConfig().idleMode(
+                            (isMoveMotor ? config.moveBrakeMode : config.turnBrakeMode)
+                                ? IdleMode.kBrake
+                                : IdleMode.kCoast
+                        )
+                    );
+                }
+
+                @Override
                 public Object getAPI() {
                     return sparkFlex;
                 }
@@ -374,16 +406,14 @@ public final class SwerveMotors {
             talonConfig.Slot0.kS = ffGains[0];
             talonConfig.Slot0.kV = ffGains[1];
 
-            PhoenixUtil.run("Clear Sticky Faults", () -> talonFX.clearStickyFaults());
-            PhoenixUtil.run("Apply TalonFXConfiguration", () -> talonFX.getConfigurator().apply(talonConfig));
-            PhoenixUtil.run("Set Update Frequency", () ->
+            PhoenixUtil.run(() -> talonFX.clearStickyFaults());
+            PhoenixUtil.run(() -> talonFX.getConfigurator().apply(talonConfig));
+            PhoenixUtil.run(() ->
                 BaseStatusSignal.setUpdateFrequencyForAll(1.0 / config.odometryPeriod, position, velocity)
             );
-            PhoenixUtil.run("Optimize Bus Utilization", () ->
-                talonFX.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05)
-            );
+            PhoenixUtil.run(() -> talonFX.optimizeBusUtilization(1.0 / config.defaultFramePeriod, 0.05));
 
-            if (isMoveMotor) PhoenixUtil.run("Zero Rotor Encoder", () -> talonFX.setPosition(0.0));
+            if (isMoveMotor) PhoenixUtil.run(() -> talonFX.setPosition(0.0));
 
             return new SwerveMotor() {
                 @Override
@@ -423,6 +453,16 @@ public final class SwerveMotors {
                     slot0Config.kS = ffGains[0];
                     slot0Config.kV = ffGains[1];
                     talonFX.getConfigurator().apply(slot0Config);
+                }
+
+                @Override
+                public void reapplyBrakeMode() {
+                    var motorOutputConfig = talonConfig.MotorOutput;
+                    motorOutputConfig.NeutralMode = (isMoveMotor ? config.moveBrakeMode : config.turnBrakeMode)
+                        ? NeutralModeValue.Brake
+                        : NeutralModeValue.Coast;
+
+                    talonFX.getConfigurator().apply(motorOutputConfig);
                 }
 
                 @Override
@@ -489,6 +529,11 @@ public final class SwerveMotors {
             @Override
             public void reapplyGains() {
                 motor.reapplyGains();
+            }
+
+            @Override
+            public void reapplyBrakeMode() {
+                motor.reapplyBrakeMode();
             }
 
             @Override

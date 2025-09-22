@@ -27,7 +27,7 @@ import org.team340.robot.Constants.RioCAN;
 @Logged
 public final class Intake extends GRRSubsystem {
 
-    private static final TunableTable tunables = Tunables.getTable("intake");
+    private static final TunableTable tunables = Tunables.getNested("intake");
 
     private static final TunableDouble intakeVolts = tunables.value("intakeVolts", 6.0);
     private static final TunableDouble barfVolts = tunables.value("barfVolts", 7.0);
@@ -58,32 +58,26 @@ public final class Intake extends GRRSubsystem {
 
         CANrangeConfiguration canRangeConfig = new CANrangeConfiguration();
 
-        canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 5000.0;
-        canRangeConfig.ProximityParams.ProximityThreshold = 3.5;
+        canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 15000.0;
+        canRangeConfig.ProximityParams.ProximityThreshold = 0.2;
         canRangeConfig.ProximityParams.ProximityHysteresis = 0.02;
 
-        canRangeConfig.FovParams.FOVRangeX = 10.0;
-        canRangeConfig.FovParams.FOVRangeY = 10.0;
+        canRangeConfig.FovParams.FOVRangeX = 6.75;
+        canRangeConfig.FovParams.FOVRangeY = 6.75;
 
         canRangeConfig.ToFParams.UpdateMode = UpdateModeValue.ShortRangeUserFreq;
         canRangeConfig.ToFParams.UpdateFrequency = 50.0;
 
-        PhoenixUtil.run("Clear Intake Motor Sticky Faults", () -> motor.clearStickyFaults());
-        PhoenixUtil.run("Clear Intake CANrange Sticky Faults", () -> canRange.clearStickyFaults());
-        PhoenixUtil.run("Apply Intake Motor TalonFXConfiguration", () -> motor.getConfigurator().apply(motorConfig));
-        PhoenixUtil.run("Apply Intake CANrange CANrangeConfiguration", () ->
-            canRange.getConfigurator().apply(canRangeConfig)
-        );
+        PhoenixUtil.run(() -> motor.clearStickyFaults());
+        PhoenixUtil.run(() -> canRange.clearStickyFaults());
+        PhoenixUtil.run(() -> motor.getConfigurator().apply(motorConfig));
+        PhoenixUtil.run(() -> canRange.getConfigurator().apply(canRangeConfig));
 
         current = motor.getStatorCurrent();
         detected = canRange.getIsDetected();
 
-        PhoenixUtil.run("Set Intake Signal Frequencies", () ->
-            BaseStatusSignal.setUpdateFrequencyForAll(100, current, detected)
-        );
-        PhoenixUtil.run("Optimize Intake CAN Utilization", () ->
-            ParentDevice.optimizeBusUtilizationForAll(10, motor, canRange)
-        );
+        PhoenixUtil.run(() -> BaseStatusSignal.setUpdateFrequencyForAll(100, current, detected));
+        PhoenixUtil.run(() -> ParentDevice.optimizeBusUtilizationForAll(10, motor, canRange));
 
         voltageControl = new VoltageOut(0.0);
         voltageControl.EnableFOC = false;

@@ -69,8 +69,6 @@ public class SwerveConfig {
     public double moveGearRatio = -1.0;
     /** The turn gear ratio, in motor rotations/module rotation. */
     public double turnGearRatio = -1.0;
-    /** The ratio between the wheel and the module's angle. */
-    public double couplingRatio = -1.0;
     /** The wheel diameter in meters. */
     public double wheelDiameter = -1.0;
     /** Standard deviations for odometry. */
@@ -89,7 +87,20 @@ public class SwerveConfig {
     public SwerveModuleConfig[] modules;
 
     /**
-     * Sets various timings utilized by the robot.
+     * Sets all timings utilized by the drivetrain.
+     * Shorthand for {@link #setTimings(double, double, double, double)}.
+     * @param period The robot's main loop period in seconds.
+     */
+    public SwerveConfig setTimings(double period) {
+        this.period = period;
+        odometryPeriod = period;
+        discretizationPeriod = period;
+        defaultFramePeriod = period * 2.0;
+        return this;
+    }
+
+    /**
+     * Sets various timings utilized by the drivetrain.
      * @param period The robot's main loop period in seconds.
      * @param odometry The period to update odometry in seconds.
      * @param discretization The period to look ahead for discretizing chassis speeds in seconds.
@@ -118,8 +129,8 @@ public class SwerveConfig {
      * Sets feed forward constants for move motors. A good starting point is a {@code kV}
      * value of {@code <Optimal Voltage> / <Max Velocity>}. These values can be obtained
      * via characterization using sysID with a real robot.
-     * @param kS The static gain.
-     * @param kV The velocity gain.
+     * @param kS Static gain constant.
+     * @param kV Velocity gain constant.
      */
     public SwerveConfig setMoveFF(double kS, double kV) {
         moveFF = new double[] { kS, kV };
@@ -229,18 +240,11 @@ public class SwerveConfig {
      * Sets swerve gearing properties.
      * @param moveRatio The move gear ratio, in motor rotations/wheel rotation.
      * @param turnRatio The turn gear ratio, in motor rotations/module rotation.
-     * @param couplingRatio The ratio between the wheel and the module's angle. Used as a compensation factor for odometry, set to {@code 0.0} to disable.
      * @param wheelDiameter The wheel diameter in meters.
      */
-    public SwerveConfig setMechanicalProperties(
-        double moveRatio,
-        double turnRatio,
-        double couplingRatio,
-        double wheelDiameter
-    ) {
+    public SwerveConfig setMechanicalProperties(double moveRatio, double turnRatio, double wheelDiameter) {
         moveGearRatio = moveRatio;
         turnGearRatio = turnRatio;
-        this.couplingRatio = couplingRatio;
         this.wheelDiameter = wheelDiameter;
         return this;
     }
@@ -333,7 +337,6 @@ public class SwerveConfig {
         if (turnSupplyLimit == -1.0) missing.add("Turn Supply Current Limit");
         if (moveGearRatio == -1.0) missing.add("Move Gear Ratio");
         if (turnGearRatio == -1.0) missing.add("Turn Gear Ratio");
-        if (couplingRatio == -1.0) missing.add("Coupling Ratio");
         if (wheelDiameter == -1.0) missing.add("Wheel Diameter");
         if (odometryStdDevs == null) missing.add("Odometry Standard Deviations");
         if (imu == null) missing.add("IMU");
@@ -343,7 +346,12 @@ public class SwerveConfig {
         } else {
             for (int i = 0; i < modules.length; i++) {
                 String name = modules[i].name == null ? "Module " + i : modules[i].name;
-                missing.addAll(modules[i].missing().stream().map(s -> name + ": " + s).toList());
+                missing.addAll(
+                    modules[i].missing()
+                        .stream()
+                        .map(s -> name + ": " + s)
+                        .toList()
+                );
             }
         }
 

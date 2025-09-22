@@ -32,9 +32,9 @@ import org.team340.robot.util.ReefSelection;
 @SuppressWarnings("unused")
 public final class Autos {
 
-    private static final TunableTable tunables = Tunables.getTable("autos");
+    private static final TunableTable tunables = Tunables.getNested("autos");
 
-    private static final TunableDouble intakeDecel = tunables.value("intakeDecel", 8.7);
+    private static final TunableDouble intakeDecel = tunables.value("intakeDecel", 6.0);
     private static final TunableDouble intakeRotDelay = tunables.value("intakeRotDelay", 0.6);
     private static final TunableDouble avoidDecel = tunables.value("avoidDecel", 8.9);
     private static final TunableDouble avoidTol = tunables.value("avoidTol", 0.25);
@@ -79,9 +79,13 @@ public final class Autos {
         chooser.add("test2", test2());
         // chooser.add("test12 left", test12(true));
         // chooser.add("test12 right", test12(false));
+    }
 
-        // Chooser bindings
-        chooser.newSelection().onTrue(lights.top.scored().andThen(lights.disabled()));
+    /**
+     * Returns {@code true} when the default auto is selected.
+     */
+    public boolean defaultSelected() {
+        return chooser.defaultSelected().getAsBoolean();
     }
 
     private Command forPiece(boolean left) {

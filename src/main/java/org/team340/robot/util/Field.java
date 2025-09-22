@@ -28,20 +28,21 @@ public final class Field {
 
     public static final ExtPose avoid = new ExtPose(6.45, 0.9, Rotation2d.k180deg);
 
-    private static final ExtTranslation coralStart = new ExtTranslation(0.0, 1.125);
-    private static final ExtTranslation coralEnd = new ExtTranslation(1.6, 0.0);
+    private static final double robotRadius = 0.253;
+    private static final ExtTranslation coralStart = new ExtTranslation(robotRadius, 1.125 + robotRadius);
+    private static final ExtTranslation coralEnd = new ExtTranslation(1.6 + robotRadius, robotRadius);
 
     public static final Obstacle[] obstacles = {
         // Walls
-        new LongitudinalObstacle(0.0, 1.0, 1.0),
-        new LongitudinalObstacle(FieldInfo.length(), 1.0, 1.0),
-        new LateralObstacle(0.0, 1.0, 1.0),
-        new LateralObstacle(FieldInfo.width(), 1.0, 1.0),
+        new LongitudinalObstacle(robotRadius, 1.1, 2.0),
+        new LongitudinalObstacle(FieldInfo.length() - robotRadius, 1.1, 2.0),
+        new LateralObstacle(robotRadius, 1.1, 2.0),
+        new LateralObstacle(FieldInfo.width() - robotRadius, 1.1, 2.0),
         // Coral stations
-        new LineObstacle(coralStart.getBlue(), coralEnd.getBlue(), 1.0, 1.0),
-        new LineObstacle(coralStart.getBlue(true), coralEnd.getBlue(true), 1.0, 1.0),
-        new LineObstacle(coralStart.getRed(), coralEnd.getRed(), 1.0, 1.0),
-        new LineObstacle(coralStart.getRed(true), coralEnd.getRed(true), 1.0, 1.0),
+        new LineObstacle(coralStart.getBlue(), coralEnd.getBlue(), 1.1, 2.0),
+        new LineObstacle(coralStart.getBlue(true), coralEnd.getBlue(true), 1.1, 2.0),
+        new LineObstacle(coralStart.getRed(), coralEnd.getRed(), 1.1, 2.0),
+        new LineObstacle(coralStart.getRed(true), coralEnd.getRed(true), 1.1, 2.0),
         // Reef
         new CircleObstacle(reef.getBlue(), 0.83, 4.0, 1.5),
         new CircleObstacle(reef.getRed(), 0.83, 4.0, 1.5)
@@ -73,7 +74,7 @@ public final class Field {
     }
 
     static {
-        TunableTable tunables = Tunables.getTable("field");
+        TunableTable tunables = Tunables.getNested("field");
         tunables.add("loadStraight", loadStraight);
         tunables.add("loadForwards", loadForwards);
         tunables.add("loadBackwards", loadBackwards);

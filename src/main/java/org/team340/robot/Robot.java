@@ -6,8 +6,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -15,11 +14,12 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import org.team340.lib.logging.LoggedRobot;
 import org.team340.lib.logging.Profiler;
 import org.team340.lib.util.DisableWatchdog;
+import org.team340.lib.util.command.RumbleCommand;
+import org.team340.lib.util.vendors.PhoenixUtil;
 import org.team340.robot.commands.Autos;
 import org.team340.robot.commands.Routines;
 import org.team340.robot.subsystems.Climber;
 import org.team340.robot.subsystems.Elevator;
-import org.team340.robot.subsystems.Elevator.ElevatorPosition;
 import org.team340.robot.subsystems.GooseNeck;
 import org.team340.robot.subsystems.Intake;
 import org.team340.robot.subsystems.Lights;
@@ -47,6 +47,8 @@ public final class Robot extends LoggedRobot {
     private final CommandXboxController coDriver;
 
     public Robot() {
+        PhoenixUtil.disableDaemons();
+
         // Initialize subsystems
         climber = new Climber();
         elevator = new Elevator();
@@ -67,8 +69,10 @@ public final class Robot extends LoggedRobot {
         coDriver = new CommandXboxController(Constants.CO_DRIVER);
 
         // Setup lights
-        lights.disabled().until(this::isEnabled).schedule();
-        RobotModeTriggers.disabled().whileTrue(lights.disabled());
+        var lightsPreMatch = lights.preMatch(swerve::getPose, swerve::seesAprilTag, autos::defaultSelected);
+        lightsPreMatch.schedule();
+
+        RobotModeTriggers.disabled().whileTrue(lightsPreMatch);
         RobotModeTriggers.autonomous().whileTrue(lights.sides.flames());
         RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
         new Trigger(this::isEnabled)
@@ -76,33 +80,33 @@ public final class Robot extends LoggedRobot {
             .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
             .onFalse(lights.top.scored().onlyIf(this::isEnabled));
 
-        // Create triggers
-        Trigger allowGoosing = coDriver.a().negate();
-        Trigger changedReference = new Trigger(swerve::changedReference);
-
         // Set default commands
-        elevator.setDefaultCommand(elevator.goTo(ElevatorPosition.DOWN, this::safeForGoose));
+        elevator.setDefaultCommand(elevator.optimisticIdle(selection, gooseNeck::hasCoral, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
         swerve.setDefaultCommand(swerve.drive(this::driverX, this::driverY, this::driverAngular));
+
+        // Create triggers
+        Trigger allowGoosing = coDriver.a().negate();
+        Trigger changedReference = RobotModeTriggers.teleop().and(swerve::changedReference);
+        Trigger poo = (driver.leftBumper().or(driver.rightBumper()).negate()).and(selection::isL1);
 
         // Driver bindings
         driver.a().onTrue(routines.intake(driver.a()));
         driver.b().whileTrue(routines.swallow());
         driver.x().whileTrue(routines.barf());
-        driver.y().onTrue(none()); // Reserved (Force goose spit)
-
-        driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
+        driver.y().and(poo).whileTrue(gooseNeck.poopL1(this::safeForGoose));
         driver.axisLessThan(kRightY.value, -0.5).onTrue(selection.incrementLevel());
         driver.axisGreaterThan(kRightY.value, 0.5).onTrue(selection.decrementLevel());
-
-        driver.povUp().whileTrue(routines.barf());
-        driver.povDown().whileTrue(routines.swallow());
-        driver.povLeft().onTrue(swerve.tareRotation());
 
         driver.leftBumper().onTrue(selection.setLeft()).whileTrue(routines.assistedScore(driver.y(), allowGoosing));
         driver.rightBumper().onTrue(selection.setRight()).whileTrue(routines.assistedScore(driver.y(), allowGoosing));
 
-        changedReference.and(RobotModeTriggers.teleop()).onTrue(setDriverRumble(1.0).withTimeout(0.15));
+        driver.povDown().whileTrue(elevator.emergency());
+        driver.povLeft().onTrue(swerve.tareRotation());
+
+        driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
+
+        changedReference.onTrue(new RumbleCommand(driver, 1.0).withTimeout(0.2));
 
         // Co-driver bindings
         coDriver.a().onTrue(none()); // Reserved (No goosing around)
@@ -120,6 +124,12 @@ public final class Robot extends LoggedRobot {
         // Disable loop overrun warnings from the command
         // scheduler, since we already log loop timings
         DisableWatchdog.in(scheduler, "m_watchdog");
+
+        // Configure the brownout threshold to match RIO 1
+        RobotController.setBrownoutVoltage(6.3);
+
+        // Enable real-time thread priority
+        enableRT(true);
     }
 
     /**
@@ -134,8 +144,8 @@ public final class Robot extends LoggedRobot {
      */
     public boolean readyToScore() {
         return (
-            swerve.wildlifeConservationProgram() &&
-            (Robot.isSimulation() || (gooseNeck.hasCoral() && elevator.atPosition() && elevator.scoring()))
+            swerve.wildlifeConservationProgram()
+            && (Robot.isSimulation() || (gooseNeck.hasCoral() && elevator.atPosition() && elevator.scoring()))
         );
     }
 
@@ -159,17 +169,6 @@ public final class Robot extends LoggedRobot {
     @NotLogged
     public double driverAngular() {
         return driver.getLeftTriggerAxis() - driver.getRightTriggerAxis();
-    }
-
-    /**
-     * Returns a command that sets the rumble output of the driver's controller.
-     * @param value The normalized value (0 to 1) to set the rumble to.
-     */
-    private Command setDriverRumble(double value) {
-        return run(() -> driver.setRumble(RumbleType.kBothRumble, value))
-            .finallyDo(() -> driver.setRumble(RumbleType.kBothRumble, 0.0))
-            .ignoringDisable(true)
-            .withName("Robot.setDriverRumble(" + value + ")");
     }
 
     @Override
