@@ -170,7 +170,7 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.HardwareLimitSwitch.ReverseLimitEnable = true;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
-        candiConfig.PWM2.AbsoluteSensorOffset = 0.594;
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.601;
         candiConfig.PWM2.SensorDirection = true;
 
         PhoenixUtil.run(() -> pivotMotor.clearStickyFaults());
