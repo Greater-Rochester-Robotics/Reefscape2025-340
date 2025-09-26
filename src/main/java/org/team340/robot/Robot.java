@@ -68,18 +68,6 @@ public final class Robot extends LoggedRobot {
         driver = new CommandXboxController(Constants.DRIVER);
         coDriver = new CommandXboxController(Constants.CO_DRIVER);
 
-        // Setup lights
-        var lightsPreMatch = lights.preMatch(swerve::getPose, swerve::seesAprilTag, autos::defaultSelected);
-        lightsPreMatch.schedule();
-
-        RobotModeTriggers.disabled().whileTrue(lightsPreMatch);
-        RobotModeTriggers.autonomous().whileTrue(lights.sides.flames());
-        RobotModeTriggers.teleop().whileTrue(lights.sides.levelSelection(selection));
-        new Trigger(this::isEnabled)
-            .and(gooseNeck::hasCoral)
-            .onTrue(lights.top.hasCoral(gooseNeck::goosing, gooseNeck::getPosition, selection))
-            .onFalse(lights.top.scored().onlyIf(this::isEnabled));
-
         // Set default commands
         elevator.setDefaultCommand(elevator.optimisticIdle(selection, gooseNeck::hasCoral, this::safeForGoose));
         gooseNeck.setDefaultCommand(gooseNeck.stow(this::safeForGoose));
@@ -104,6 +92,7 @@ public final class Robot extends LoggedRobot {
         driver.povDown().whileTrue(elevator.emergency());
         driver.povLeft().onTrue(swerve.tareRotation());
 
+        driver.start().toggleOnTrue(routines.driveClimb());
         driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));
 
         changedReference.onTrue(new RumbleCommand(driver, 1.0).withTimeout(0.2));
@@ -120,6 +109,19 @@ public final class Robot extends LoggedRobot {
         coDriver.povDown().onTrue(selection.decrementLevel());
 
         coDriver.leftBumper().and(coDriver.rightBumper()).toggleOnTrue(routines.killTheGoose());
+
+        // Setup lights
+        routines.lightsPreMatch(autos::defaultSelected).schedule();
+
+        RobotModeTriggers.autonomous().whileTrue(lights.sides.flames(false));
+        RobotModeTriggers.disabled().whileTrue(
+            either(lights.sides.flames(true), routines.lightsPreMatch(autos::defaultSelected), climber::isDeployed)
+        );
+
+        lights.sides.setDefaultCommand(lights.sides.levelSelection(selection));
+        lights.top.setDefaultCommand(
+            lights.top.coralDisplay(gooseNeck::hasCoral, gooseNeck::goosing, gooseNeck::getPosition, selection)
+        );
 
         // Disable loop overrun warnings from the command
         // scheduler, since we already log loop timings

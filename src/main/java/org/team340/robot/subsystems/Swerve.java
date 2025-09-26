@@ -548,6 +548,34 @@ public final class Swerve extends GRRSubsystem {
     }
 
     /**
+     * Drives the robot with the heading locked for the climb.
+     * @param x The X value from the driver's joystick.
+     * @param y The Y value from the driver's joystick.
+     */
+    public Command driveClimb(DoubleSupplier x, DoubleSupplier y) {
+        return commandBuilder("Swerve.driveClimb()")
+            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond))
+            .onExecute(() -> {
+                api.applyAssistedDriverInput(
+                    x.getAsDouble(),
+                    y.getAsDouble(),
+                    0.0,
+                    new ChassisSpeeds(
+                        0.0,
+                        0.0,
+                        angularPID.calculate(
+                            state.rotation.getRadians(),
+                            Math2.HALF_PI * (Alliance.isBlue() ? 1.0 : -1.0)
+                        )
+                    ),
+                    Perspective.OPERATOR,
+                    true,
+                    true
+                );
+            });
+    }
+
+    /**
      * Drives the modules to stop the robot from moving.
      * @param lock If the wheels should be driven to an X formation to stop the robot from being pushed.
      */

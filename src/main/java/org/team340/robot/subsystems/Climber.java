@@ -10,6 +10,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -109,6 +110,14 @@ public final class Climber extends GRRSubsystem {
      */
     public boolean isClimbed() {
         return getPosition() >= ClimberPosition.DEPLOY.rotations();
+    }
+
+    /**
+     * Returns a number from [0.0, 1.0] that represents the percentage
+     * of the distance the climber is from its deploy position.
+     */
+    public double deployPercent() {
+        return MathUtil.clamp(getPosition() / ClimberPosition.DEPLOY.rotations(), 0.0, 1.0);
     }
 
     // *************** Commands ***************

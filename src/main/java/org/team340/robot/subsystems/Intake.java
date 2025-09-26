@@ -59,7 +59,7 @@ public final class Intake extends GRRSubsystem {
         CANrangeConfiguration canRangeConfig = new CANrangeConfiguration();
 
         canRangeConfig.ProximityParams.MinSignalStrengthForValidMeasurement = 15000.0;
-        canRangeConfig.ProximityParams.ProximityThreshold = 0.2;
+        canRangeConfig.ProximityParams.ProximityThreshold = 0.14;
         canRangeConfig.ProximityParams.ProximityHysteresis = 0.02;
 
         canRangeConfig.FovParams.FOVRangeX = 6.75;

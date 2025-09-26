@@ -194,9 +194,30 @@ public final class Lights {
         }
 
         /**
+         * Displays the percentage of the climber deploy position.
+         * @param percent The climber's distance from the deploy position as a percent from [0.0, 1.0].
+         */
+        public Command climbPercent(DoubleSupplier percent) {
+            return commandBuilder()
+                .onExecute(() -> {
+                    for (int i = 0; i < LENGTH; i++) {
+                        setBoth(
+                            i,
+                            i > Math.ceil(percent.getAsDouble() * LENGTH)
+                                ? Color.OFF
+                                : Alliance.isBlue() ? Color.BLUE : Color.RED
+                        );
+                    }
+                })
+                .onEnd(() -> setBoth(Color.OFF))
+                .ignoringDisable(true)
+                .withName("Lights.Sides.climbPercent()");
+        }
+
+        /**
          * Displays the flames animation.
          */
-        public Command flames() {
+        public Command flames(boolean allianceColors) {
             int[] state = new int[LENGTH];
             for (int i = 0; i < state.length; i++) {
                 state[i] = 0;
@@ -205,27 +226,38 @@ public final class Lights {
             return commandBuilder()
                 .onExecute(() -> {
                     for (int i = 0; i < LENGTH; i++) {
-                        state[i] = (int) Math.max(
-                            0.0,
-                            state[i] - (Math2.random((0.5 + (i / (LENGTH * 0.11))) * 5.0) + 28.0)
-                        );
+                        state[i] = (int) Math.max(0.0, state[i] - (Math2.random((i / (LENGTH * 0.11)) * 0.1) + 50.0));
                     }
                     for (int i = LENGTH - 1; i >= 2; i--) {
                         state[i] = (state[i - 1] + state[i - 2] + state[i - 2]) / 3;
                     }
                     if (Math.random() < 0.5) {
-                        int i = (int) Math2.random(5.0);
-                        state[i] = (int) (state[i] + Math2.random(160.0, 255.0));
+                        int i = (int) Math2.random(3.0);
+                        state[i] = (int) (state[i] + Math2.random(200.0, 255.0));
                     }
                     for (int i = 0; i < LENGTH; i++) {
                         int heat = (int) ((state[i] / 255.0) * 191.0);
                         int ramp = (heat & 63) << 2;
-                        if (heat > 180) {
-                            setBoth(i, 255, 255, ramp);
-                        } else if (heat > 60) {
-                            setBoth(i, 255, ramp, 0);
+                        if (heat > (allianceColors ? 70 : 200)) {
+                            if (allianceColors) {
+                                if (Alliance.isBlue()) setBoth(i, 0, 0, ramp);
+                                else setBoth(i, ramp, 0, 0);
+                            } else {
+                                setBoth(i, 255, 255, ramp);
+                            }
+                        } else if (heat > (allianceColors ? 20 : 100)) {
+                            if (allianceColors) {
+                                if (Alliance.isBlue()) setBoth(i, ramp - 20, 0, 255);
+                                else setBoth(i, 255, 0, ramp - 20);
+                            } else {
+                                setBoth(i, 255, ramp, 0);
+                            }
                         } else {
-                            setBoth(i, ramp, 0, 0);
+                            if (allianceColors) {
+                                setBoth(i, ramp, ramp, ramp);
+                            } else {
+                                setBoth(i, ramp, 0, 0);
+                            }
                         }
                     }
                 })
@@ -291,14 +323,22 @@ public final class Lights {
         }
 
         /**
-         * Displays the "Has Coral" animation.
+         * Displays the coral state.
          */
-        public Command hasCoral(BooleanSupplier goosing, DoubleSupplier goosePosition, ReefSelection selection) {
+        public Command coralDisplay(
+            BooleanSupplier hasCoral,
+            BooleanSupplier goosing,
+            DoubleSupplier goosePosition,
+            ReefSelection selection
+        ) {
             final double GOOSE_RANGE = 0.15;
             final double HALF_RANGE = GOOSE_RANGE / 2.0;
 
-            return commandBuilder()
-                .onExecute(() -> {
+            Timer timer = new Timer();
+
+            return sequence(
+                run(() -> set(Color.OFF)).until(hasCoral::getAsBoolean),
+                run(() -> {
                     if (!goosing.getAsBoolean()) {
                         set(RobotController.getRSLState() ? Color.HAS_CORAL : Color.OFF);
                     } else {
@@ -317,25 +357,14 @@ public final class Lights {
                             }
                         }
                     }
-                })
-                .onEnd(() -> set(Color.OFF))
+                }).until(() -> !hasCoral.getAsBoolean()),
+                run(() -> set(timer.get() % 0.2 > 0.1 ? Color.SCORED : Color.OFF))
+                    .beforeStarting(timer::restart)
+                    .withTimeout(1.5)
+            )
+                .repeatedly()
                 .ignoringDisable(true)
-                .withName("Lights.Top.hasCoral()");
-        }
-
-        /**
-         * Displays the "Scored" animation.
-         */
-        public Command scored() {
-            Timer timer = new Timer();
-
-            return commandBuilder()
-                .onInitialize(() -> timer.restart())
-                .onExecute(() -> set(timer.get() % 0.2 > 0.1 ? Color.SCORED : Color.OFF))
-                .onEnd(() -> set(Color.OFF))
-                .withTimeout(1.5)
-                .ignoringDisable(true)
-                .withName("Lights.Top.scored()");
+                .withName("Lights.Top.coralDisplay()");
         }
 
         /**
@@ -436,6 +465,23 @@ public final class Lights {
                 .onEnd(() -> set(Color.OFF))
                 .ignoringDisable(true)
                 .withName("Lights.Top.preMatch()");
+        }
+
+        /**
+         * Displays the climbing animation.
+         */
+        public Command climbing(BooleanSupplier isDeployed) {
+            return commandBuilder()
+                .onExecute(() ->
+                    set(
+                        !RobotController.getRSLState() && isDeployed.getAsBoolean()
+                            ? Color.OFF
+                            : (Alliance.isBlue() ? Color.BLUE : Color.RED)
+                    )
+                )
+                .onEnd(() -> set(Color.OFF))
+                .ignoringDisable(true)
+                .withName("Lights.Sides.climbing()");
         }
 
         /**

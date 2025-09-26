@@ -203,6 +203,21 @@ public final class Routines {
     }
 
     /**
+     * Locks the robot's heading for the climb and
+     * displays the climbing animation on the lights.
+     */
+    public Command driveClimb() {
+        return parallel(
+            swerve.driveClimb(robot::driverX, robot::driverY),
+            sequence(
+                lights.sides.climbPercent(climber::deployPercent).until(climber::isDeployed),
+                lights.sides.flames(true)
+            ),
+            lights.top.climbing(climber::isDeployed)
+        ).withName("Routines.driveClimb()");
+    }
+
+    /**
      * Kills the goose :( and elevator
      * For emergencies
      */
@@ -210,5 +225,15 @@ public final class Routines {
         return parallel(idle(elevator, gooseNeck), lights.top.gooseAssassination())
             .withInterruptBehavior(InterruptionBehavior.kCancelIncoming)
             .withName("Routines.killTheGoose()");
+    }
+
+    /**
+     * Displays the pre-match animation.
+     * @param defaultAutoSelected If the default auto is selected.
+     */
+    public Command lightsPreMatch(BooleanSupplier defaultAutoSelected) {
+        return lights
+            .preMatch(swerve::getPose, swerve::seesAprilTag, defaultAutoSelected::getAsBoolean)
+            .withName("Routines.lightsPreMatch()");
     }
 }
