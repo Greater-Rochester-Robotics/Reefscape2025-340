@@ -127,13 +127,13 @@ public final class RevUtil {
 
         DriverStation.reportError(
             "[RevUtil] "
-            + device.getClass().getSimpleName()
-            + " (ID "
-            + device.getDeviceId()
-            + ") \""
-            + name
-            + "\": "
-            + results,
+                + device.getClass().getSimpleName()
+                + " (ID "
+                + device.getDeviceId()
+                + ") \""
+                + name
+                + "\": "
+                + results,
             false
         );
         return false;

@@ -36,13 +36,13 @@ public final class Math2 {
     public static final double TWO_PI = 6.283185307179586;
 
     /**
-     * Discretizes a continuous-time chassis speed in place.
+     * Discretizes continuous-time chassis speeds in place.
      * @param speeds The continuous speeds.
      * @param dtSeconds The duration of the timestep the speeds should be applied for.
      * @return The provided speeds object.
      * @see {@link ChassisSpeeds#discretize(ChassisSpeeds, double)}
      */
-    public static ChassisSpeeds discretize(ChassisSpeeds speeds, double dtSeconds) {
+    public static ChassisSpeeds discretizeChassisSpeeds(ChassisSpeeds speeds, double dtSeconds) {
         double dtheta = speeds.omegaRadiansPerSecond * dtSeconds;
 
         double sin = -dtheta / 2.0;

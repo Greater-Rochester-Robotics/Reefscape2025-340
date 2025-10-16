@@ -80,6 +80,8 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble reefAssistKp = reefAssistTunables.value("kP", 20.0);
     private static final TunableDouble reefAssistTolerance = reefAssistTunables.value("tolerance", 1.75);
 
+    private static final TunableDouble climbFudge = tunables.value("climbFudge", Math.toRadians(5.0));
+
     private final SwerveModuleConfig frontLeft = new SwerveModuleConfig()
         .setName("frontLeft")
         .setLocation(OFFSET, OFFSET)
@@ -168,10 +170,10 @@ public final class Swerve extends GRRSubsystem {
         Translation2d reefTranslation = state.translation.minus(reefCenter);
         Rotation2d reefAngle = new Rotation2d(
             Math.floor(
-                reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math2.SIXTH_PI)).getRadians()
-                / Math2.THIRD_PI
-            )
-            * Math2.THIRD_PI
+                    reefCenter.minus(state.translation).getAngle().plus(new Rotation2d(Math2.SIXTH_PI)).getRadians()
+                        / Math2.THIRD_PI
+                )
+                * Math2.THIRD_PI
         );
 
         // Save if the reef angle has changed.
@@ -188,8 +190,8 @@ public final class Swerve extends GRRSubsystem {
         wallDistance = Math.max(
             0.0,
             reefAngle.rotateBy(Rotation2d.k180deg).minus(reefTranslation.getAngle()).getCos()
-                * reefTranslation.getNorm()
-            - Field.reefWallDist
+                    * reefTranslation.getNorm()
+                - Field.reefWallDist
         );
     }
 
@@ -293,38 +295,28 @@ public final class Swerve extends GRRSubsystem {
      */
     public Command drive(DoubleSupplier x, DoubleSupplier y, DoubleSupplier angular) {
         return commandBuilder("Swerve.drive()").onExecute(() -> {
-                double pitch = state.pitch.getRadians();
-                double roll = state.roll.getRadians();
+            double pitch = state.pitch.getRadians();
+            double roll = state.roll.getRadians();
 
-                var antiBeach = Perspective.OPERATOR.toPerspectiveSpeeds(
-                    new ChassisSpeeds(
-                        Math.abs(pitch) > beachTolerance.get() ? Math.copySign(beachSpeed.get(), pitch) : 0.0,
-                        Math.abs(roll) > beachTolerance.get() ? Math.copySign(beachSpeed.get(), -roll) : 0.0,
-                        0.0
-                    ),
-                    state.rotation
-                );
+            var antiBeach = Perspective.OPERATOR.toPerspectiveSpeeds(
+                new ChassisSpeeds(
+                    Math.abs(pitch) > beachTolerance.get() ? Math.copySign(beachSpeed.get(), pitch) : 0.0,
+                    Math.abs(roll) > beachTolerance.get() ? Math.copySign(beachSpeed.get(), -roll) : 0.0,
+                    0.0
+                ),
+                state.rotation
+            );
 
-                api.applyAssistedDriverInput(
-                    x.getAsDouble(),
-                    y.getAsDouble(),
-                    angular.getAsDouble(),
-                    antiBeach,
-                    Perspective.OPERATOR,
-                    true,
-                    true
-                );
-
-                // Repulsor driving
-                // var driverSpeeds = apf.repulsorDrive(
-                //     ChassisSpeeds.fromRobotRelativeSpeeds(
-                //         api.calculateDriverSpeeds(x.getAsDouble(), y.getAsDouble(), angular.getAsDouble()),
-                //         Alliance.isBlue() ? Rotation2d.kZero : Rotation2d.k180deg
-                //     ),
-                //     state.pose
-                // );
-                // api.applySpeeds(driverSpeeds.plus(antiBeach), Perspective.BLUE, true, true);
-            });
+            api.applyAssistedDriverInput(
+                x.getAsDouble(),
+                y.getAsDouble(),
+                angular.getAsDouble(),
+                antiBeach,
+                Perspective.OPERATOR,
+                true,
+                true
+            );
+        });
     }
 
     /**
@@ -565,7 +557,7 @@ public final class Swerve extends GRRSubsystem {
                         0.0,
                         angularPID.calculate(
                             state.rotation.getRadians(),
-                            Math2.HALF_PI * (Alliance.isBlue() ? 1.0 : -1.0)
+                            Math2.HALF_PI * (Alliance.isBlue() ? 1.0 : -1.0) + climbFudge.get()
                         )
                     ),
                     Perspective.OPERATOR,

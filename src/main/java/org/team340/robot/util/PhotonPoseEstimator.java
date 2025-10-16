@@ -718,7 +718,7 @@ public class PhotonPoseEstimator {
 
             double alternateTransformDelta = Math.abs(
                 robotToCamera.getZ()
-                - targetPosition.get().transformBy(target.getAlternateCameraToTarget().inverse()).getZ()
+                    - targetPosition.get().transformBy(target.getAlternateCameraToTarget().inverse()).getZ()
             );
             double bestTransformDelta = Math.abs(
                 robotToCamera.getZ() - targetPosition.get().transformBy(target.getBestCameraToTarget().inverse()).getZ()

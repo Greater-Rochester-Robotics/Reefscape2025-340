@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 
 public class SparkFaultsStruct implements Struct<Integer> {
 
-    public static final SparkFaultsStruct inst = new SparkFaultsStruct();
+    public static final SparkFaultsStruct struct = new SparkFaultsStruct();
 
     @Override
     public Class<Integer> getTypeClass() {
@@ -19,7 +19,7 @@ public class SparkFaultsStruct implements Struct<Integer> {
 
     @Override
     public int getSize() {
-        return kSizeInt32;
+        return kSizeInt8;
     }
 
     @Override
@@ -38,12 +38,12 @@ public class SparkFaultsStruct implements Struct<Integer> {
 
     @Override
     public Integer unpack(ByteBuffer bb) {
-        return bb.getInt();
+        return (int) bb.get() & 0xff;
     }
 
     @Override
     public void pack(ByteBuffer bb, Integer value) {
-        bb.putInt(value.intValue());
+        bb.put(value.byteValue());
     }
 
     @Override

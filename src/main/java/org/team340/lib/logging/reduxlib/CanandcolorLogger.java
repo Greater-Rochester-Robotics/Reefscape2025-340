@@ -18,7 +18,6 @@ public class CanandcolorLogger extends ClassSpecificLogger<Canandcolor> {
     public void update(EpilogueBackend backend, Canandcolor canandcolor) {
         backend.log("color", canandcolor.getColor(), ColorData.struct);
         backend.log("proximity", canandcolor.getProximity());
-        backend.log("connected", canandcolor.isConnected());
         backend.log("status", canandcolor.getStatusFrame().getValue(), CanandcolorStatus.struct);
     }
 }

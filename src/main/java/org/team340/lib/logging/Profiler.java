@@ -105,10 +105,10 @@ public final class Profiler {
             } else if (name != root) {
                 DriverStation.reportError(
                     "[Profiler] Unexpected secondary root with name \""
-                    + name
-                    + "\", expected primary root \""
-                    + root
-                    + "\"",
+                        + name
+                        + "\", expected primary root \""
+                        + root
+                        + "\"",
                     true
                 );
             }

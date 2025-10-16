@@ -112,8 +112,8 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     public void refresh() {
         odometryMutex.lock();
         try {
-            odometryThread.run(true);
-            state.timestamp = Timer.getFPGATimestamp();
+            if (!odometryThread.active) odometryThread.run(true);
+            state.timestamp = odometryThread.lastTimestamp;
 
             state.odometryThread.timesync = odometryThread.timesync;
             state.odometryThread.successes = odometryThread.successes;
@@ -206,7 +206,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         odometryMutex.lock();
         try {
             // Patch for an upstream bug.
-            // TODO PR a proper fix to PoseEstimator.resetRotation()
+            // TODO Fixed by https://github.com/wpilibsuite/allwpilib/pull/8285
             odometry.resetPose(state.pose);
 
             poseEstimator.resetRotation(rotation);
@@ -220,7 +220,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     /**
      * Utility method for converting driver input to chassis speeds. The {@code x} and {@code y}
      * parameters expect the controller's NED (north-east-down) convention, and will automatically
-     * convert to WPILib's typical NWU (north-west-up) convention when converting to chassis speeds.
+     * convert to WPILib's typical NWU (north-west-up) convention when calculating chassis speeds.
      * @param x The X value of the driver's joystick, from {@code [-1.0, 1.0]}.
      * @param y The Y value of the driver's joystick, from {@code [-1.0, 1.0]}.
      * @param angular The CCW+ angular speed to apply, from {@code [-1.0, 1.0]}.
@@ -381,7 +381,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         }
 
         if (discretize) {
-            Math2.discretize(speeds, config.discretizationPeriod);
+            Math2.discretizeChassisSpeeds(speeds, config.discretizationPeriod);
         }
 
         lastRobotAngle = state.rotation;
@@ -444,16 +444,15 @@ public class SwerveAPI implements Tunable, AutoCloseable {
     }
 
     /**
-     * Manages swerve odometry. Will run asynchronously at the configured odometry update
-     * period, unless the configured period is the same or more than the main robot loop
-     * period. The {@link SwerveOdometryThread#run(boolean)} method is also invoked in
-     * {@link SwerveAPI#refresh()}, to ensure the latest measurements are applied to
-     * pose estimation when executing user logic in the main loop.
+     * Manages swerve odometry. Will run asynchronously at the configured
+     * odometry update period, unless the configured period is the same or
+     * more than the main robot loop period.
      */
     private final class SwerveOdometryThread implements AutoCloseable {
 
         public final List<TimestampedPose> poseHistory = new ArrayList<>();
         public Rotation2d lastYaw = Rotation2d.kZero;
+        public double lastTimestamp = 0.0;
         public boolean timesync = false;
         public int successes = 0;
         public int failures = 0;
@@ -461,9 +460,9 @@ public class SwerveAPI implements Tunable, AutoCloseable {
         private final SwerveModulePosition[] positionCache;
         private final BaseStatusSignal[] signals;
         private final Thread thread;
+        private double lastSleep = 0.0;
 
-        private volatile boolean active = false;
-        private double lastTime = 0.0;
+        public volatile boolean active = false;
 
         public SwerveOdometryThread() {
             List<BaseStatusSignal> signalList = new ArrayList<>();
@@ -500,17 +499,17 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 if (timesync) {
                     phoenixStatus = BaseStatusSignal.waitForAll(config.period, signals);
                 } else {
-                    Sleep.seconds(Math.max(0.0, config.odometryPeriod - (Timer.getFPGATimestamp() - lastTime)));
-                    lastTime = Timer.getFPGATimestamp();
+                    Sleep.seconds(Math.max(0.0, config.odometryPeriod - (Timer.getFPGATimestamp() - lastSleep)));
+                    lastSleep = Timer.getFPGATimestamp();
                 }
             }
 
             odometryMutex.lock();
             try {
                 if (!timesync && signals.length > 0) phoenixStatus = BaseStatusSignal.refreshAll(signals);
+                lastTimestamp = Timer.getFPGATimestamp();
 
                 lastYaw = imu.getYaw();
-                double yawTimestamp = Timer.getFPGATimestamp();
 
                 boolean readError = !phoenixStatus.isOK() || imu.readError();
                 for (var module : modules) {
@@ -523,7 +522,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                 }
 
                 poseEstimator.update(lastYaw, positionCache);
-                poseHistory.add(new TimestampedPose(poseEstimator.getEstimatedPosition(), yawTimestamp));
+                poseHistory.add(new TimestampedPose(poseEstimator.getEstimatedPosition(), lastTimestamp));
 
                 successes++;
             } finally {

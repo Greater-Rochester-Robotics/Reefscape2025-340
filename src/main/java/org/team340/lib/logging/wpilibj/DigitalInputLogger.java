@@ -14,6 +14,6 @@ public class DigitalInputLogger extends ClassSpecificLogger<DigitalInput> {
 
     @Override
     public void update(EpilogueBackend backend, DigitalInput digitalInput) {
-        backend.log("value", digitalInput.get());
+        backend.log("", digitalInput.get());
     }
 }

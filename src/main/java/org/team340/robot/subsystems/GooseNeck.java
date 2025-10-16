@@ -358,7 +358,9 @@ public final class GooseNeck extends GRRSubsystem {
                                 beakVoltageControl.withOutput(
                                     selection.isL1()
                                         ? GooseSpeed.L1.voltage()
-                                        : selection.isL4() ? GooseSpeed.L4.voltage() : GooseSpeed.L2_L3.voltage()
+                                        : selection.isL4()
+                                            ? GooseSpeed.L4.voltage()
+                                            : GooseSpeed.L2_L3.voltage()
                                 )
                             );
                             hasCoral.set(false);

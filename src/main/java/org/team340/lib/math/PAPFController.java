@@ -345,6 +345,13 @@ public final class PAPFController implements Tunable {
         private final double range;
         private final boolean repulsive;
 
+        /**
+         * Creates an obstacle.
+         * @param strength The strength of the obstacle's force. Positive values
+         *                 represent a repulsive potential (pushes away), negative
+         *                 values represent an attractive potential (pulls towards).
+         * @param range The range of the obstacle's potential, in meters.
+         */
         public Obstacle(double strength, double range) {
             this(strength, range, ForceHeuristic.DEFAULT);
         }

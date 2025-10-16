@@ -42,10 +42,10 @@ public final class DisableWatchdog {
         } catch (Exception e) {
             DriverStation.reportWarning(
                 "Unable to disable watchdog: Attempted with accessor \""
-                + obj.getClass().getSimpleName()
-                + "."
-                + fieldName
-                + "\"",
+                    + obj.getClass().getSimpleName()
+                    + "."
+                    + fieldName
+                    + "\"",
                 false
             );
         }

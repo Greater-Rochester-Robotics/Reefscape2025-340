@@ -18,7 +18,6 @@ public class CanandmagLogger extends ClassSpecificLogger<Canandmag> {
         backend.log("absolutePosition", canandmag.getAbsPosition());
         backend.log("magnetInRange", canandmag.magnetInRange());
         backend.log("position", canandmag.getPosition());
-        backend.log("connected", canandmag.isConnected());
         backend.log("status", canandmag.getStatus(), CanandmagStatus.struct);
     }
 }

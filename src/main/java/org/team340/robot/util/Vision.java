@@ -87,24 +87,39 @@ public final class Vision {
      */
     public VisionMeasurement[] getUnreadResults(List<TimestampedPose> poseHistory, Pose2d odometryPose) {
         if (sim != null) {
+            // Update sim, if applicable.
             sim.update(odometryPose);
         }
 
+        // Clear lists from the last cycle.
+        // These are only used for telemetry.
         estimates.clear();
         targets.clear();
 
+        // Create a new list to save this cycle's vision measurements to.
         List<VisionMeasurement> measurements = new ArrayList<>();
+
+        // Iterate over every camera.
         for (var camera : cameras) {
+            // Update the camera's PhotonPoseEstimator with the robot's pose history. Since
+            // we run odometry on a separate thread at a higher frequency, we have multiple
+            // timestamped poses to reference which is helpful for latency compensation.
             camera.addReferencePoses(poseHistory);
+
+            // Populate our lists with vision data from the camera.
             camera.refresh(measurements, targets);
         }
 
+        // Save the Pose2ds from all vision measurements
+        // to the estimates list to be logged by Epilogue.
         estimates.addAll(
             measurements
                 .stream()
                 .map(m -> m.pose())
                 .toList()
         );
+
+        // Convert the vision measurement list to an array and return it.
         return measurements.stream().toArray(VisionMeasurement[]::new);
     }
 

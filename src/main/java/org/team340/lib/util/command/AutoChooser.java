@@ -39,7 +39,7 @@ public final class AutoChooser {
     private boolean running = false;
 
     /**
-     * Creates an auto chooser.
+     * Creates an auto chooser, using the default {@code /Autos} table.
      */
     public AutoChooser() {
         this("/Autos", true);
@@ -121,6 +121,8 @@ public final class AutoChooser {
             running = false;
         }
 
+        newSelection = false;
+
         if (!running) {
             String selected = selectedSub.get();
             if (!selected.equals(activeName)) {
@@ -128,8 +130,6 @@ public final class AutoChooser {
                 activeCommand = options.get(activeName);
                 activePub.set(activeName);
                 newSelection = true;
-            } else {
-                newSelection = false;
             }
         }
     }

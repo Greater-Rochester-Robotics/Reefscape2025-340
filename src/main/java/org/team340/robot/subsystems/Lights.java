@@ -205,7 +205,9 @@ public final class Lights {
                             i,
                             i > Math.ceil(percent.getAsDouble() * LENGTH)
                                 ? Color.OFF
-                                : Alliance.isBlue() ? Color.BLUE : Color.RED
+                                : Alliance.isBlue()
+                                    ? Color.BLUE
+                                    : Color.RED
                         );
                     }
                 })

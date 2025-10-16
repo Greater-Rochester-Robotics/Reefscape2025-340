@@ -10,10 +10,10 @@ import edu.wpi.first.networktables.StringEntry;
 import edu.wpi.first.util.function.BooleanConsumer;
 import edu.wpi.first.util.function.FloatConsumer;
 import edu.wpi.first.wpilibj.DriverStation;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
@@ -50,13 +50,23 @@ public final class Tunables {
          * @param table The table to object is being added to.
          * @param obj The object to make tunable.
          */
-        void init(TunableTable table, T obj);
+        public void init(TunableTable table, T obj);
+    }
+
+    /**
+     * Represents a tunable value in NetworkTables.
+     */
+    private static interface TunableValue {
+        /**
+         * Polls changes from NetworkTables for updates.
+         */
+        public void poll();
     }
 
     private static final NetworkTable nt = NetworkTableInstance.getDefault().getTable("/Tunables");
-    private static final Set<Runnable> pollChanges = new LinkedHashSet<>();
 
     private static final Map<String, TunableTable> tables = new HashMap<>();
+    private static final Map<String, TunableValue> values = new HashMap<>();
     private static final Map<Class<?>, TunableHandler<?>> handlers = new HashMap<>();
 
     static {
@@ -68,19 +78,7 @@ public final class Tunables {
      * Tunables to function (this is already done if utilizing {@link LoggedRobot}).
      */
     public static void update() {
-        pollChanges.forEach(Runnable::run);
-    }
-
-    /**
-     * Gets a table that can be used to add nested
-     * tunable values under a specified path.
-     * @param name The name of the table.
-     */
-    public static TunableTable getNested(String name) {
-        name = NetworkTable.normalizeKey(name, false);
-        if (!name.endsWith("/")) name += "/";
-
-        return tables.computeIfAbsent(name, key -> new TunableTable(key));
+        values.values().forEach(TunableValue::poll);
     }
 
     /**
@@ -91,6 +89,17 @@ public final class Tunables {
      */
     public static <T> void registerHandler(Class<T> clazz, TunableHandler<T> handler) {
         handlers.put(clazz, handler);
+    }
+
+    /**
+     * Gets a table that can be used to add nested
+     * tunable values under a specified path.
+     * @param name The name of the table.
+     */
+    public static TunableTable getNested(String name) {
+        name = normalizeKey(name, true);
+        var existing = tables.get(name);
+        return existing != null ? existing : new TunableTable(name);
     }
 
     /**
@@ -143,30 +152,33 @@ public final class Tunables {
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
     public static TunableBoolean value(String name, boolean defaultValue, BooleanConsumer onChange) {
-        return new TunableBoolean(name, defaultValue, onChange);
+        name = normalizeKey(name, false);
+        if (values.get(name) instanceof TunableBoolean v) {
+            v.addListener(onChange);
+            return v;
+        }
+
+        var value = new TunableBoolean(name, defaultValue);
+        value.addListener(onChange);
+        values.put(name, value);
+
+        return value;
     }
 
     /**
      * A tunable boolean value. Can be modified via NetworkTables.
      */
-    public static final class TunableBoolean implements AutoCloseable {
+    public static final class TunableBoolean implements TunableValue {
 
         private final BooleanEntry entry;
+        private final List<BooleanConsumer> listeners = new ArrayList<>();
+
         private boolean value;
 
-        private TunableBoolean(String name, boolean defaultValue, BooleanConsumer onChange) {
+        private TunableBoolean(String name, boolean defaultValue) {
             entry = nt.getBooleanTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
             value = defaultValue;
-
-            pollChanges.add(() -> {
-                value = entry.get();
-                if (onChange != null) {
-                    for (boolean value : entry.readQueueValues()) {
-                        onChange.accept(value);
-                    }
-                }
-            });
         }
 
         /**
@@ -185,9 +197,21 @@ public final class Tunables {
             entry.set(value);
         }
 
+        /**
+         * Adds a listener that will be invoked when the tunable's value
+         * is modified. Will no-op if the listener is {@code null}.
+         * @param onChange A consumer that is invoked when the value of the tunable is modified.
+         */
+        public void addListener(BooleanConsumer onChange) {
+            if (onChange == null) return;
+            listeners.add(onChange);
+        }
+
         @Override
-        public void close() {
-            entry.close();
+        public void poll() {
+            if (value != (value = entry.get())) {
+                for (var listener : listeners) listener.accept(value);
+            }
         }
     }
 
@@ -207,30 +231,33 @@ public final class Tunables {
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
     public static TunableInteger value(String name, int defaultValue, IntConsumer onChange) {
-        return new TunableInteger(name, defaultValue, onChange);
+        name = normalizeKey(name, false);
+        if (values.get(name) instanceof TunableInteger v) {
+            v.addListener(onChange);
+            return v;
+        }
+
+        var value = new TunableInteger(name, defaultValue);
+        value.addListener(onChange);
+        values.put(name, value);
+
+        return value;
     }
 
     /**
      * A tunable integer value. Can be modified via NetworkTables.
      */
-    public static final class TunableInteger implements AutoCloseable {
+    public static final class TunableInteger implements TunableValue {
 
         private final IntegerEntry entry;
+        private final List<IntConsumer> listeners = new ArrayList<>();
+
         private int value;
 
-        private TunableInteger(String name, int defaultValue, IntConsumer onChange) {
+        private TunableInteger(String name, int defaultValue) {
             entry = nt.getIntegerTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
             value = defaultValue;
-
-            pollChanges.add(() -> {
-                value = (int) entry.get();
-                if (onChange != null) {
-                    for (long value : entry.readQueueValues()) {
-                        onChange.accept((int) value);
-                    }
-                }
-            });
         }
 
         /**
@@ -249,9 +276,21 @@ public final class Tunables {
             entry.set(value);
         }
 
+        /**
+         * Adds a listener that will be invoked when the tunable's value
+         * is modified. Will no-op if the listener is {@code null}.
+         * @param onChange A consumer that is invoked when the value of the tunable is modified.
+         */
+        public void addListener(IntConsumer onChange) {
+            if (onChange == null) return;
+            listeners.add(onChange);
+        }
+
         @Override
-        public void close() {
-            entry.close();
+        public void poll() {
+            if (value != (value = (int) entry.get())) {
+                for (var listener : listeners) listener.accept(value);
+            }
         }
     }
 
@@ -271,30 +310,33 @@ public final class Tunables {
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
     public static TunableFloat value(String name, float defaultValue, FloatConsumer onChange) {
-        return new TunableFloat(name, defaultValue, onChange);
+        name = normalizeKey(name, false);
+        if (values.get(name) instanceof TunableFloat v) {
+            v.addListener(onChange);
+            return v;
+        }
+
+        var value = new TunableFloat(name, defaultValue);
+        value.addListener(onChange);
+        values.put(name, value);
+
+        return value;
     }
 
     /**
      * A tunable float value. Can be modified via NetworkTables.
      */
-    public static final class TunableFloat implements AutoCloseable {
+    public static final class TunableFloat implements TunableValue {
 
         private final FloatEntry entry;
+        private final List<FloatConsumer> listeners = new ArrayList<>();
+
         private float value;
 
-        private TunableFloat(String name, float defaultValue, FloatConsumer onChange) {
+        private TunableFloat(String name, float defaultValue) {
             entry = nt.getFloatTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
             value = defaultValue;
-
-            pollChanges.add(() -> {
-                value = entry.get();
-                if (onChange != null) {
-                    for (float value : entry.readQueueValues()) {
-                        onChange.accept(value);
-                    }
-                }
-            });
         }
 
         /**
@@ -313,9 +355,21 @@ public final class Tunables {
             entry.set(value);
         }
 
+        /**
+         * Adds a listener that will be invoked when the tunable's value
+         * is modified. Will no-op if the listener is {@code null}.
+         * @param onChange A consumer that is invoked when the value of the tunable is modified.
+         */
+        public void addListener(FloatConsumer onChange) {
+            if (onChange == null) return;
+            listeners.add(onChange);
+        }
+
         @Override
-        public void close() {
-            entry.close();
+        public void poll() {
+            if (value != (value = entry.get())) {
+                for (var listener : listeners) listener.accept(value);
+            }
         }
     }
 
@@ -335,30 +389,33 @@ public final class Tunables {
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
     public static TunableDouble value(String name, double defaultValue, DoubleConsumer onChange) {
-        return new TunableDouble(name, defaultValue, onChange);
+        name = normalizeKey(name, false);
+        if (values.get(name) instanceof TunableDouble v) {
+            v.addListener(onChange);
+            return v;
+        }
+
+        var value = new TunableDouble(name, defaultValue);
+        value.addListener(onChange);
+        values.put(name, value);
+
+        return value;
     }
 
     /**
      * A tunable double value. Can be modified via NetworkTables.
      */
-    public static final class TunableDouble implements AutoCloseable {
+    public static final class TunableDouble implements TunableValue {
 
         private final DoubleEntry entry;
+        private final List<DoubleConsumer> listeners = new ArrayList<>();
+
         private double value;
 
-        private TunableDouble(String name, double defaultValue, DoubleConsumer onChange) {
+        private TunableDouble(String name, double defaultValue) {
             entry = nt.getDoubleTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
             value = defaultValue;
-
-            pollChanges.add(() -> {
-                value = entry.get();
-                if (onChange != null) {
-                    for (double value : entry.readQueueValues()) {
-                        onChange.accept(value);
-                    }
-                }
-            });
         }
 
         /**
@@ -377,9 +434,21 @@ public final class Tunables {
             entry.set(value);
         }
 
+        /**
+         * Adds a listener that will be invoked when the tunable's value
+         * is modified. Will no-op if the listener is {@code null}.
+         * @param onChange A consumer that is invoked when the value of the tunable is modified.
+         */
+        public void addListener(DoubleConsumer onChange) {
+            if (onChange == null) return;
+            listeners.add(onChange);
+        }
+
         @Override
-        public void close() {
-            entry.close();
+        public void poll() {
+            if (value != (value = entry.get())) {
+                for (var listener : listeners) listener.accept(value);
+            }
         }
     }
 
@@ -399,30 +468,33 @@ public final class Tunables {
      * @param onChange A consumer that is invoked when the value of the tunable is modified.
      */
     public static TunableString value(String name, String defaultValue, Consumer<String> onChange) {
-        return new TunableString(name, defaultValue, onChange);
+        name = normalizeKey(name, false);
+        if (values.get(name) instanceof TunableString v) {
+            v.addListener(onChange);
+            return v;
+        }
+
+        var value = new TunableString(name, defaultValue);
+        value.addListener(onChange);
+        values.put(name, value);
+
+        return value;
     }
 
     /**
      * A tunable string value. Can be modified via NetworkTables.
      */
-    public static final class TunableString implements AutoCloseable {
+    public static final class TunableString implements TunableValue {
 
         private final StringEntry entry;
+        private final List<Consumer<String>> listeners = new ArrayList<>();
+
         private String value;
 
-        private TunableString(String name, String defaultValue, Consumer<String> onChange) {
+        private TunableString(String name, String defaultValue) {
             entry = nt.getStringTopic(name).getEntry(defaultValue);
             entry.setDefault(defaultValue);
             value = defaultValue;
-
-            pollChanges.add(() -> {
-                value = entry.get();
-                if (onChange != null) {
-                    for (String value : entry.readQueueValues()) {
-                        onChange.accept(value);
-                    }
-                }
-            });
         }
 
         /**
@@ -441,9 +513,33 @@ public final class Tunables {
             entry.set(value);
         }
 
-        @Override
-        public void close() {
-            entry.close();
+        /**
+         * Adds a listener that will be invoked when the tunable's value
+         * is modified. Will no-op if the listener is {@code null}.
+         * @param onChange A consumer that is invoked when the value of the tunable is modified.
+         */
+        public void addListener(Consumer<String> onChange) {
+            if (onChange == null) return;
+            listeners.add(onChange);
         }
+
+        @Override
+        public void poll() {
+            if (value != (value = entry.get())) {
+                for (var listener : listeners) listener.accept(value);
+            }
+        }
+    }
+
+    /**
+     * Normalizes a key for a tunable table or value.
+     * @param key The key to normalize.
+     * @param suffixSlash If the key should be suffixed with a slash.
+     * @return The normalized key.
+     */
+    private static String normalizeKey(String key, boolean suffixSlash) {
+        key = NetworkTable.normalizeKey(key, false);
+        if (!key.endsWith("/") && suffixSlash) key += "/";
+        return key;
     }
 }
