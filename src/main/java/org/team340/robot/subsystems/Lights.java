@@ -220,43 +220,50 @@ public final class Lights {
          * Displays the flames animation.
          */
         public Command flames(boolean allianceColors) {
+            Mutable<Integer> count = new Mutable<>(0);
             int[] state = new int[LENGTH];
-            for (int i = 0; i < state.length; i++) {
-                state[i] = 0;
-            }
 
             return commandBuilder()
+                .onInitialize(() -> {
+                    count.value = 0;
+                    for (int i = 0; i < state.length; i++) {
+                        state[i] = 0;
+                    }
+                })
                 .onExecute(() -> {
                     for (int i = 0; i < LENGTH; i++) {
-                        state[i] = (int) Math.max(0.0, state[i] - (Math2.random((i / (LENGTH * 0.11)) * 0.1) + 50.0));
+                        state[i] = Math.max(0, state[i] - 16);
                     }
+
                     for (int i = LENGTH - 1; i >= 2; i--) {
                         state[i] = (state[i - 1] + state[i - 2] + state[i - 2]) / 3;
                     }
-                    if (Math.random() < 0.5) {
+
+                    if (count.value++ % 2 == 0) {
                         int i = (int) Math2.random(3.0);
-                        state[i] = (int) (state[i] + Math2.random(200.0, 255.0));
+                        state[i] = (int) Math.min(255.0, state[i] + Math2.random(200.0, 255.0));
                     }
+
                     for (int i = 0; i < LENGTH; i++) {
-                        int heat = (int) ((state[i] / 255.0) * 191.0);
-                        int ramp = (heat & 63) << 2;
-                        if (heat > (allianceColors ? 70 : 200)) {
+                        int heat = Math.min(255, state[i] + (Math.random() < 0.05 && state[i] > 16 ? 32 : 0));
+                        int ramp = (((int) Math.round((heat / 255.0) * 191.0)) & 63) << 2;
+                        if (heat > 170) {
                             if (allianceColors) {
-                                if (Alliance.isBlue()) setBoth(i, 0, 0, ramp);
-                                else setBoth(i, ramp, 0, 0);
+                                if (Alliance.isBlue()) setBoth(i, ramp, ramp, 255);
+                                else setBoth(i, 255, ramp, ramp);
                             } else {
-                                setBoth(i, 255, 255, ramp);
+                                setBoth(i, 255, 255, ramp / 2);
                             }
-                        } else if (heat > (allianceColors ? 20 : 100)) {
+                        } else if (heat > 84) {
                             if (allianceColors) {
-                                if (Alliance.isBlue()) setBoth(i, ramp - 20, 0, 255);
-                                else setBoth(i, 255, 0, ramp - 20);
+                                if (Alliance.isBlue()) setBoth(i, ramp / 4, 0, 255);
+                                else setBoth(i, 255, 0, ramp / 4);
                             } else {
-                                setBoth(i, 255, ramp, 0);
+                                setBoth(i, 255, ramp / 2, 0);
                             }
                         } else {
-                            if (allianceColors) {
-                                setBoth(i, ramp, ramp, ramp);
+                            if (allianceColors && Alliance.isBlue()) {
+                                setBoth(i, 0, 0, ramp);
                             } else {
                                 setBoth(i, ramp, 0, 0);
                             }

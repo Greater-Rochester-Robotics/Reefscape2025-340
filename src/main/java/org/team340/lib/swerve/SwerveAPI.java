@@ -521,7 +521,7 @@ public class SwerveAPI implements Tunable, AutoCloseable {
                     if (!Robot.isSimulation()) return;
                 }
 
-                poseEstimator.update(lastYaw, positionCache);
+                poseEstimator.updateWithTime(lastTimestamp, lastYaw, positionCache);
                 poseHistory.add(new TimestampedPose(poseEstimator.getEstimatedPosition(), lastTimestamp));
 
                 successes++;

@@ -28,6 +28,9 @@ import org.photonvision.targeting.PhotonPipelineResult;
 import org.team340.lib.math.FieldInfo;
 import org.team340.lib.math.geometry.TimestampedPose;
 import org.team340.lib.math.geometry.VisionMeasurement;
+import org.team340.lib.tunable.TunableTable;
+import org.team340.lib.tunable.Tunables;
+import org.team340.lib.tunable.Tunables.TunableDouble;
 import org.team340.lib.util.Alliance;
 import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 
@@ -38,6 +41,13 @@ import org.team340.robot.util.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 public final class Vision {
 
     public static final record CameraConfig(String name, Translation3d translation, Rotation3d rotation) {}
+
+    private static final TunableTable tunables = Tunables.getNested("vision");
+
+    private static final TunableDouble trigXyStd = tunables.value("trigXyStd", 0.18);
+    private static final TunableDouble constrainedPnpXyStd = tunables.value("constrainedPnpXyStd", 0.4);
+    private static final TunableDouble constrainedPnpAngStd = tunables.value("constrainedPnpAngStd", 0.14);
+    private static final TunableDouble velocityLatencyFactor = tunables.value("velocityLatencyFactor", 0.06);
 
     // Set to true to enable simulation. Note that this may
     // negatively impact performance on slower devices.
@@ -63,9 +73,7 @@ public final class Vision {
         }
 
         cameras = RobotBase.isSimulation() && !ENABLE_SIM ? new CameraConfig[0] : cameras;
-        this.cameras = Arrays.stream(cameras)
-            .map(config -> new Camera(config))
-            .toArray(Camera[]::new);
+        this.cameras = Arrays.stream(cameras).map(Camera::new).toArray(Camera[]::new);
 
         // Hit the undocumented Photon Turbo Button™
         // https://github.com/PhotonVision/photonvision/pull/1662
@@ -84,8 +92,13 @@ public final class Vision {
      * Gets unread results from all cameras.
      * @param poseHistory Robot pose estimates from the last robot cycle.
      * @param odometryPose The uncorrected odometry pose of the robot. Used for simulation.
+     * @param velocity The directionless measured velocity of the robot in m/s.
      */
-    public VisionMeasurement[] getUnreadResults(List<TimestampedPose> poseHistory, Pose2d odometryPose) {
+    public VisionMeasurement[] getUnreadResults(
+        List<TimestampedPose> poseHistory,
+        Pose2d odometryPose,
+        double velocity
+    ) {
         if (sim != null) {
             // Update sim, if applicable.
             sim.update(odometryPose);
@@ -107,7 +120,7 @@ public final class Vision {
             camera.addReferencePoses(poseHistory);
 
             // Populate our lists with vision data from the camera.
-            camera.refresh(measurements, targets);
+            camera.refresh(velocity, measurements, targets);
         }
 
         // Save the Pose2ds from all vision measurements
@@ -175,10 +188,11 @@ public final class Vision {
         /**
          * Refreshes the provided lists with new unread results from the camera. Note
          * that this method does not remove any elements from the supplied lists.
+         * @param velocity The directionless measured velocity of the robot in m/s.
          * @param measurements A list of vision measurements to add to.
          * @param targets A list of targets to add to.
          */
-        private void refresh(List<VisionMeasurement> measurements, List<Pose3d> targets) {
+        private void refresh(double velocity, List<VisionMeasurement> measurements, List<Pose3d> targets) {
             // If we are disabled, use Constrained SolvePNP to estimate the robot's heading.
             // See https://github.com/Greater-Rochester-Robotics/Reefscape2025-340/issues/19
             boolean usingTrig = disabledDebounce.calculate(DriverStation.isEnabled());
@@ -204,18 +218,22 @@ public final class Vision {
 
                 // Calculate the pose estimation weights for X/Y location. As
                 // distance increases, the tag is trusted exponentially less.
-                double xyStd = (usingTrig ? 0.18 : 0.4) * distance * distance;
+                double xyStd = (usingTrig ? trigXyStd.get() : constrainedPnpXyStd.get()) * distance * distance;
 
                 // Calculate the angular pose estimation weight. If we're solving via trig, reject
                 // the heading estimate to ensure the pose estimator doesn't "poison" itself with
                 // essentially duplicate data. Otherwise, weight the estimate similar to X/Y.
-                double angStd = (usingTrig ? 1e5 : 0.14) * distance * distance;
+                double angStd = (usingTrig ? 1e5 : constrainedPnpAngStd.get()) * distance * distance;
+
+                // Apply a heuristic to the measurement's latency, that accounts for
+                // increased translational error at high chassis velocities.
+                double timestamp = estimate.get().timestampSeconds - (velocity * velocityLatencyFactor.get());
 
                 // Push the measurement to the supplied measurements list.
                 measurements.add(
                     new VisionMeasurement(
                         estimate.get().estimatedPose.toPose2d(),
-                        estimate.get().timestampSeconds - (1.0 / 30.0),
+                        timestamp,
                         VecBuilder.fill(xyStd, xyStd, angStd)
                     )
                 );

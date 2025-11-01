@@ -62,14 +62,15 @@ public final class Swerve extends GRRSubsystem {
     private static final TunableDouble beachTolerance = beachTunables.value("tolerance", 0.15);
 
     private static final TunableTable apfTunables = tunables.getNested("apf");
-    private static final TunableDouble apfX = apfTunables.value("x", 1.28);
+    private static final TunableDouble apfX = apfTunables.value("x", 1.12);
     private static final TunableDouble apfVel = apfTunables.value("velocity", 4.5);
-    private static final TunableDouble apfLead = apfTunables.value("lead", 0.35);
+    private static final TunableDouble apfLead = apfTunables.value("lead", 0.45);
     private static final TunableDouble apfLeadMult = apfTunables.value("leadMult", 0.15);
     private static final TunableDouble apfLeadAccel = apfTunables.value("leadAccel", 7.7);
     private static final TunableDouble apfLeadAccelL4 = apfTunables.value("leadAccelL4", 7.2);
-    private static final TunableDouble apfScoreAccel = apfTunables.value("scoreAccel", 6.0);
-    private static final TunableDouble apfScoreAccelL4 = apfTunables.value("scoreAccelL4", 3.75);
+    private static final TunableDouble apfScoreAccel = apfTunables.value("scoreAccel", 5.0);
+    private static final TunableDouble apfScoreAccelL4 = apfTunables.value("scoreAccelL4", 3.65);
+    private static final TunableDouble apfL4Ta = apfTunables.value("apfL4Ta", 6.0);
     private static final TunableDouble apfAngTolerance = apfTunables.value("angTolerance", 0.4);
     private static final TunableDouble apfSafeTolerance = apfTunables.value("safeTolerance", 0.2);
     private static final TunableDouble apfAttractStrength = apfTunables.value("attractStrength", -9.0);
@@ -161,7 +162,7 @@ public final class Swerve extends GRRSubsystem {
         api.refresh();
 
         // Apply vision estimates to the pose estimator.
-        var measurements = vision.getUnreadResults(state.poseHistory, state.odometryPose);
+        var measurements = vision.getUnreadResults(state.poseHistory, state.odometryPose, state.velocity);
         seesAprilTag = measurements.length > 0;
         api.addVisionMeasurements(measurements);
 
@@ -447,10 +448,17 @@ public final class Swerve extends GRRSubsystem {
         BooleanSupplier l4
     ) {
         Mutable<Pose2d> lastTarget = new Mutable<>(Pose2d.kZero);
+        Mutable<Double> torqueAccel = new Mutable<>(config.torqueAccel);
         Mutable<Boolean> nowSafe = new Mutable<>(false);
 
         return commandBuilder("Swerve.apfDrive()")
-            .onInitialize(() -> angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond))
+            .onInitialize(() -> {
+                angularPID.reset(state.rotation.getRadians(), state.speeds.omegaRadiansPerSecond);
+
+                lastTarget.value = Pose2d.kZero;
+                torqueAccel.value = config.torqueAccel;
+                nowSafe.value = false;
+            })
             .onExecute(() -> {
                 Pose2d goal = reefAssist.targetPipe = generateReefLocation(apfX.get(), side.get(), left.getAsBoolean());
 
@@ -474,6 +482,7 @@ public final class Swerve extends GRRSubsystem {
                         <= apfSafeTolerance.get()
                         && Math.abs(state.rotation.minus(goal.getRotation()).getRadians()) <= apfAngTolerance.get()
                     ) {
+                        if (l4.getAsBoolean()) config.torqueAccel = apfL4Ta.get();
                         nowSafe.value = true;
                     }
                 }
@@ -499,10 +508,7 @@ public final class Swerve extends GRRSubsystem {
 
                 api.applySpeeds(speeds, Perspective.BLUE, true, true);
             })
-            .beforeStarting(() -> {
-                lastTarget.value = Pose2d.kZero;
-                nowSafe.value = false;
-            });
+            .onEnd(() -> config.torqueAccel = torqueAccel.value);
     }
 
     /**

@@ -42,9 +42,9 @@ public final class Elevator extends GRRSubsystem {
 
     public static enum ElevatorPosition {
         DOWN(1.0),
-        INTAKE(0.0),
+        INTAKE(0.15),
         BARF(0.0),
-        SWALLOW(0.45),
+        SWALLOW(0.65),
         L1(4.0, Type.SCORING),
         L2(10.9, Type.SCORING),
         L3(22.5, Type.SCORING),
@@ -127,7 +127,7 @@ public final class Elevator extends GRRSubsystem {
         motorConfig.HardwareLimitSwitch.ReverseLimitAutosetPositionValue = 0.0;
 
         motorConfig.MotionMagic.MotionMagicCruiseVelocity = 92.5;
-        motorConfig.MotionMagic.MotionMagicAcceleration = 600.0;
+        motorConfig.MotionMagic.MotionMagicAcceleration = 525.0;
 
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 

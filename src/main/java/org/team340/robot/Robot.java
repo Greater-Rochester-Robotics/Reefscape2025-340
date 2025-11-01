@@ -91,6 +91,7 @@ public final class Robot extends LoggedRobot {
 
         driver.povDown().whileTrue(elevator.emergency());
         driver.povLeft().onTrue(swerve.tareRotation());
+        driver.povRight().whileTrue(swerve.apfDrive(selection::isLeft, () -> true, selection::isL4));
 
         driver.start().toggleOnTrue(routines.driveClimb());
         driver.leftStick().whileTrue(swerve.turboSpin(this::driverX, this::driverY, this::driverAngular));

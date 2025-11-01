@@ -34,9 +34,9 @@ public final class Autos {
 
     private static final TunableTable tunables = Tunables.getNested("autos");
 
-    private static final TunableDouble intakeDecel = tunables.value("intakeDecel", 6.0);
+    private static final TunableDouble intakeDecel = tunables.value("intakeDecel", 12.0);
     private static final TunableDouble intakeRotDelay = tunables.value("intakeRotDelay", 0.6);
-    private static final TunableDouble avoidDecel = tunables.value("avoidDecel", 8.9);
+    private static final TunableDouble avoidDecel = tunables.value("avoidDecel", 10.0);
     private static final TunableDouble avoidTol = tunables.value("avoidTol", 0.25);
 
     private final Robot robot;

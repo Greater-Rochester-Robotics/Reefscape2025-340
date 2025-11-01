@@ -87,8 +87,8 @@ public final class GooseNeck extends GRRSubsystem {
     }
 
     private static enum GooseSpeed {
-        INTAKE(-6.5),
-        SEAT(-5.0),
+        INTAKE(-6.0),
+        SEAT(-4.5),
         POOP_L1(-4.25),
         L1(4.0),
         L2_L3(12.0),
@@ -170,7 +170,7 @@ public final class GooseNeck extends GRRSubsystem {
         beakConfig.HardwareLimitSwitch.ReverseLimitEnable = true;
 
         CANdiConfiguration candiConfig = new CANdiConfiguration();
-        candiConfig.PWM2.AbsoluteSensorOffset = 0.594;
+        candiConfig.PWM2.AbsoluteSensorOffset = 0.601;
         candiConfig.PWM2.SensorDirection = true;
 
         PhoenixUtil.run(() -> pivotMotor.clearStickyFaults());
